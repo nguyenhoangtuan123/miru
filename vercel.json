@@ -103,6 +103,30 @@
         {
             "source": "/app/settings",
             "destination": "/pwa/settings.html"
+        },
+        {
+            "source": "/app/auth",
+            "destination": "/pwa/auth.html"
+        },
+        {
+            "source": "/app/memories",
+            "destination": "/pwa/memories.html"
+        },
+        {
+            "source": "/memories",
+            "destination": "/pwa/memories.html"
+        },
+        {
+            "source": "/orb",
+            "destination": "/pwa/orb.html"
+        },
+        {
+            "source": "/orb.html",
+            "destination": "/pwa/orb.html"
+        },
+        {
+            "source": "/app/orb",
+            "destination": "/pwa/orb.html"
         }
     ],
     "headers": [
