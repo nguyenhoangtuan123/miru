@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Development
+.env
+.env.local
+*.backup
+
+# Testing & Benchmarks
+test_*.py
+*_test.py
+benchmark_results/
+debug_*.py
+
+# Old/Unused files
+client_old*.py
+client_time.py
+UX/
+memory_app/
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+
+# Batch files
+*.bat
+
+# Migration scripts
+migrations/
+create_users_table.py
+fix_database.py
+check_migration_method.py
+
+# Benchmarks
+therapy_memory_benchmark.py
+
+# Vercel specific
+vercel.json
+.vercel/
+.vercelignore

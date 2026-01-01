@@ -1,0 +1,125 @@
+/* Reflection PWA - Layout Styles */
+
+/* ==================== Header ==================== */
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--bg-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--surface-secondary-light);
+    padding: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dark .app-header {
+    border-bottom-color: var(--surface-secondary-dark);
+    background-color: rgba(15, 23, 42, 0.8);
+}
+
+.header-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: center;
+    flex: 1;
+}
+
+.header-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ==================== Navigation Bar ==================== */
+.nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 428px;
+    margin: 0 auto;
+    background-color: var(--surface-color);
+    border-top: 1px solid var(--surface-secondary-light);
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-sm) 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .nav-bar {
+    border-top-color: var(--surface-secondary-dark);
+    background-color: rgba(30, 41, 59, 0.95);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--spacing-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    min-width: 60px;
+}
+
+.nav-item.active {
+    color: var(--primary-light);
+}
+
+.nav-item:hover {
+    color: var(--primary-light);
+}
+
+.nav-item span {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.nav-item .material-symbols-outlined {
+    font-size: 24px;
+}
+
+/* ==================== Dark Mode Toggle ==================== */
+.dark-mode-toggle {
+    position: fixed;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    z-index: 200;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface-color);
+    border: none;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.dark-mode-toggle:hover {
+    transform: rotate(20deg) scale(1.1);
+}
+
+.dark-only {
+    display: none;
+}
+
+.light-only {
+    display: block;
+}
+
+.dark .dark-only {
+    display: block;
+}
+
+.dark .light-only {
+    display: none;
+}

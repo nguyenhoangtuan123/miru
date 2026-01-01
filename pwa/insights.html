@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Insights - Emotional Rhythm</title>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Chart.js for dynamic charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Theme Configuration -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#7f0df2",
+            "background-light": "#f7f5f8",
+            "background-dark": "#191022",
+            "surface-dark": "#2a2036",
+            "surface-light": "#ffffff",
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+          backgroundImage: {
+            'glow-gradient': 'radial-gradient(circle at 50% 0%, rgba(127, 13, 242, 0.15) 0%, rgba(25, 16, 34, 0) 70%)',
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for cleaner look */
+    ::-webkit-scrollbar {
+      width: 0px;
+      background: transparent;
+    }
+
+    /* Soft glow animation for the chart pulse */
+    @keyframes pulse-glow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(127, 13, 242, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 0 6px rgba(127, 13, 242, 0);
+      }
+    }
+
+    .animate-pulse-glow {
+      animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    html.dark .glass-panel-heavy {
+      background: rgba(20, 15, 25, 0.6);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+  <style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+
+<body class="font-display antialiased selection:bg-primary selection:text-white">
+  <div
+    class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+    <!-- Ambient Background Glow -->
+    <div class="fixed inset-0 pointer-events-none bg-glow-gradient z-0"></div>
+    <!-- Top Navigation -->
+    <div class="relative z-10 flex items-center p-4 pb-2 justify-between">
+      <button
+        class="text-slate-800 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+        <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+      </button>
+      <h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+        Emotional Rhythm</h2>
+      <div class="flex w-12 items-center justify-end">
+        <button
+          class="flex size-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+          <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+        </button>
+      </div>
+    </div>
+    <!-- Date Segment Selector -->
+    <div class="relative z-10 flex px-4 py-2 justify-center">
+      <div
+        class="flex h-12 w-full max-w-sm items-center justify-center rounded-full bg-surface-light dark:bg-[#302839]/50 p-1 shadow-sm border border-slate-200 dark:border-white/5 backdrop-blur-sm">
+        <label
+          class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-white text-slate-500 dark:text-[#ab9cba] text-sm font-semibold transition-all duration-200">
+          <span class="truncate">Weekly</span>
+          <input checked="" class="invisible w-0 absolute" name="date-selector" type="radio" value="Weekly" />
+        </label>
+        <label
+          class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-white text-slate-500 dark:text-[#ab9cba] text-sm font-semibold transition-all duration-200">
+          <span class="truncate">Monthly</span>
+          <input class="invisible w-0 absolute" name="date-selector" type="radio" value="Monthly" />
+        </label>
+        <label
+          class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 has-[:checked]:bg-primary has-[:checked]:shadow-md has-[:checked]:text-white text-slate-500 dark:text-[#ab9cba] text-sm font-semibold transition-all duration-200">
+          <span class="truncate">Yearly</span>
+          <input class="invisible w-0 absolute" name="date-selector" type="radio" value="Yearly" />
+        </label>
+      </div>
+    </div>
+    <!-- Main Chart Section: The River of Emotion -->
+    <div class="relative z-10 px-4 py-6">
+      <div class="glass-panel rounded-[2rem] p-6 shadow-xl relative overflow-hidden group">
+        <!-- Header Stats -->
+        <div class="flex justify-between items-start mb-6 relative z-10">
+          <div>
+            <p class="text-slate-500 dark:text-[#ab9cba] text-sm font-medium uppercase tracking-wider mb-1">Energy Level
+            </p>
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-slate-900 dark:text-white text-4xl font-bold">7.5</h3>
+              <span class="text-slate-400 text-sm font-medium">avg</span>
+            </div>
+          </div>
+          <div class="flex flex-col items-end">
+            <span
+              class="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full text-xs font-bold">
+              <span class="material-symbols-outlined text-[14px]">trending_up</span>
+              +10%
+            </span>
+            <p class="text-slate-400 text-xs mt-1">vs last week</p>
+          </div>
+        </div>
+        <!-- The Chart - Dynamic Canvas -->
+        <div class="h-48 w-full relative">
+          <canvas id="emotionChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- AI Summary Card -->
+    <div class="relative z-10 px-4 mb-2">
+      <h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight px-1 pb-3 pt-2">AI Summary</h2>
+      <div class="glass-panel p-5 rounded-3xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-20">
+          <span class="material-symbols-outlined text-[64px] text-primary">auto_awesome</span>
+        </div>
+        <div class="relative z-10">
+          <p class="text-slate-700 dark:text-slate-200 text-[15px] leading-relaxed">
+            Your emotional rhythm has stabilized this week. You found significant <span
+              class="text-primary font-bold">moments of joy</span> during creative activities on Tuesday and Wednesday,
+            correlating with your highest energy peaks.
+          </p>
+          <div class="mt-4 flex gap-2">
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary border border-primary/20">
+              <span class="material-symbols-outlined text-[14px]">psychology</span>
+              High Focus
+            </span>
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 border border-blue-500/20">
+              <span class="material-symbols-outlined text-[14px]">bedtime</span>
+              Better Sleep
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Emotion Distribution (Dominant Feelings) -->
+    <div class="relative z-10 px-4 py-4">
+      <div class="flex items-center justify-between px-1 pb-3">
+        <h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Emotion Spectrum</h2>
+        <button class="text-primary text-sm font-semibold">View Details</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Feeling Card 1 -->
+        <div
+          class="bg-white dark:bg-surface-dark p-4 rounded-2xl border border-slate-100 dark:border-white/5 flex flex-col gap-3">
+          <div class="flex justify-between items-start">
+            <div class="size-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+              <span class="material-symbols-outlined">self_improvement</span>
+            </div>
+            <span class="text-slate-900 dark:text-white font-bold text-lg">42%</span>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Calmness</p>
+            <div class="w-full bg-slate-100 dark:bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div class="bg-purple-500 h-full rounded-full" style="width: 42%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Feeling Card 2 -->
+        <div
+          class="bg-white dark:bg-surface-dark p-4 rounded-2xl border border-slate-100 dark:border-white/5 flex flex-col gap-3">
+          <div class="flex justify-between items-start">
+            <div class="size-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400">
+              <span class="material-symbols-outlined">wb_sunny</span>
+            </div>
+            <span class="text-slate-900 dark:text-white font-bold text-lg">28%</span>
+          </div>
+          <div>
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Optimism</p>
+            <div class="w-full bg-slate-100 dark:bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div class="bg-orange-500 h-full rounded-full" style="width: 28%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Feeling Card 3 (Full Width for minor emotions) -->
+        <div
+          class="col-span-2 bg-white dark:bg-surface-dark p-4 rounded-2xl border border-slate-100 dark:border-white/5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="size-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+              <span class="material-symbols-outlined text-sm">water_drop</span>
+            </div>
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Melancholy</p>
+          </div>
+          <div class="flex items-center gap-3 w-1/2">
+            <div class="w-full bg-slate-100 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-blue-500 h-full rounded-full" style="width: 15%"></div>
+            </div>
+            <span class="text-slate-900 dark:text-white font-bold text-sm">15%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Pattern Detected -->
+    <div class="relative z-10 px-4 py-2 pb-24">
+      <h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight px-1 pb-3 pt-2">Pattern Detected</h2>
+      <div
+        class="bg-gradient-to-br from-surface-light to-slate-50 dark:from-[#2a2036] dark:to-[#1f1628] p-5 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+        <div class="flex gap-4">
+          <div class="shrink-0 size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">timeline</span>
+          </div>
+          <div>
+            <h4 class="text-slate-900 dark:text-white font-bold text-base mb-1">Weekend Recovery</h4>
+            <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">
+              Your mood scores consistently rise by <span class="text-emerald-500 font-bold">15%</span> on Saturdays
+              compared to Fridays.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Bottom Navigation Bar (Glassmorphic Floating) -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-[400px]">
+      <div class="glass-panel-heavy rounded-full px-6 py-4 flex justify-between items-center shadow-2xl">
+        <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-[24px]">home</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-[24px]">menu_book</span>
+        </button>
+        <button
+          class="flex -mt-8 bg-primary text-white size-14 rounded-full items-center justify-center shadow-lg shadow-primary/40 border-4 border-background-dark">
+          <span class="material-symbols-outlined text-[28px]">add</span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-white transition-colors">
+          <span class="material-symbols-outlined text-[24px] filled">insights</span>
+          <span class="size-1 bg-primary rounded-full"></span>
+        </button>
+        <button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+          <span class="material-symbols-outlined text-[24px]">person</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script>
+    const userId = localStorage.getItem('user_id');
+    if (!userId) window.location.href = '/app/auth';
+
+    const apiBase = window.APP_CONFIG?.getApiUrl?.() || '';
+    let emotionChart = null;
+    let currentDays = 7;
+
+    // Back button
+    document.querySelector('button').onclick = () => history.back();
+
+    // Initialize Chart.js
+    function initChart() {
+      const ctx = document.getElementById('emotionChart');
+      if (!ctx) return;
+
+      // Create gradient
+      const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+      gradient.addColorStop(0, 'rgba(127, 13, 242, 0.4)');
+      gradient.addColorStop(1, 'rgba(127, 13, 242, 0)');
+
+      emotionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Cảm xúc',
+            data: [5, 5, 5, 5, 5, 5, 5],
+            borderColor: '#7f0df2',
+            backgroundColor: gradient,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 6,
+            pointHoverRadius: 10,
+            pointBackgroundColor: '#7f0df2',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 3,
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#7f0df2'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#2a2036',
+              titleColor: '#fff',
+              bodyColor: '#ab9cba',
+              borderColor: 'rgba(127, 13, 242, 0.3)',
+              borderWidth: 1,
+              padding: 12,
+              displayColors: false,
+              callbacks: {
+                label: (ctx) => `Điểm cảm xúc: ${ctx.parsed.y}/10`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10,
+              ticks: { color: '#ab9cba', stepSize: 2 },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: {
+              ticks: { color: '#ab9cba' },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Load emotion data for chart
+    async function loadEmotionChart() {
+      try {
+        // Get emotion data from analyzed_sessions
+        const res = await fetch(`${apiBase}/api/insights/emotions/${userId}?days=${currentDays}`);
+        const result = await res.json();
+
+        if (result.success && result.data && result.data.length > 0) {
+          // Group by day of week
+          const dayData = {};
+          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+          result.data.forEach(item => {
+            const date = new Date(item.timestamp);
+            const dayName = dayNames[date.getDay()];
+            if (!dayData[dayName]) dayData[dayName] = [];
+            dayData[dayName].push(item.score);
+          });
+
+          // Calculate averages per day
+          const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          const scores = labels.map(day => {
+            if (dayData[day] && dayData[day].length > 0) {
+              return Math.round(dayData[day].reduce((a, b) => a + b, 0) / dayData[day].length * 10) / 10;
+            }
+            return null; // No data for this day
+          });
+
+          if (emotionChart) {
+            emotionChart.data.labels = labels;
+            emotionChart.data.datasets[0].data = scores;
+            emotionChart.update();
+          }
+        } else {
+          // No data - show helpful message
+          console.log('No emotion data yet. Chat more to see insights!');
+        }
+      } catch (e) {
+        console.error('Error loading emotion chart:', e);
+      }
+    }
+
+    // Load insights analysis data
+    async function loadInsights() {
+      try {
+        const res = await fetch(`${apiBase}/api/insights/analysis/${userId}?days=${currentDays}`);
+        const data = await res.json();
+
+        if (data.success) {
+          // Update Energy Level
+          const energyLevel = document.querySelector('h3.text-4xl');
+          if (energyLevel) energyLevel.textContent = data.energy.level;
+
+          // Update change percent
+          const changeSpan = document.querySelector('.text-emerald-500, .text-red-500');
+          if (changeSpan) {
+            const isUp = data.energy.change_percent >= 0;
+            changeSpan.className = `flex items-center gap-1 ${isUp ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10'} px-2 py-1 rounded-full text-xs font-bold`;
+            changeSpan.innerHTML = `
+              <span class="material-symbols-outlined text-[14px]">${isUp ? 'trending_up' : 'trending_down'}</span>
+              ${isUp ? '+' : ''}${data.energy.change_percent}%
+            `;
+          }
+
+          // Update AI Summary
+          const summaryP = document.querySelector('.glass-panel p.text-slate-700');
+          if (summaryP) summaryP.textContent = data.ai_summary.text;
+
+          // Update tags
+          const tagsContainer = document.querySelector('.glass-panel .mt-4.flex.gap-2');
+          if (tagsContainer && data.ai_summary.tags && data.ai_summary.tags.length > 0) {
+            tagsContainer.innerHTML = data.ai_summary.tags.map(tag => {
+              const colorMap = {
+                'emerald': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                'purple': 'bg-primary/10 text-primary border-primary/20',
+                'orange': 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+              };
+              return `<span class="inline-flex items-center gap-1 rounded-full ${colorMap[tag.color] || colorMap.purple} px-3 py-1 text-xs font-medium border">${tag.label}</span>`;
+            }).join('');
+          }
+
+          // Update Emotion Spectrum
+          const spectrum = data.emotion_spectrum;
+
+          // Calmness
+          const calmnessCard = document.querySelector('.bg-purple-500\\/20')?.closest('.flex.flex-col');
+          if (calmnessCard) {
+            const percent = calmnessCard.querySelector('span.font-bold');
+            const bar = calmnessCard.querySelector('.bg-purple-500');
+            if (percent) percent.textContent = spectrum.calmness + '%';
+            if (bar) bar.style.width = spectrum.calmness + '%';
+          }
+
+          // Optimism
+          const optimismCard = document.querySelector('.bg-orange-500\\/20')?.closest('.flex.flex-col');
+          if (optimismCard) {
+            const percent = optimismCard.querySelector('span.font-bold');
+            const bar = optimismCard.querySelector('.bg-orange-500');
+            if (percent) percent.textContent = spectrum.optimism + '%';
+            if (bar) bar.style.width = spectrum.optimism + '%';
+          }
+
+          // Melancholy
+          const melancholyCard = document.querySelector('.col-span-2');
+          if (melancholyCard) {
+            const percent = melancholyCard.querySelector('span.font-bold');
+            const bar = melancholyCard.querySelector('.bg-blue-500');
+            if (percent) percent.textContent = spectrum.melancholy + '%';
+            if (bar) bar.style.width = spectrum.melancholy + '%';
+          }
+
+          // Update Pattern
+          if (data.patterns && data.patterns.length > 0) {
+            const pattern = data.patterns[0];
+            const patternTitle = document.querySelector('.pb-24 h4');
+            const patternDesc = document.querySelector('.pb-24 p.text-slate-500');
+            if (patternTitle) patternTitle.textContent = pattern.title;
+            if (patternDesc) patternDesc.innerHTML = pattern.description;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading insights:', e);
+      }
+    }
+
+    // Date selector change handler
+    document.querySelectorAll('input[name="date-selector"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const value = e.target.value;
+        if (value === 'Weekly') currentDays = 7;
+        else if (value === 'Monthly') currentDays = 30;
+        else if (value === 'Yearly') currentDays = 365;
+
+        loadInsights();
+        loadEmotionChart();
+      });
+    });
+
+    // Initialize everything on page load
+    initChart();
+    loadInsights();
+    loadEmotionChart();
+
+    // Bottom nav links
+    const navButtons = document.querySelectorAll('.fixed.bottom-6 button');
+    const links = ['/app', '/app/memories', null, '/app/insights', '/app'];
+    navButtons.forEach((btn, i) => {
+      if (links[i]) btn.onclick = () => window.location.href = links[i];
+    });
+  </script>
+</body>
+
+</html>

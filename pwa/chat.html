@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Chat - Miru</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#8b5cf6", // Muted Purple
+                        "secondary": "#d8b4fe", // Light Purple/Gold hint
+                        "background-light": "#1e1b2e", // Dark purple tint
+                        "background-dark": "#0f0c18", // Deep charcoal/midnight
+                        "surface-dark": "#181524", // Slightly lighter midnight
+                        "surface-light": "#2a2438", // Deep purple/grey
+                        "accent-teal": "#2dd4bf", // Muted teal for accents
+                        "accent-gold": "#fde047", // Soft gold
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "2xl": "2.5rem",
+                        "full": "9999px"
+                    },
+                    backgroundImage: {
+                        'ethereal-gradient': 'radial-gradient(circle at 50% 0%, rgba(88, 28, 135, 0.15) 0%, rgba(15, 12, 24, 0) 60%)', // Deep purple glow
+                        'aurora-gradient': 'linear-gradient(180deg, rgba(30,27,46,0) 0%, rgba(88, 28, 135, 0.05) 100%)',
+                        'bubble-user': 'linear-gradient(135deg, #4c1d95 0%, #581c87 100%)', // Deep purple
+                        'bubble-user-soft': 'linear-gradient(135deg, rgba(76, 29, 149, 0.6) 0%, rgba(88, 28, 135, 0.4) 100%)', // Frosted purple
+                        'bubble-ai': 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)', // Glassy AI bubble
+                    },
+                    boxShadow: {
+                        'glow-purple': '0 0 20px -5px rgba(139, 92, 246, 0.3)',
+                        'glow-gold': '0 0 15px -5px rgba(253, 224, 71, 0.2)',
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .organic-bubble {
+            border-radius: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .organic-bubble-ai {
+            border-top-left-radius: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .organic-bubble-user {
+            border-top-right-radius: 0.25rem;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1);
+            }
+        }
+
+        .glow-dot {
+            animation: pulse-glow 4s infinite ease-in-out;
+            box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+        }
+
+        footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 100 !important;
+        }
+
+        main {
+            padding-bottom: 100px !important;
+        }
+
+        .frosted-glass {
+            background: rgba(15, 12, 24, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">\n
+</head>
+
+<body
+    class="bg-background-dark font-display text-white overflow-auto h-screen flex flex-col relative selection:bg-primary/30">
+    <div class="absolute inset-0 bg-ethereal-gradient pointer-events-none z-0"></div>
+    <div
+        class="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[100px] pointer-events-none z-0">
+    </div>
+    <div
+        class="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-950/20 rounded-full blur-[80px] pointer-events-none z-0">
+    </div>
+    <header class="relative z-10 flex items-center bg-transparent px-4 py-3 justify-between">
+        <!-- Left: History + Back -->
+        <div class="flex items-center gap-1">
+            <button id="historyBtn"
+                class="text-white/60 hover:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+                title="Lịch sử chat">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </div>
+        <div class="flex flex-col items-center">
+            <h2 class="text-white/90 text-lg font-medium leading-tight tracking-wide drop-shadow-md">Trò chuyện</h2>
+            <div class="flex items-center gap-1.5 opacity-60">
+                <span class="size-1.5 rounded-full bg-accent-teal glow-dot"></span>
+                <span class="text-[10px] font-medium tracking-widest uppercase text-accent-teal/80">Connected</span>
+            </div>
+        </div>
+        <!-- Right: Back to App -->
+        <a href="/app"
+            class="text-white/60 hover:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+            title="Về trang chủ">
+            <span class="material-symbols-outlined">home</span>
+        </a>
+    </header>
+    <!-- Session Sidebar - Toggle Panel -->
+    <div id="sessionSidebar"
+        class="fixed inset-y-0 left-0 w-72 bg-surface-dark/95 backdrop-blur-xl z-50 flex flex-col border-r border-white/5 hidden">
+        <div class="flex items-center justify-between p-4 border-b border-white/5">
+            <h3 class="text-white font-semibold">Lịch sử trò chuyện</h3>
+            <button id="closeSidebar" class="text-white/60 hover:text-white p-2 rounded-lg hover:bg-white/5">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <button id="newChatBtn"
+            class="m-3 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors">
+            <span class="material-symbols-outlined">add</span>
+            Cuộc trò chuyện mới
+        </button>
+        <div id="sessionList" class="flex-1 overflow-y-auto p-2 space-y-2">
+            <div class="text-white/40 text-sm text-center py-4">Đang tải...</div>
+        </div>
+    </div>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden"></div>
+
+    <main class="relative z-10 flex-1 overflow-y-auto px-4 py-6 pb-32 flex flex-col gap-8 scroll-smooth"
+        id="chat-container" style="max-height: calc(100vh - 180px);">
+        <!-- Welcome message -->
+        <div class="flex justify-center mt-10">
+            <div class="text-center">
+
+                <h2 class="text-white/90 text-xl font-medium">Xin chào!</h2>
+                <p class="text-white/50 text-sm mt-2">Hãy chia sẻ suy nghĩ của bạn với Miru</p>
+            </div>
+        </div>
+    </main>
+    <footer class="relative z-20 p-4 pb-8 frosted-glass">
+        <div class="flex items-end gap-3 max-w-4xl mx-auto">
+            <button aria-label="Add attachment"
+                class="hidden text-white/40 hover:text-secondary transition-colors p-2.5 rounded-full hover:bg-white/5 shrink-0">
+                <span class="material-symbols-outlined font-light">add</span>
+            </button>
+            <div
+                class="flex-1 bg-white/5 rounded-full flex items-center border-0 focus-within:border-secondary/30 focus-within:bg-surface-light/50 transition-all group backdrop-blur-sm">
+                <textarea
+                    class="w-full bg-transparent text-white placeholder-white/30 text-[15px] px-5 py-4 focus:outline-none resize-none overflow-hidden font-light leading-normal"
+                    placeholder="Viết ra suy nghĩ của bạn..." rows="1" style="min-height: 54px;"></textarea>
+                <button aria-label="Voice input"
+                    class="hidden text-white/40 group-focus-within:text-white/60 hover:text-white transition-colors p-2 mr-2 rounded-full shrink-0">
+                    <span class="material-symbols-outlined font-light">mic</span>
+                </button>
+            </div>
+            <button aria-label="Send message"
+                class="bg-white/10 hover:bg-secondary/20 hover:text-secondary hover:border-secondary/30 border border-white/10 text-white/80 w-[54px] h-[54px] rounded-full shrink-0 flex items-center justify-center transition-all transform active:scale-95 shadow-lg backdrop-blur-sm group">
+                <span
+                    class="material-symbols-outlined group-hover:translate-x-0.5 transition-transform">arrow_upward</span>
+            </button>
+        </div>
+    </footer>
+    <div class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md">
+    </div>
+
+
+    <script src="/config.js"></script>
+    <script>
+        // ========== INITIALIZATION ==========
+        const userId = localStorage.getItem('user_id');
+        if (!userId) window.location.href = '/app/auth';
+
+        const messages = document.getElementById('chat-container');
+        const apiBase = window.APP_CONFIG?.getApiUrl?.() || '';
+        let ws = null;
+        let currentSessionId = null;
+
+        // ========== WEBSOCKET ==========
+        let reconnectAttempts = 0;
+        let reconnectTimeout = null;
+
+        function connectWS() {
+            if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
+            if (ws && ws.readyState !== WebSocket.CLOSED) { ws.close(); }
+
+            const wsUrl = (window.APP_CONFIG?.getWsUrl?.() || 'ws://localhost:8000') + '/ws/chat/' + userId;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => { console.log('WebSocket connected'); reconnectAttempts = 0; };
+
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                console.log('WebSocket received:', data);
+                if (data.type === 'ai_response') {
+                    addAIMessage(data.message);
+                }
+                if (data.crisis_detected) {
+                    showCrisisAlert(data.crisis_data);
+                }
+            };
+
+            ws.onerror = () => {
+                if (!reconnectTimeout) {
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    reconnectAttempts++;
+                    reconnectTimeout = setTimeout(connectWS, delay);
+                }
+            };
+            ws.onclose = () => {
+                if (!reconnectTimeout) {
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    reconnectAttempts++;
+                    reconnectTimeout = setTimeout(connectWS, delay);
+                }
+            };
+        }
+
+        // ========== SEND MESSAGE ==========
+        async function sendMessage() {
+            const textarea = document.querySelector('textarea');
+            const msg = textarea.value.trim();
+            if (!msg) return;
+
+            addUserMessage(msg);
+            textarea.value = '';
+
+            // Check for contextual UI triggers
+            await checkContextualUI(msg);
+
+            // Send to WebSocket
+            if (ws?.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ message: msg, session_id: currentSessionId }));
+            }
+        }
+
+        // ========== CONTEXTUAL UI ==========
+        async function checkContextualUI(msg) {
+            const m = msg.toLowerCase();
+
+            // Graph trigger
+            if (m.includes('graph') || m.includes('quan hệ') || m.includes('mối') || m.includes('rối')) {
+                try {
+                    const res = await fetch(apiBase + '/api/memories/' + userId + '/graph');
+                    const data = await res.json();
+                    if (data.success && data.graph?.nodes?.length > 0) {
+                        addContextualCard('graph', data.graph);
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            // Emotion trigger  
+            if (m.includes('cảm xúc') || m.includes('tâm trạng') || m.includes('tuần này')) {
+                try {
+                    const res = await fetch(apiBase + '/api/emotions/chart/' + userId);
+                    const data = await res.json();
+                    if (data.emotions?.length > 0) {
+                        addContextualCard('emotion', data);
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        // ========== ADD MESSAGES ==========
+        function addUserMessage(text) {
+            const html = `
+        <div class="flex items-end gap-3 w-full max-w-[85%] self-end justify-end group">
+            <div class="flex flex-col gap-1 items-end">
+                <div class="text-[15px] font-light leading-relaxed p-5 bg-bubble-user-soft text-white organic-bubble organic-bubble-user shadow-glow-purple backdrop-blur-md border border-purple-500/20">
+                    ${text}
+                </div>
+            </div>
+        </div>`;
+            messages.insertAdjacentHTML('beforeend', html);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addAIMessage(text) {
+            if (!text) {
+                console.log('Empty AI message, skipping');
+                return;
+            }
+            console.log('Adding AI message:', text);
+            const html = `
+        <div class="flex items-end gap-3 w-full max-w-[85%] self-start group">
+            <div class="relative w-10 h-10 shrink-0">
+                <div class="absolute inset-0 bg-purple-500/20 rounded-full blur-md"></div>
+                <div class="relative bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full w-10 h-10 flex items-center justify-center text-white">✨</div>
+            </div>
+            <div class="flex flex-col gap-1 items-start">
+                <div class="text-[15px] font-light leading-relaxed p-5 bg-white/5 text-white/90 rounded-2xl backdrop-blur-xl border border-white/10">
+                    ${text.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        </div>`;
+            messages.insertAdjacentHTML('beforeend', html);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addContextualCard(type, data) {
+            let html = '';
+            const id = type + '-' + Date.now();
+
+            if (type === 'emotion') {
+                html = `
+            <div class="flex flex-col gap-3 w-full max-w-sm self-start ml-12">
+                <div class="flex items-center gap-2 mb-1 pl-1">
+                    <span class="material-symbols-outlined text-secondary text-sm animate-pulse">grain</span>
+                    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-80">Phân tích cảm xúc</span>
+                </div>
+                <div class="bg-surface-light/40 border border-white/5 rounded-3xl overflow-hidden shadow-lg backdrop-blur-md relative">
+                    <div class="p-5 pb-2">
+                        <p class="text-white/90 text-[15px] font-medium">Biểu đồ tâm trạng</p>
+                        <p class="text-white/40 text-xs mt-1 font-light">Dựa trên ${data.emotions.length} ký ức gần đây</p>
+                    </div>
+                    <div class="w-full h-36 flex items-end justify-between px-6 pb-6 gap-2">
+                        ${data.emotions.map(e => `<div class="flex-1 bg-gradient-to-t from-purple-500/40 to-purple-500/10 rounded-t-sm" style="height:${e * 10}%"></div>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+            }
+
+            messages.insertAdjacentHTML('beforeend', html);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // ========== CRISIS ALERT ==========
+        function showCrisisAlert(data) {
+            const html = `
+        <div class="flex flex-col gap-2 w-full self-center mx-4">
+            <div class="bg-gradient-to-br from-rose-950/40 to-surface-dark border border-rose-500/20 rounded-3xl p-5 flex gap-4 items-start shadow-lg backdrop-blur-md">
+                <div class="bg-rose-500/10 p-2.5 rounded-2xl shrink-0 text-rose-400 border border-rose-500/10">
+                    <span class="material-symbols-outlined text-[20px]">spa</span>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-white/90 font-medium text-sm mb-1">Chúng tôi quan tâm đến bạn</h3>
+                    <p class="text-white/60 text-[13px] leading-relaxed mb-4">
+                        ${data?.message || 'Nếu bạn cần sự giúp đỡ ngay lập tức, hãy liên hệ với chuyên gia.'}
+                    </p>
+                    <div class="flex gap-3 flex-wrap">
+                        <a href="tel:1800599920" class="bg-rose-500/80 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 px-5 rounded-full uppercase">Gọi đường dây nóng</a>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+            messages.insertAdjacentHTML('beforeend', html);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // ========== EVENT LISTENERS ==========
+        document.querySelector('button[aria-label="Send message"]').onclick = sendMessage;
+        document.querySelector('textarea').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+
+
+        // ========== SESSION MANAGEMENT ==========
+        const sidebar = document.getElementById('sessionSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const sessionList = document.getElementById('sessionList');
+        let conversation_history = [];
+
+        function openSidebar() {
+            sidebar.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+            loadSessions();
+        }
+
+        function closeSidebar() {
+            sidebar.classList.add('hidden');
+            overlay.classList.add('hidden');
+        }
+
+        async function loadSessions() {
+            try {
+                const res = await fetch(apiBase + '/api/chat/sessions/' + userId);
+                const data = await res.json();
+                if (data.success && data.sessions.length > 0) {
+                    sessionList.innerHTML = data.sessions.map(s => `
+                    <div class="session-item p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-colors ${s.id == currentSessionId ? 'bg-primary/20 border border-primary/30' : ''}" data-id="${s.id}">
+                        <div class="text-white text-sm font-medium truncate">${s.title || 'Cuộc trò chuyện'}</div>
+                        <div class="text-white/40 text-xs mt-1">${s.date || ''} ${s.time || ''}</div>
+                    </div>
+                `).join('');
+
+                    sessionList.querySelectorAll('.session-item').forEach(el => {
+                        el.onclick = () => switchSession(el.dataset.id);
+                    });
+                } else {
+                    sessionList.innerHTML = '<div class="text-white/40 text-sm text-center py-4">Chưa có cuộc trò chuyện</div>';
+                }
+            } catch (e) {
+                console.error('Load sessions error:', e);
+            }
+        }
+
+        function switchSession(sessionId) {
+            currentSessionId = sessionId;
+            localStorage.setItem('current_session_id', sessionId);
+            closeSidebar();
+            messages.innerHTML = '';
+            conversation_history = [];
+        }
+
+
+        async function saveCurrentSession() {
+            if (currentSessionId && conversation_history.length >= 2) {
+                try {
+                    await fetch(apiBase + '/api/chat/sessions/' + currentSessionId + '/generate-title', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages: conversation_history.slice(0, 6) })
+                    });
+                    console.log('Session saved with AI title');
+                } catch (e) { console.log('Title generation:', e); }
+            }
+        }
+
+        async function createNewSession() {
+            try {
+                await saveCurrentSession();
+                const res = await fetch(apiBase + '/api/chat/sessions/' + userId, { method: 'POST' });
+                const data = await res.json();
+                if (data.success && data.session) {
+                    currentSessionId = data.session.id;
+                    localStorage.setItem('current_session_id', currentSessionId);
+                    messages.innerHTML = '';
+                    conversation_history = [];
+                    closeSidebar();
+                }
+            } catch (e) {
+                console.error('Create session error:', e);
+            }
+        }
+
+        // Sidebar event listeners
+        document.getElementById('historyBtn').onclick = openSidebar;
+        document.getElementById('closeSidebar').onclick = closeSidebar;
+        document.getElementById('sidebarOverlay').onclick = closeSidebar;
+        document.getElementById('newChatBtn').onclick = createNewSession;
+
+        // Init session - auto-create if none exists
+        currentSessionId = localStorage.getItem('current_session_id');
+        if (!currentSessionId) {
+            fetch(apiBase + '/api/chat/sessions/' + userId, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.session) {
+                        currentSessionId = data.session.id;
+                        localStorage.setItem('current_session_id', currentSessionId);
+                        console.log('Auto-created session:', currentSessionId);
+                    }
+                });
+        }
+        console.log('Using session:', currentSessionId);
+
+
+        // Connect WebSocket on load
+        connectWS();
+    </script>
+</body>
+
+</html>

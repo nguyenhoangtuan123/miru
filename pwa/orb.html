@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Miru - AI hiểu bạn</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#050A1F", // Deep Midnight Blue
+                        "anxiety-purple": "#4a0072",
+                        "void": "#02040a"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                    animation: {
+                        'blob-spin': 'spin-slow 20s linear infinite',
+                        'blob-pulse': 'pulse-fast 2s ease-in-out infinite',
+                        'breathe': 'breathe 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        'spin-slow': {
+                            '0%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' },
+                        },
+                        'pulse-fast': {
+                            '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                            '50%': { opacity: 0.8, transform: 'scale(1.05)' },
+                        },
+                        'breathe': {
+                            '0%, 100%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.1)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Organic fluid blob effect using CSS filters */
+        .gooey-container {
+            filter: url('#gooey-filter');
+        }
+
+        .blob-1 {
+            animation: move-1 4s infinite alternate;
+        }
+
+        .blob-2 {
+            animation: move-2 5s infinite alternate-reverse;
+        }
+
+        .blob-3 {
+            animation: move-3 6s infinite alternate;
+        }
+
+        @keyframes move-1 {
+            from {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            to {
+                transform: translate(20px, -30px) rotate(45deg);
+            }
+        }
+
+        @keyframes move-2 {
+            from {
+                transform: translate(0, 0);
+            }
+
+            to {
+                transform: translate(-25px, 20px);
+            }
+        }
+
+        @keyframes move-3 {
+            from {
+                transform: translate(0, 0);
+            }
+
+            to {
+                transform: translate(15px, 35px);
+            }
+        }
+
+        /* Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .orb-glow {
+            box-shadow: 0 0 80px 20px rgba(127, 13, 242, 0.4);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display selection:bg-primary selection:text-white overflow-hidden relative transition-colors duration-500">
+    <!-- Ambient Background Light -->
+    <div class="absolute inset-0 pointer-events-none z-0">
+        <div
+            class="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/20 rounded-full blur-[120px] mix-blend-screen opacity-40">
+        </div>
+        <div
+            class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#3b0764]/30 rounded-full blur-[100px] mix-blend-screen opacity-30">
+        </div>
+    </div>
+    <!-- Main Content Container -->
+    <div class="relative z-10 flex flex-col h-[100dvh] w-full max-w-md mx-auto justify-between p-6">
+        <!-- Header / Status Area -->
+        <div class="flex flex-col items-center justify-center pt-8 opacity-0 animate-[fadeIn_1s_ease-out_forwards]">
+            <!-- Dynamic AI Status Text -->
+            <h1 class="text-white/90 tracking-tight text-[32px] font-bold leading-tight text-center drop-shadow-md">
+                I'm listening...
+            </h1>
+            <p class="text-primary/60 text-sm font-medium tracking-wide mt-2 uppercase animate-pulse">
+                Analyzing Emotions
+            </p>
+        </div>
+        <!-- Central Interactive Orb Section -->
+        <div class="flex-1 flex items-center justify-center relative my-4">
+            <!-- The Orb Container -->
+            <button aria-label="Hold to speak"
+                class="group relative w-72 h-72 focus:outline-none touch-manipulation cursor-grab active:cursor-grabbing">
+                <!-- Ripples/Haptic Visuals (Behind) -->
+                <div
+                    class="absolute inset-0 rounded-full border border-primary/20 scale-100 opacity-0 group-active:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]">
+                </div>
+                <div
+                    class="absolute inset-0 rounded-full border border-primary/10 scale-110 opacity-0 group-active:animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] delay-100">
+                </div>
+                <!-- Glow Behind -->
+                <div
+                    class="absolute inset-4 bg-primary rounded-full blur-[60px] opacity-40 group-active:opacity-70 transition-opacity duration-500">
+                </div>
+                <!-- The Fluid Blob -->
+                <!-- SVG Filter Definition for Gooey Effect -->
+                <svg class="absolute" height="0" width="0">
+                    <defs>
+                        <filter id="gooey-filter">
+                            <fegaussianblur in="SourceGraphic" result="blur" stddeviation="12"></fegaussianblur>
+                            <fecolormatrix in="blur" mode="matrix" result="goo"
+                                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9"></fecolormatrix>
+                            <fecomposite in="SourceGraphic" in2="goo" operator="atop"></fecomposite>
+                        </filter>
+                    </defs>
+                </svg>
+                <!-- The actual blob elements layered -->
+                <div class="absolute inset-0 gooey-container overflow-hidden rounded-full mask-image-radial">
+                    <div class="w-full h-full relative animate-blob-spin">
+                        <!-- Core Blob Shapes -->
+                        <div
+                            class="absolute top-[10%] left-[20%] w-[60%] h-[60%] bg-gradient-to-br from-[#9d4edd] to-[#3c096c] rounded-full blob-1 mix-blend-overlay opacity-90 blur-md">
+                        </div>
+                        <div
+                            class="absolute top-[30%] right-[10%] w-[55%] h-[55%] bg-gradient-to-bl from-[#7b2cbf] to-[#240046] rounded-full blob-2 mix-blend-color-dodge opacity-80 blur-md">
+                        </div>
+                        <div
+                            class="absolute bottom-[10%] left-[25%] w-[65%] h-[50%] bg-gradient-to-t from-[#5a189a] to-[#10002b] rounded-full blob-3 mix-blend-hard-light opacity-80 blur-lg">
+                        </div>
+                        <!-- Frosted Overlay Texture -->
+                        <div
+                            class="absolute inset-0 bg-white/5 backdrop-blur-[2px] rounded-full shadow-[inset_0_0_20px_rgba(255,255,255,0.1)] border border-white/10 group-active:border-primary/50 transition-colors duration-300">
+                        </div>
+                    </div>
+                </div>
+                <!-- Icon Indicator (Appears on Hover/Active or subtle always) -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span
+                        class="material-symbols-outlined text-white/80 text-[40px] drop-shadow-lg opacity-60 group-active:scale-125 transition-transform duration-300 group-active:text-white">
+                        mic
+                    </span>
+                </div>
+            </button>
+        </div>
+        <!-- Bottom Controls & Hints -->
+        <div class="flex flex-col items-center justify-end pb-8 gap-6 z-20">
+            <!-- Contextual Hint Text -->
+            <div class="text-center space-y-1">
+                <p class="text-white text-base font-medium leading-normal tracking-wide drop-shadow-sm">
+                    Hold the orb to speak
+                </p>
+                <p class="text-[#ab9cba] text-sm font-normal leading-normal">
+                    Release your thoughts into the void
+                </p>
+            </div>
+            <!-- Alternative Input Button (Glassmorphism) -->
+            <button
+                class="glass-panel group flex items-center gap-3 px-6 py-3 rounded-full hover:bg-white/10 active:scale-95 transition-all duration-200 w-full max-w-[280px] justify-center">
+                <span
+                    class="material-symbols-outlined text-[#d8b4fe] group-hover:text-white transition-colors text-[20px]">
+                    keyboard
+                </span>
+                <span
+                    class="text-[#d8b4fe] group-hover:text-white text-sm font-semibold tracking-wide transition-colors">
+                    Or tap to type
+                </span>
+            </button>
+        </div>
+    </div>
+    <!-- Background Grain Overlay for "Ethereal" texture -->
+    <div class="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay z-[5]"
+        data-alt="Subtle noise texture overlay"
+        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCCEJptE61m8AtxYEd1UyTveveDvU75_K24pc7fROM6AdO7FDmDv8m_rsPosKN6EpcskzHDZerKpfU9b37aqS8bqBv44qwrx7M39HXhpgeB346F12qwhqbCoLigAV-kLxPKvKUkwNYOpgHn46FEqDehdupZ_VXgFWr0KAsnWlT16CYQLgp45Pzo61ZxeV4ph6lwKeB6UtUs21J9F3CJidJLm7nKf4PPSM32EbkY6JqJzsN6x5mOOBxo9sLiSl41hpbdBzM-Y1jehB2L");'>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        // Check login
+        const userId = localStorage.getItem('user_id');
+        if (!userId) window.location.href = '/app/auth';
+
+        const orb = document.querySelector('button[aria-label="Hold to speak"]');
+        const typeBtn = document.querySelector('button.glass-panel');
+        const statusText = document.querySelector('h1');
+        const subText = document.querySelector('p.animate-pulse');
+        const micIcon = orb.querySelector('.material-symbols-outlined');
+        const hintText = document.querySelector('.text-center p.text-white');
+        const hintSubText = document.querySelector('.text-center p.text-\\[\\#ab9cba\\]');
+
+        let breathingMode = false;
+        let breathingInterval = null;
+        let breathPhase = 0;
+        const phases = [
+            { text: 'Hít vào...', duration: 4000, scale: 1.15 },
+            { text: 'Giữ...', duration: 4000, scale: 1.15 },
+            { text: 'Thở ra...', duration: 6000, scale: 1 },
+            { text: 'Giữ...', duration: 2000, scale: 1 }
+        ];
+        let cycleCount = 0;
+        const maxCycles = 5;
+
+        // Initial state
+        statusText.textContent = 'Thư giãn cùng Miru';
+        subText.textContent = 'Bài tập thở 4-4-6-2';
+        micIcon.textContent = 'self_improvement';
+        hintText.textContent = 'Chạm để bắt đầu thở';
+        hintSubText.textContent = '5 vòng · Giúp bạn bình tĩnh';
+
+        // Start/stop breathing
+        function toggleBreathing() {
+            if (breathingMode) {
+                stopBreathing();
+            } else {
+                startBreathing();
+            }
+        }
+
+        function startBreathing() {
+            breathingMode = true;
+            breathPhase = 0;
+            cycleCount = 0;
+            orb.style.transition = 'transform 1s ease-in-out';
+            hintText.textContent = 'Chạm để dừng';
+            hintSubText.textContent = `Vòng 1/${maxCycles}`;
+            runBreathPhase();
+        }
+
+        function runBreathPhase() {
+            if (!breathingMode) return;
+
+            const phase = phases[breathPhase];
+            statusText.textContent = phase.text;
+
+            // Animate orb
+            orb.style.transform = `scale(${phase.scale})`;
+
+            // Vibrate on phase change
+            if (navigator.vibrate) navigator.vibrate(30);
+
+            breathingInterval = setTimeout(() => {
+                breathPhase++;
+                if (breathPhase >= phases.length) {
+                    breathPhase = 0;
+                    cycleCount++;
+                    hintSubText.textContent = `Vòng ${cycleCount + 1}/${maxCycles}`;
+
+                    if (cycleCount >= maxCycles) {
+                        completeBreathing();
+                        return;
+                    }
+                }
+                runBreathPhase();
+            }, phase.duration);
+        }
+
+        function stopBreathing() {
+            breathingMode = false;
+            clearTimeout(breathingInterval);
+            orb.style.transform = 'scale(1)';
+            statusText.textContent = 'Thư giãn cùng Miru';
+            subText.textContent = 'Bài tập thở 4-4-6-2';
+            hintText.textContent = 'Chạm để bắt đầu thở';
+            hintSubText.textContent = '5 vòng · Giúp bạn bình tĩnh';
+        }
+
+        function completeBreathing() {
+            breathingMode = false;
+            clearTimeout(breathingInterval);
+            orb.style.transform = 'scale(1)';
+            statusText.textContent = '✨ Hoàn thành!';
+            subText.textContent = 'Bạn đã thở 5 vòng';
+            hintText.textContent = 'Cảm thấy tốt hơn chưa?';
+            hintSubText.textContent = 'Chạm để làm lại';
+            micIcon.textContent = 'check_circle';
+
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            setTimeout(() => {
+                micIcon.textContent = 'self_improvement';
+                hintText.textContent = 'Chạm để bắt đầu thở';
+                hintSubText.textContent = '5 vòng · Giúp bạn bình tĩnh';
+            }, 5000);
+        }
+
+        // Orb click handler
+        orb.addEventListener('click', toggleBreathing);
+
+        // Type button -> go to chat
+        typeBtn.querySelector('span:last-child').textContent = 'Trò chuyện với Miru';
+        typeBtn.querySelector('.material-symbols-outlined').textContent = 'chat';
+        typeBtn.addEventListener('click', () => {
+            window.location.href = '/app/chat';
+        });
+    </script>
+</body>
+
+</html>

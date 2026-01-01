@@ -1,0 +1,20 @@
+# Render Static Site Redirects
+# Format: source destination [status]
+
+# App routes
+/app              /app.html           200
+/app/             /app.html           200
+/app/chat         /chat.html          200
+/app/insights     /insights.html      200
+/app/history      /history.html       200
+/app/settings     /settings.html      200
+
+# Auth routes
+/auth             /auth.html          200
+/login            /auth.html          200
+
+# Landing page
+/                 /landing.html       200
+
+# Fallback for any other routes
+/*                /landing.html       404

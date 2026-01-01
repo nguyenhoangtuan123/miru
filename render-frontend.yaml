@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: reflection-frontend
+    env: static
+    region: singapore
+    plan: free
+    buildCommand: echo "No build needed for static site"
+    staticPublishPath: ./pwa
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /service-worker.js
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /manifest.json
+        name: Content-Type
+        value: application/manifest+json
+    routes:
+      - type: rewrite
+        source: /service-worker.js
+        destination: /service-worker.js
+      - type: rewrite
+        source: /manifest.json
+        destination: /manifest.json
+      - type: rewrite
+        source: /app/*
+        destination: /index.html

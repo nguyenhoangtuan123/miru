@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Patterns - Miru</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#191022",
+                        "surface-dark": "#2a1e36",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                    backgroundImage: {
+                        'ethereal-gradient': 'linear-gradient(135deg, rgba(127, 13, 242, 0.15) 0%, rgba(25, 16, 34, 0) 100%)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for clean look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(127, 13, 242, 0.2);
+            border-radius: 10px;
+        }
+        /* Soft glow animation for the analyze button */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px 0 rgba(127, 13, 242, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 25px 5px rgba(127, 13, 242, 0.5); transform: scale(1.02); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#141118] dark:text-white font-display overflow-x-hidden transition-colors duration-300">
+<div class="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto shadow-2xl overflow-hidden">
+<!-- Decorative ambient background glow -->
+<div class="absolute top-0 left-0 right-0 h-96 bg-primary/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2"></div>
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 flex items-center justify-between p-5 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold tracking-tight">Patterns</h1>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">history</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col p-5 gap-8 pb-24">
+<!-- Hero / Trigger Section -->
+<section class="flex flex-col items-center justify-center py-6 text-center gap-6">
+<div class="relative group">
+<!-- Button Glow -->
+<div class="absolute inset-0 bg-primary rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+<button class="relative flex items-center justify-center size-20 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-all animate-pulse-glow active:scale-95">
+<span class="material-symbols-outlined text-4xl">auto_awesome</span>
+</button>
+</div>
+<div class="space-y-1">
+<h2 class="text-2xl font-bold">Analyze Memories</h2>
+<p class="text-sm text-gray-600 dark:text-gray-400 max-w-[260px] mx-auto leading-relaxed">
+                        Discover hidden threads and emotional rhythms in your recent journal entries.
+                    </p>
+</div>
+</section>
+<!-- Insight Card (Hero Result) -->
+<div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/20 dark:to-surface-dark border border-primary/10 dark:border-white/5 backdrop-blur-sm shadow-sm">
+<div class="p-6 flex flex-col gap-4">
+<div class="flex items-center gap-2 text-primary dark:text-primary-300">
+<span class="material-symbols-outlined text-lg">lightbulb</span>
+<span class="text-xs font-bold uppercase tracking-widest opacity-80">Core Insight</span>
+</div>
+<div>
+<h3 class="text-2xl font-bold leading-tight mb-2">Weekend Anxiety Loop</h3>
+<p class="text-base text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                            You tend to feel anxious primarily on Sunday evenings. This pattern is often linked to upcoming work deadlines mentioned in your "Career" logs.
+                        </p>
+</div>
+</div>
+<!-- Abstract decorative graphic -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/20 rounded-full blur-2xl"></div>
+</div>
+<!-- Emotional Patterns -->
+<section>
+<div class="flex items-center justify-between mb-4 px-1">
+<h3 class="text-lg font-bold">Emotional Patterns</h3>
+<button class="text-primary text-sm font-medium hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Item 1 -->
+<div class="flex flex-col p-4 bg-white dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold">Joy</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">High Frequency</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-black/30 rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex flex-col p-4 bg-white dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold">Anxiety</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">Occasional</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-black/30 rounded-full h-2 overflow-hidden">
+<div class="bg-primary/60 h-2 rounded-full" style="width: 45%"></div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex flex-col p-4 bg-white dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold">Nostalgia</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">Rare</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-black/30 rounded-full h-2 overflow-hidden">
+<div class="bg-primary/30 h-2 rounded-full" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Frequent Topics -->
+<section>
+<h3 class="text-lg font-bold mb-4 px-1">Frequent Topics</h3>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-2 rounded-full bg-primary text-white text-sm font-medium shadow-md shadow-primary/20">#Career</span>
+<span class="px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-sm font-medium">#Relationships</span>
+<span class="px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-sm font-medium">#Sleep</span>
+<span class="px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-sm font-medium">#Creativity</span>
+<span class="px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-sm font-medium">#Finances</span>
+</div>
+</section>
+<!-- Contradictions -->
+<section>
+<h3 class="text-lg font-bold mb-4 px-1">Observed Contradictions</h3>
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+<div class="p-4 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group">
+<div class="flex items-start gap-3">
+<div class="bg-orange-500/10 p-2 rounded-full text-orange-500 mt-1">
+<span class="material-symbols-outlined text-base font-bold">compare_arrows</span>
+</div>
+<div>
+<h4 class="font-bold text-sm mb-1 group-hover:text-primary transition-colors">Social Need vs. Energy Levels</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400">
+                                    You express a deep desire for "more connection" in your Tuesday entry, but consistently describe social events as "draining" on Fridays.
+                                </p>
+</div>
+</div>
+</div>
+<div class="p-4 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group">
+<div class="flex items-start gap-3">
+<div class="bg-orange-500/10 p-2 rounded-full text-orange-500 mt-1">
+<span class="material-symbols-outlined text-base font-bold">compare_arrows</span>
+</div>
+<div>
+<h4 class="font-bold text-sm mb-1 group-hover:text-primary transition-colors">Goal Setting vs. Action</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400">
+                                    High motivation for fitness goals on Monday mornings often conflicts with expressed fatigue and skipped sessions by Wednesday.
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Contextual) -->
+<div class="fixed bottom-0 w-full max-w-md bg-white/90 dark:bg-[#141118]/90 backdrop-blur-lg border-t border-gray-200 dark:border-white/5 flex justify-around items-center p-3 pb-6 z-40">
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined filled">analytics</span>
+<span class="text-[10px] font-medium">Patterns</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="text-[10px] font-medium">Journal</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</div>
+</div>
+
+<script src="/config.js"></script>
+<script>
+    const userId = localStorage.getItem('user_id');
+    if (!userId) window.location.href = '/app/auth';
+    
+    const apiBase = window.APP_CONFIG?.getApiUrl?.() || '';
+    
+    async function analyzePatterns() {
+        const btn = document.querySelector('button.animate-pulse-glow');
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span>';
+        
+        try {
+            const res = await fetch(apiBase + '/api/memories/' + userId + '/patterns');
+            const data = await res.json();
+            
+            // Update insight card
+            if (data.insights?.length) {
+                document.querySelector('h3.text-2xl').textContent = data.insights[0].substring(0, 50) + '...';
+            }
+            
+            // Update emotional patterns
+            if (data.emotional_patterns?.length) {
+                const container = document.querySelector('section:nth-of-type(2) .flex.flex-col.gap-3');
+                container.innerHTML = data.emotional_patterns.slice(0, 3).map(p => `
+                    <div class="flex flex-col p-4 bg-surface-dark rounded-xl border border-white/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold">${p.pattern}</span>
+                            <span class="text-xs text-gray-400">${p.frequency}</span>
+                        </div>
+                        <div class="w-full bg-black/30 rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full" style="width: ${p.frequency === 'thường xuyên' ? '75%' : '45%'}"></div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Update topics
+            if (data.frequent_topics?.length) {
+                const topicsContainer = document.querySelector('.flex.flex-wrap.gap-2');
+                topicsContainer.innerHTML = data.frequent_topics.map(t => `
+                    <span class="px-4 py-2 rounded-full bg-surface-dark border border-white/10 text-gray-200 text-sm font-medium">#${t.topic}</span>
+                `).join('');
+            }
+            
+        } catch(e) { console.error(e); }
+        
+        btn.innerHTML = '<span class="material-symbols-outlined text-4xl">auto_awesome</span>';
+    }
+    
+    document.querySelector('button.animate-pulse-glow').onclick = analyzePatterns;
+    document.querySelector('header button').onclick = () => history.back();
+</script>
+</body></html>

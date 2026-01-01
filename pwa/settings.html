@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Settings - Digital Sanctuary</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#191022",
+                        "card-dark": "#2a2235", // A slightly lighter tone for cards in dark mode
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display antialiased transition-colors duration-300">
+    <div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-10">
+        <!-- Top App Bar -->
+        <div
+            class="sticky top-0 z-20 flex items-center bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md p-4 pb-2 justify-between">
+            <button
+                class="text-slate-800 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+            </button>
+            <h2
+                class="text-slate-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
+                Cài đặt</h2>
+        </div>
+        <!-- Profile Header -->
+        <div class="flex flex-col items-center pt-4 pb-8 px-4 relative z-10">
+            <!-- Glow effect behind profile -->
+            <div
+                class="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/20 blur-[60px] rounded-full pointer-events-none">
+            </div>
+            <div class="relative mb-5 group cursor-pointer">
+                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 shadow-xl ring-4 ring-white dark:ring-white/5"
+                    data-alt="Portrait of a user in a calm setting"
+                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAXgtN-BP8Z8qO63d7PZohnM3IU4U9aoGaojiJGxir62k2Al7r9Sfos2QOPge0oS1oQmNatifM_WejeM35WkVNl5cy_yQd1ly1eKUa_U5bD14izL3BVKEcREKF0gvXfr_ysmLCfCrECPMgdpC9zAOVkv7s_Iz8iP0HvDSIej-uR3i8OXhLxSTWWXq2JE3doVMqBVGYXicF0TL8iq_ZcWBgMRRTH21IlDqFo_c6jJLl_RTWnATjGlgydYr3ic8Igj-diULWDeZYOSsG4");'>
+                </div>
+                <button
+                    class="absolute bottom-1 right-1 bg-primary hover:bg-primary/90 text-white rounded-full p-2 border-[4px] border-background-light dark:border-background-dark flex items-center justify-center transition-colors shadow-lg">
+                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+            </div>
+            <div class="text-center space-y-1 relative z-10">
+                <h1 class="text-slate-900 dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em]">Minh
+                    An</h1>
+                <p class="text-slate-500 dark:text-[#ab9cba] text-base font-medium">Thành viên từ 2023</p>
+            </div>
+        </div>
+        <!-- Name Input Section -->
+        <div class="px-4 mb-8">
+            <div class="flex max-w-[480px] flex-col gap-2 mx-auto">
+                <label class="text-slate-900 dark:text-white text-base font-bold leading-normal pl-1">Tên hiển
+                    thị</label>
+                <div class="relative flex items-center">
+                    <input
+                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border-none bg-white dark:bg-[#302839] h-14 placeholder:text-slate-400 dark:placeholder:text-[#ab9cba] px-4 pl-12 text-base font-normal leading-normal shadow-sm transition-all"
+                        value="Minh An" />
+                    <span
+                        class="material-symbols-outlined absolute left-4 text-slate-400 dark:text-[#ab9cba]">badge</span>
+                </div>
+            </div>
+        </div>
+        <!-- Preferences Headline -->
+        <div class="px-4 pb-2 pt-2">
+            <h3 class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight px-1">Tùy chọn ứng
+                dụng</h3>
+        </div>
+        <!-- Settings List -->
+        <div class="px-4 mb-8 flex flex-col gap-3">
+            <!-- Notifications Item -->
+            <div
+                class="flex items-center justify-between p-4 bg-white dark:bg-[#302839] rounded-xl shadow-sm border border-slate-100 dark:border-white/5 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="size-10 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 flex items-center justify-center">
+                        <span class="material-symbols-outlined">notifications</span>
+                    </div>
+                    <span class="text-slate-900 dark:text-white font-medium text-base">Thông báo</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input checked="" class="sr-only peer" type="checkbox" value="" />
+                    <div
+                        class="w-12 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary">
+                    </div>
+                </label>
+            </div>
+            <!-- Dark Mode Item -->
+            <div
+                class="flex items-center justify-between p-4 bg-white dark:bg-[#302839] rounded-xl shadow-sm border border-slate-100 dark:border-white/5 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="size-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
+                        <span class="material-symbols-outlined">dark_mode</span>
+                    </div>
+                    <span class="text-slate-900 dark:text-white font-medium text-base">Chế độ tối</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input checked="" class="sr-only peer" type="checkbox" value="" />
+                    <div
+                        class="w-12 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary">
+                    </div>
+                </label>
+            </div>
+            <!-- Language Item -->
+            <button
+                class="flex items-center justify-between p-4 bg-white dark:bg-[#302839] rounded-xl shadow-sm border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-[#3b3246] transition-all active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="size-10 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300 flex items-center justify-center">
+                        <span class="material-symbols-outlined">translate</span>
+                    </div>
+                    <span class="text-slate-900 dark:text-white font-medium text-base">Ngôn ngữ</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500 dark:text-[#ab9cba] text-sm font-medium">Tiếng Việt</span>
+                    <span
+                        class="material-symbols-outlined text-slate-400 dark:text-[#ab9cba] text-xl">chevron_right</span>
+                </div>
+            </button>
+        </div>
+        <!-- Therapist Connect Section -->
+        <div class="px-4 mb-8">
+            <h3 class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight px-1 mb-3">Hỗ trợ
+                chuyên môn</h3>
+            <button
+                class="w-full relative overflow-hidden rounded-[2rem] p-1 bg-gradient-to-br from-[#7f0df2] via-[#9d4ef5] to-[#5b08b0] shadow-lg shadow-primary/20 group active:scale-[0.99] transition-transform duration-200">
+                <div
+                    class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10">
+                </div>
+                <!-- Inner content wrapper -->
+                <div
+                    class="relative flex items-center justify-between p-5 h-full rounded-[1.8rem] bg-white/5 backdrop-blur-sm border border-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white text-primary p-3 rounded-full shadow-md">
+                            <span class="material-symbols-outlined text-2xl">psychology_alt</span>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="text-white text-lg font-bold leading-tight">Kết nối với Therapist</span>
+                            <span class="text-white/80 text-sm font-medium mt-0.5">Trò chuyện cùng chuyên gia</span>
+                        </div>
+                    </div>
+                    <div class="bg-white/20 rounded-full p-2 group-hover:bg-white/30 transition-colors">
+                        <span class="material-symbols-outlined text-white">arrow_forward</span>
+                    </div>
+                </div>
+            </button>
+        </div>
+        <!-- Data Management Section -->
+        <div class="px-4 mb-8">
+            <h3 class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight px-1 mb-3">Quản lý
+                dữ liệu</h3>
+            <div class="flex flex-col gap-3">
+                <!-- Delete All Memories Button -->
+                <button id="deleteMemoriesBtn"
+                    class="flex items-center justify-between p-4 bg-white dark:bg-[#302839] rounded-xl shadow-sm border border-slate-100 dark:border-white/5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-[0.99] group">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="size-10 rounded-full bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center">
+                            <span class="material-symbols-outlined">delete_forever</span>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span class="text-slate-900 dark:text-white font-medium text-base">Xóa tất cả ký ức</span>
+                            <span class="text-slate-500 dark:text-[#ab9cba] text-xs">AI sẽ quên tất cả về bạn</span>
+                        </div>
+                    </div>
+                    <span
+                        class="material-symbols-outlined text-slate-400 dark:text-[#ab9cba] text-xl group-hover:text-red-500 transition-colors">chevron_right</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal"
+            class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div class="bg-white dark:bg-[#302839] rounded-2xl p-6 mx-4 max-w-sm w-full shadow-2xl">
+                <div class="flex items-center gap-3 mb-4">
+                    <div
+                        class="size-12 rounded-full bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-2xl">warning</span>
+                    </div>
+                    <h3 class="text-slate-900 dark:text-white text-lg font-bold">Xác nhận xóa</h3>
+                </div>
+                <p class="text-slate-600 dark:text-[#ab9cba] text-sm mb-6">Bạn có chắc muốn xóa tất cả ký ức? Hành động
+                    này không thể hoàn tác. AI sẽ quên hoàn toàn về bạn.</p>
+                <div class="flex gap-3">
+                    <button id="cancelDeleteBtn"
+                        class="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-medium hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                        Hủy
+                    </button>
+                    <button id="confirmDeleteBtn"
+                        class="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                        Xóa tất cả
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer / Logout -->
+        <div class="mt-auto px-4 flex flex-col items-center gap-6">
+            <button
+                class="w-full py-4 rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2 group">
+                <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">logout</span>
+                Đăng xuất
+            </button>
+            <div class="flex flex-col items-center gap-1 opacity-50 mb-4">
+                <p class="text-slate-500 dark:text-[#ab9cba] text-xs font-medium">Phiên bản 2.4.0 (Build 102)</p>
+                <div class="w-10 h-1 bg-slate-300 dark:bg-[#ab9cba] rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        const userId = localStorage.getItem('user_id');
+        if (!userId) window.location.href = '/app/auth';
+
+        const userName = localStorage.getItem('user_name') || 'User';
+        const userEmail = localStorage.getItem('user_email');
+        const userPicture = localStorage.getItem('user_picture');
+        const apiBase = window.APP_CONFIG?.getApiUrl?.() || '';
+
+        // === UPDATE PROFILE UI ===
+        document.querySelector('h1').textContent = userName;
+        document.querySelector('input[value="Minh An"]').value = userName;
+
+        if (userPicture) {
+            const avatarDiv = document.querySelector('[style*="background-image"]');
+            if (avatarDiv) avatarDiv.style.backgroundImage = `url("${userPicture}")`;
+        }
+
+        // === SETTINGS PERSISTENCE ===
+        const notificationToggle = document.querySelectorAll('input[type="checkbox"]')[0];
+        const darkModeToggle = document.querySelectorAll('input[type="checkbox"]')[1];
+        const nameInput = document.querySelector('input[type="text"]');
+
+        // Load saved settings
+        const savedNotifications = localStorage.getItem('setting_notifications') !== 'false';
+        const savedDarkMode = localStorage.getItem('setting_darkmode') !== 'false';
+
+        notificationToggle.checked = savedNotifications;
+        darkModeToggle.checked = savedDarkMode;
+
+        // Apply dark mode
+        if (savedDarkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Toggle handlers
+        notificationToggle.addEventListener('change', (e) => {
+            localStorage.setItem('setting_notifications', e.target.checked);
+            console.log('Notifications:', e.target.checked ? 'ON' : 'OFF');
+        });
+
+        darkModeToggle.addEventListener('change', (e) => {
+            localStorage.setItem('setting_darkmode', e.target.checked);
+            if (e.target.checked) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Save name changes
+        let nameTimeout;
+        nameInput.addEventListener('input', (e) => {
+            clearTimeout(nameTimeout);
+            nameTimeout = setTimeout(() => {
+                localStorage.setItem('user_name', e.target.value);
+                document.querySelector('h1').textContent = e.target.value;
+            }, 500);
+        });
+
+        // === BACK BUTTON ===
+        document.querySelector('button').onclick = () => history.back();
+
+        // === LOGOUT ===
+        const logoutBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('xuất'));
+        if (logoutBtn) {
+            logoutBtn.onclick = () => {
+                localStorage.clear();
+                window.location.href = '/';
+            };
+        }
+
+        // === THERAPIST CONNECT ===
+        const therapistBtn = document.querySelector('[class*="from-[#7f0df2]"]');
+        if (therapistBtn) {
+            therapistBtn.onclick = () => {
+                window.location.href = '/therapist-connect.html';
+            };
+        }
+
+        // === DELETE ALL MEMORIES ===
+        const deleteMemoriesBtn = document.getElementById('deleteMemoriesBtn');
+        const deleteModal = document.getElementById('deleteModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        if (deleteMemoriesBtn && deleteModal) {
+            deleteMemoriesBtn.onclick = () => {
+                deleteModal.classList.remove('hidden');
+                deleteModal.classList.add('flex');
+            };
+
+            cancelDeleteBtn.onclick = () => {
+                deleteModal.classList.add('hidden');
+                deleteModal.classList.remove('flex');
+            };
+
+            confirmDeleteBtn.onclick = async () => {
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Đang xóa...';
+                try {
+                    const response = await fetch(apiBase + '/api/memories/' + userId, { method: 'DELETE' });
+                    const result = await response.json();
+                    if (result.success) {
+                        deleteModal.classList.add('hidden');
+                        alert('✅ Đã xóa tất cả ký ức! AI sẽ bắt đầu học lại về bạn.');
+                    } else {
+                        alert('Lỗi: ' + (result.detail || 'Không thể xóa'));
+                    }
+                } catch (error) {
+                    alert('Lỗi kết nối: ' + error.message);
+                }
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.innerHTML = '<span class="material-symbols-outlined text-lg">delete</span> Xóa tất cả';
+            };
+
+            deleteModal.onclick = (e) => {
+                if (e.target === deleteModal) {
+                    deleteModal.classList.add('hidden');
+                    deleteModal.classList.remove('flex');
+                }
+            };
+        }
+    </script>
+</body>
+
+</html>

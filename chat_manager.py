@@ -1,0 +1,268 @@
+"""
+Chat Manager - Quản lý conversations và chat sessions
+Không sửa database.py, chỉ sử dụng DatabaseManager
+"""
+
+from database import DatabaseManager
+from datetime import datetime, timezone
+import uuid
+
+
+class ChatManager:
+    """Quản lý chat sessions và conversation history"""
+    
+    def __init__(self):
+        self.db_manager = DatabaseManager()
+    
+    def create_new_session(self, user_id: str, title: str = "New Conversation"):
+        """
+        Tạo session mới cho user.
+        Trả về session_id.
+        """
+        try:
+            # Get user from database
+            user = self.db_manager.get_or_create_user(user_id)
+            user_db_id = user['id']
+            
+            # Tạo session mới trong session_summaries
+            # Sử dụng summary_text để lưu metadata
+            session_metadata = {
+                "title": title,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "active",
+                "message_count": 0
+            }
+            
+            import json
+            summary_text = json.dumps(session_metadata)
+            
+            # Use empty embedding placeholder (database updated to 768 dimensions for text-embedding-004)
+            # Session embedding will be updated when session is summarized
+            embedding = [0.0] * 768
+            
+            response = self.db_manager.supabase.table('session_summaries').insert({
+                'user_id': user_db_id,
+                'summary_text': summary_text,
+                'embedding': embedding
+            }).execute()
+            
+            if response.data:
+                session_id = response.data[0]['id']
+                print(f"✅ Created new session {session_id} for user {user_id}")
+                return {
+                    "success": True,
+                    "session_id": session_id,
+                    "title": title
+                }
+            else:
+                return {"success": False, "error": "Failed to create session"}
+                
+        except Exception as e:
+            print(f"❌ Error creating session: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def end_session(self, session_id: int, final_summary: str = None):
+        """
+        Kết thúc session (đánh dấu là ended).
+        Cập nhật summary nếu có.
+        """
+        try:
+            # Lấy session hiện tại
+            response = self.db_manager.supabase.table('session_summaries')\
+                .select('summary_text')\
+                .eq('id', session_id)\
+                .execute()
+            
+            if not response.data:
+                return {"success": False, "error": "Session not found"}
+            
+            import json
+            metadata = json.loads(response.data[0]['summary_text'])
+            metadata['status'] = 'ended'
+            metadata['ended_at'] = datetime.now(timezone.utc).isoformat()
+            
+            if final_summary:
+                metadata['final_summary'] = final_summary
+            
+            # Update session
+            update_response = self.db_manager.supabase.table('session_summaries')\
+                .update({'summary_text': json.dumps(metadata)})\
+                .eq('id', session_id)\
+                .execute()
+            
+            print(f"✅ Ended session {session_id}")
+            return {"success": True, "session_id": session_id}
+            
+        except Exception as e:
+            print(f"❌ Error ending session: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def get_user_sessions(self, user_id: str, limit: int = 20):
+        """
+        Lấy danh sách conversations của user.
+        Trả về list sessions với title, created_at, status.
+        """
+        try:
+            user = self.db_manager.get_or_create_user(user_id)
+            user_db_id = user['id']
+            
+            # Lấy sessions
+            response = self.db_manager.supabase.table('session_summaries')\
+                .select('id, summary_text, created_at')\
+                .eq('user_id', user_db_id)\
+                .order('created_at', desc=True)\
+                .limit(limit)\
+                .execute()
+            
+            if not response.data:
+                return {"success": True, "sessions": []}
+            
+            import json
+            sessions = []
+            for item in response.data:
+                try:
+                    metadata = json.loads(item['summary_text'])
+                    sessions.append({
+                        "id": item['id'],
+                        "title": metadata.get('title', 'Untitled'),
+                        "created_at": item['created_at'],
+                        "status": metadata.get('status', 'active'),
+                        "message_count": metadata.get('message_count', 0)
+                    })
+                except:
+                    # Nếu không parse được, bỏ qua
+                    continue
+            
+            return {"success": True, "sessions": sessions}
+            
+        except Exception as e:
+            print(f"❌ Error getting sessions: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def update_session_title(self, session_id: int, new_title: str):
+        """Cập nhật title của session"""
+        try:
+            # Lấy session
+            response = self.db_manager.supabase.table('session_summaries')\
+                .select('summary_text')\
+                .eq('id', session_id)\
+                .execute()
+            
+            if not response.data:
+                return {"success": False, "error": "Session not found"}
+            
+            import json
+            metadata = json.loads(response.data[0]['summary_text'])
+            metadata['title'] = new_title
+            
+            # Update
+            self.db_manager.supabase.table('session_summaries')\
+                .update({'summary_text': json.dumps(metadata)})\
+                .eq('id', session_id)\
+                .execute()
+            
+            return {"success": True, "title": new_title}
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def increment_message_count(self, session_id: int):
+        """Tăng message count của session"""
+        try:
+            response = self.db_manager.supabase.table('session_summaries')\
+                .select('summary_text')\
+                .eq('id', session_id)\
+                .execute()
+            
+            if response.data:
+                import json
+                metadata = json.loads(response.data[0]['summary_text'])
+                metadata['message_count'] = metadata.get('message_count', 0) + 1
+                
+                self.db_manager.supabase.table('session_summaries')\
+                    .update({'summary_text': json.dumps(metadata)})\
+                    .eq('id', session_id)\
+                    .execute()
+                
+        except Exception as e:
+            print(f"Warning: Could not increment message count: {str(e)}")
+    
+    def delete_session(self, session_id: int, user_id: str):
+        """Xóa session (soft delete - đánh dấu deleted)"""
+        try:
+            # Verify ownership
+            user = self.db_manager.get_or_create_user(user_id)
+            user_db_id = user['id']
+            
+            response = self.db_manager.supabase.table('session_summaries')\
+                .select('user_id, summary_text')\
+                .eq('id', session_id)\
+                .execute()
+            
+            if not response.data:
+                return {"success": False, "error": "Session not found"}
+            
+            if response.data[0]['user_id'] != user_db_id:
+                return {"success": False, "error": "Unauthorized"}
+            
+            # Soft delete
+            import json
+            metadata = json.loads(response.data[0]['summary_text'])
+            metadata['status'] = 'deleted'
+            metadata['deleted_at'] = datetime.now(timezone.utc).isoformat()
+            
+            self.db_manager.supabase.table('session_summaries')\
+                .update({'summary_text': json.dumps(metadata)})\
+                .eq('id', session_id)\
+                .execute()
+            
+            return {"success": True}
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def save_message(self, session_id: int, user_id: str, role: str, content: str):
+        """Lưu message vào database"""
+        try:
+            response = self.db_manager.supabase.table('chat_messages').insert({
+                'session_id': session_id,
+                'user_id': user_id,
+                'role': role,
+                'content': content
+            }).execute()
+            
+            if response.data:
+                # Increment message count
+                self.increment_message_count(session_id)
+                return {"success": True, "message_id": response.data[0]['id']}
+            else:
+                return {"success": False, "error": "Failed to save message"}
+                
+        except Exception as e:
+            print(f"❌ Error saving message: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    def get_session_messages(self, session_id: int, limit: int = 100):
+        """Lấy messages của một session"""
+        try:
+            response = self.db_manager.supabase.table('chat_messages')\
+                .select('id, role, content, created_at')\
+                .eq('session_id', session_id)\
+                .order('created_at', desc=False)\
+                .limit(limit)\
+                .execute()
+            
+            if response.data:
+                messages = [{
+                    "id": msg['id'],
+                    "role": msg['role'],
+                    "content": msg['content'],
+                    "created_at": msg['created_at']
+                } for msg in response.data]
+                return {"success": True, "messages": messages}
+            else:
+                return {"success": True, "messages": []}
+                
+        except Exception as e:
+            print(f"❌ Error getting messages: {str(e)}")
+            return {"success": False, "error": str(e)}

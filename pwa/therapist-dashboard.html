@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Therapist Dashboard - Miru</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e4e4e4;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .crisis-alert {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .crisis-item {
+            background: rgba(239, 68, 68, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #ef4444;
+        }
+
+        .crisis-item .level {
+            font-weight: bold;
+            color: #ef4444;
+        }
+
+        .client-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .client-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .client-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .client-item .name {
+            font-weight: 500;
+        }
+
+        .client-item .stats {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .assignment-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .assignment-item .title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .assignment-item .meta {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+        }
+
+        .modal-content input,
+        .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .modal-content textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🧠 Miru Therapist Dashboard</h1>
+        <div>
+            <span id="therapist-name">Dr. Example</span>
+            <button class="btn btn-primary" onclick="logout()">Đăng xuất</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Crisis Alerts -->
+        <div class="card crisis-alert" id="crisis-section" style="margin-bottom: 20px;">
+            <h2>🚨 Cảnh báo khủng hoảng</h2>
+            <div id="crisis-list">
+                <div class="empty-state">Không có cảnh báo mới</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Clients -->
+            <div class="card">
+                <h2>👥 Thân chủ của tôi</h2>
+                <button class="btn btn-primary" onclick="openPairModal()" style="margin-bottom: 16px;">
+                    + Thêm thân chủ
+                </button>
+                <div class="client-list" id="client-list">
+                    <div class="empty-state">Chưa có thân chủ nào</div>
+                </div>
+            </div>
+
+            <!-- Assignments -->
+            <div class="card">
+                <h2>📝 Bài tập đã giao</h2>
+                <button class="btn btn-primary" onclick="openAssignModal()" style="margin-bottom: 16px;">
+                    + Giao bài tập mới
+                </button>
+                <div id="assignment-list">
+                    <div class="empty-state">Chưa có bài tập nào</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Thêm thân chủ -->
+    <div class="modal" id="pair-modal">
+        <div class="modal-content">
+            <h3>Thêm thân chủ mới</h3>
+            <input type="text" id="client-id-input" placeholder="User ID của thân chủ">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="pairClient()">Thêm</button>
+                <button class="btn" onclick="closePairModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Giao bài tập -->
+    <div class="modal" id="assign-modal">
+        <div class="modal-content">
+            <h3>Giao bài tập mới</h3>
+            <select id="assign-client"
+                style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                <option value="">-- Chọn thân chủ --</option>
+            </select>
+            <input type="text" id="assign-title" placeholder="Tiêu đề bài tập">
+            <textarea id="assign-desc" placeholder="Mô tả chi tiết..."></textarea>
+            <input type="date" id="assign-due" placeholder="Hạn nộp (tùy chọn)">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="createAssignment()">Giao bài</button>
+                <button class="btn" onclick="closeAssignModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        // TODO: Replace with actual therapist ID from auth
+        const THERAPIST_ID = localStorage.getItem('therapist_id') || 'demo-therapist';
+        const API_BASE = window.APP_CONFIG?.getApiUrl?.() || '';
+
+        // === DATA LOADING ===
+        async function loadClients() {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${THERAPIST_ID}`);
+                const data = await res.json();
+                renderClients(data.clients || []);
+            } catch (e) {
+                console.error('Error loading clients:', e);
+            }
+        }
+
+        async function loadAssignments() {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${THERAPIST_ID}`);
+                const data = await res.json();
+                renderAssignments(data.assignments || []);
+            } catch (e) {
+                console.error('Error loading assignments:', e);
+            }
+        }
+
+        async function loadCrises() {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/crises/${THERAPIST_ID}`);
+                const data = await res.json();
+                renderCrises(data.crises || []);
+            } catch (e) {
+                console.error('Error loading crises:', e);
+            }
+        }
+
+        // === RENDERING ===
+        function renderClients(clients) {
+            const el = document.getElementById('client-list');
+            if (!clients.length) {
+                el.innerHTML = '<div class="empty-state">Chưa có thân chủ nào</div>';
+                return;
+            }
+            el.innerHTML = clients.map(c => `
+                <div class="client-item" onclick="viewClient('${c.client_id}')">
+                    <div>
+                        <div class="name">${c.users?.name || 'Unknown'}</div>
+                        <div class="stats">${c.users?.email || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Update select dropdown
+            const select = document.getElementById('assign-client');
+            select.innerHTML = '<option value="">-- Chọn thân chủ --</option>' +
+                clients.map(c => `<option value="${c.client_id}">${c.users?.name || c.client_id}</option>`).join('');
+        }
+
+        function renderAssignments(assignments) {
+            const el = document.getElementById('assignment-list');
+            if (!assignments.length) {
+                el.innerHTML = '<div class="empty-state">Chưa có bài tập nào</div>';
+                return;
+            }
+            el.innerHTML = assignments.map(a => `
+                <div class="assignment-item">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div class="title">${a.title}</div>
+                        <span class="status-badge status-${a.status}">${a.status}</span>
+                    </div>
+                    <div class="meta">
+                        ${a.users?.name || a.client_id} · 
+                        ${a.due_date ? 'Hạn: ' + a.due_date : 'Không có hạn'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderCrises(crises) {
+            const el = document.getElementById('crisis-list');
+            const section = document.getElementById('crisis-section');
+            if (!crises.length) {
+                el.innerHTML = '<div class="empty-state">Không có cảnh báo mới</div>';
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            el.innerHTML = crises.map(c => `
+                <div class="crisis-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span class="level">${c.crisis_level}</span> - ${c.users?.name || c.client_id}
+                            <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">
+                                "${c.message_snippet}"
+                            </div>
+                        </div>
+                        <button class="btn btn-danger" onclick="acknowledgeCrisis(${c.id})">
+                            Đã xem
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === ACTIONS ===
+        async function pairClient() {
+            const clientId = document.getElementById('client-id-input').value;
+            if (!clientId) return alert('Vui lòng nhập Client ID');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${THERAPIST_ID}/pair`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: clientId })
+                });
+                if (res.ok) {
+                    closePairModal();
+                    loadClients();
+                } else {
+                    alert('Không thể thêm thân chủ');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi kết nối');
+            }
+        }
+
+        async function createAssignment() {
+            const clientId = document.getElementById('assign-client').value;
+            const title = document.getElementById('assign-title').value;
+            const desc = document.getElementById('assign-desc').value;
+            const due = document.getElementById('assign-due').value;
+
+            if (!clientId || !title) return alert('Vui lòng chọn thân chủ và nhập tiêu đề');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${THERAPIST_ID}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: clientId, title, description: desc, due_date: due || null })
+                });
+                if (res.ok) {
+                    closeAssignModal();
+                    loadAssignments();
+                } else {
+                    alert('Không thể giao bài tập');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi kết nối');
+            }
+        }
+
+        async function acknowledgeCrisis(crisisId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/crises/${crisisId}/acknowledge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (res.ok) {
+                    loadCrises();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function viewClient(clientId) {
+            // TODO: Navigate to client detail view
+            alert(`View client: ${clientId}`);
+        }
+
+        // === MODALS ===
+        function openPairModal() { document.getElementById('pair-modal').classList.add('open'); }
+        function closePairModal() { document.getElementById('pair-modal').classList.remove('open'); }
+        function openAssignModal() { document.getElementById('assign-modal').classList.add('open'); }
+        function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
+
+        function logout() {
+            localStorage.removeItem('therapist_id');
+            window.location.href = '/';
+        }
+
+        // === INIT ===
+        loadClients();
+        loadAssignments();
+        loadCrises();
+    </script>
+</body>
+
+</html>
