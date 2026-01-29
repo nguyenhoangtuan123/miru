@@ -30,11 +30,11 @@ const CONFIG = {
 
             case 'vercel':
                 // When frontend is on Vercel, backend is on Railway
-                return 'https://miru-production.up.railway.app';
+                return 'https://web-production-56fc05.up.railway.app';
 
             case 'railway':
                 // When frontend is also on Railway
-                return 'https://miru-production.up.railway.app';
+                return 'https://web-production-56fc05.up.railway.app';
 
             default:
                 return 'http://localhost:8008';
