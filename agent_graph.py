@@ -221,13 +221,18 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
 async def parallel_init_node(state: AgentState) -> AgentState:
     """Chạy song song crisis_check và memory_retrieval để tối ưu tốc độ."""
     import time
+    from concurrent.futures import ThreadPoolExecutor
     start_time = time.time()
     
-    # Chạy cả 2 task đồng thời
-    crisis_task = asyncio.to_thread(crisis_check_node, state.copy())
-    memory_task = asyncio.to_thread(memory_retrieval_node, state.copy())
-    
-    crisis_result, memory_result = await asyncio.gather(crisis_task, memory_task)
+    # Sử dụng ThreadPoolExecutor để chạy đồng thời
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        # Submit cả 2 tasks
+        crisis_future = executor.submit(crisis_check_node, state)
+        memory_future = executor.submit(memory_retrieval_node, state)
+        
+        # Đợi cả 2 hoàn thành
+        crisis_result = crisis_future.result()
+        memory_result = memory_future.result()
     
     # Merge kết quả
     state["crisis_level"] = crisis_result["crisis_level"]
@@ -236,7 +241,7 @@ async def parallel_init_node(state: AgentState) -> AgentState:
     state["session_facts"] = memory_result["session_facts"]
     
     # Merge actions_taken từ cả 2
-    state["actions_taken"] = crisis_result["actions_taken"] + memory_result["actions_taken"]
+    state["actions_taken"] = crisis_result.get("actions_taken", []) + memory_result.get("actions_taken", [])
     
     elapsed = time.time() - start_time
     print(f"⚡ [Parallel Init] Completed in {elapsed:.2f}s (crisis + memory ran concurrently)")
