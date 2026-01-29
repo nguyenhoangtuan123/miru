@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 memory_app/
+memories/
 
 # Secrets - DO NOT COMMIT
 .env
