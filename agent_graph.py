@@ -5,6 +5,7 @@ LangGraph Multi-Agent System for Miru
 """
 
 import os
+import asyncio
 from typing import TypedDict, Annotated, Sequence, Literal, Any
 from dotenv import load_dotenv
 
@@ -217,6 +218,32 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
     return state
 
 
+async def parallel_init_node(state: AgentState) -> AgentState:
+    """Chạy song song crisis_check và memory_retrieval để tối ưu tốc độ."""
+    import time
+    start_time = time.time()
+    
+    # Chạy cả 2 task đồng thời
+    crisis_task = asyncio.to_thread(crisis_check_node, state.copy())
+    memory_task = asyncio.to_thread(memory_retrieval_node, state.copy())
+    
+    crisis_result, memory_result = await asyncio.gather(crisis_task, memory_task)
+    
+    # Merge kết quả
+    state["crisis_level"] = crisis_result["crisis_level"]
+    state["crisis_detected"] = crisis_result["crisis_detected"]
+    state["memories"] = memory_result["memories"]
+    state["session_facts"] = memory_result["session_facts"]
+    
+    # Merge actions_taken từ cả 2
+    state["actions_taken"] = crisis_result["actions_taken"] + memory_result["actions_taken"]
+    
+    elapsed = time.time() - start_time
+    print(f"⚡ [Parallel Init] Completed in {elapsed:.2f}s (crisis + memory ran concurrently)")
+    
+    return state
+
+
 async def empathy_response_node(state: AgentState) -> AgentState:
     """Tạo phản hồi đồng cảm dựa trên context sử dụng Gemini."""
     ai = get_ai_service()
@@ -400,16 +427,14 @@ def create_agent_graph():
     
     workflow = StateGraph(AgentState)
     
-    # Add nodes
-    workflow.add_node("crisis_check", crisis_check_node)
-    workflow.add_node("memory_retrieval", memory_retrieval_node)
+    # Add nodes - sử dụng parallel_init thay vì crisis_check + memory_retrieval riêng lẻ
+    workflow.add_node("parallel_init", parallel_init_node)  # Chạy crisis + memory song song
     workflow.add_node("empathy_response", empathy_response_node)
     workflow.add_node("action", action_node)
     
-    # Define edges (flow)
-    workflow.set_entry_point("crisis_check")
-    workflow.add_edge("crisis_check", "memory_retrieval")
-    workflow.add_edge("memory_retrieval", "empathy_response")
+    # Define edges (flow) - Giờ chỉ có 2 bước chính
+    workflow.set_entry_point("parallel_init")
+    workflow.add_edge("parallel_init", "empathy_response")
     
     # Conditional: take action if crisis detected
     workflow.add_conditional_edges(
