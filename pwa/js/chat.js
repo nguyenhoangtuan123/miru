@@ -4,6 +4,19 @@ class ReflectionChat {
     constructor(userId) {
         this.ws = null;
         this.userId = userId || this.getUserId();
+        
+        // Check authentication
+        const getAuthToken = () => {
+            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
+            return match ? match[2] : null;
+        };
+        
+        if (!this.userId || !getAuthToken()) {
+            console.log('[Auth] Not authenticated, redirecting...');
+            window.location.href = '/app/auth';
+            return;
+        }
+        
         this.chatContainer = document.getElementById('chatContainer');
         this.chatInput = document.getElementById('chatInput');
         this.sendButton = document.getElementById('sendButton');

@@ -465,6 +465,18 @@
             return match ? match[2] : null;
         }
 
+        // Helper: Check if authenticated
+        function isAuthenticated() {
+            return !!getAuthToken();
+        }
+
+        // Initialization - Check auth first
+        if (!USER_ID || !isAuthenticated()) {
+            console.log('[Auth] Not authenticated, redirecting to login...');
+            window.location.href = '/app/auth';
+            throw new Error('Not authenticated');
+        }
+
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
         let PROACTIVE_TIMEOUT = 1 * 60 * 1000; // 1 phút không hoạt động
