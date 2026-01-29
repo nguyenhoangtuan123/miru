@@ -55,12 +55,21 @@ class GoogleLLMIntegration:
         
         # Cấu hình GenerateContentConfig
         if is_thinking:
-            # Dùng mẫu config Thinking theo code mẫu Google
-            self.config = types.GenerateContentConfig(
-                temperature=TEMPERATURE,
-                max_output_tokens=MAX_TOKENS,
-                thinking_config=types.ThinkingConfig(thinking_level=MODE_THINKING)
-            )
+            # Thử dùng thinking_level (SDK mới), fallback về include_thoughts (SDK cũ)
+            try:
+                self.config = types.GenerateContentConfig(
+                    temperature=TEMPERATURE,
+                    max_output_tokens=MAX_TOKENS,
+                    thinking_config=types.ThinkingConfig(thinking_level=MODE_THINKING)
+                )
+                logger.info(f"[AI Service] Using thinking_level='{MODE_THINKING}'")
+            except Exception as e:
+                logger.warning(f"[AI Service] thinking_level not supported, fallback to include_thoughts: {e}")
+                self.config = types.GenerateContentConfig(
+                    temperature=TEMPERATURE,
+                    max_output_tokens=MAX_TOKENS,
+                    thinking_config=types.ThinkingConfig(include_thoughts=True)
+                )
         else:
             # Dùng config mặc định (thường cho Summarizer)
             self.config = types.GenerateContentConfig(
