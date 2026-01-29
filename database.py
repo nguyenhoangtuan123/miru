@@ -40,14 +40,16 @@ class DatabaseManager:
         print(f"DEBUG: Connecting to Supabase URL: '{url}'")
         
         # Diagnostic: Check DNS resolution
-        import socket
-        try:
-            hostname = url.replace("https://", "").replace("http://", "").split("/")[0]
-            print(f"DEBUG: Attempting to resolve hostname: '{hostname}'")
-            ip = socket.gethostbyname(hostname)
-            print(f"DEBUG: Successfully resolved {hostname} to {ip}")
-        except Exception as e:
-            print(f"[ERROR] DEBUG: Failed to resolve hostname {hostname}: {e}")
+        
+        # Diagnostic: Check DNS resolution - DISABLED for production to avoid blocking
+        # import socket
+        # try:
+        #     hostname = url.replace("https://", "").replace("http://", "").split("/")[0]
+        #     print(f"DEBUG: Attempting to resolve hostname: '{hostname}'")
+        #     ip = socket.gethostbyname(hostname)
+        #     print(f"DEBUG: Successfully resolved {hostname} to {ip}")
+        # except Exception as e:
+        #     print(f"[ERROR] DEBUG: Failed to resolve hostname {hostname}: {e}")
         
         if not url or not key:
             raise ValueError("SUPABASE_URL và SUPABASE_KEY phải được thiết lập trong file .env")
