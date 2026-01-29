@@ -899,7 +899,7 @@
 
         async function checkProactiveMessage() {
             const timeSinceActivity = Date.now() - PROACTIVE_LAST_ACTIVITY;
-            console.log('[Proactive] Checking... Time since activity:', Math.floor(timeSinceActivity / 1000) + 's / timeout:', (PROACTIVE_TIMEOUT / 1000) + 's');
+            // Log đã tắt để tránh spam console
 
             // Chỉ kiểm tra nếu đã đủ thời gian không hoạt động
             if (timeSinceActivity < PROACTIVE_TIMEOUT) return;
