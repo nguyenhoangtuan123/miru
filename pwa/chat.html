@@ -479,8 +479,7 @@
 
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
-        let PROACTIVE_TIMEOUT = 1 * 60 * 1000; // 1 phút không hoạt động
-        let PROACTIVE_LAST_ACTIVITY = Date.now();
+        let PROACTIVE_TIMEOUT = 5 * 60 * 1000; // 5 phút không hoạt động
         let PROACTIVE_DISMISSED_TYPES = [];
 
         // Initialization
@@ -501,10 +500,13 @@
             if (WS) WS.close();
 
             const token = getAuthToken();
+            console.log('[WS] Token exists:', !!token);
+            console.log('[WS] Cookie:', document.cookie);
+            
             const wsUrl = token 
                 ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}?token=${token}`
                 : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
-
+            
             console.log('[WS] Connecting to:', wsUrl);
             WS = new WebSocket(wsUrl);
 
@@ -910,8 +912,8 @@
         // ==================== Proactive Message Functions ====================
 
         function initProactiveTimer() {
-            // Check mỗi 15 giây
-            PROACTIVE_TIMER = setInterval(checkProactiveMessage, 15000);
+            // Check mỗi 60 giây
+            PROACTIVE_TIMER = setInterval(checkProactiveMessage, 60000);
         }
 
         function resetProactiveTimer() {
