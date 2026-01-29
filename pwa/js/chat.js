@@ -55,7 +55,9 @@ class ReflectionChat {
             console.log(`🔄 Fetching history for session ${this.sessionId}...`);
             console.log(`[DEBUG] Request URL: ${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?user_id=${this.userId}&limit=${this.msgLimit}`);
 
-            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?user_id=${this.userId}&limit=${this.msgLimit}`);
+            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?user_id=${this.userId}&limit=${this.msgLimit}`, {
+                credentials: 'include'
+            });
             console.log(`[DEBUG] Response status: ${response.status}`);
 
             const data = await response.json();

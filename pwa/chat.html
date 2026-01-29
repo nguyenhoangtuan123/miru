@@ -600,7 +600,9 @@
 
         async function loadSessionList() {
             try {
-                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`);
+                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`, {
+                    credentials: 'include'
+                });
                 const data = await res.json();
                 const list = document.getElementById('sessionList');
 
@@ -939,6 +941,7 @@
                 console.log('[Proactive] Calling /api/proactive/check...');
                 const res = await fetch(`${API_URL}/api/proactive/check`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: USER_ID,
