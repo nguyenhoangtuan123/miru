@@ -1,45 +1,127 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html class="dark" lang="vi">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reflection AI - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Miru - Dashboard</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#86B3F4">
+    <link rel="icon" type="image/png" href="/pwa/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/pwa/images/icon-192.png">
+    <meta name="theme-color" content="#050A1F">
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#7f0df2",
+                        "primary-light": "#a855f7",
+                        "primary-dark": "#581c87",
+                        background: "#050A1F",
+                        surface: "rgba(255, 255, 255, 0.05)",
+                        "surface-highlight": "rgba(255, 255, 255, 0.1)",
+                    },
+                    fontFamily: {
+                        display: ["Manrope", "sans-serif"],
+                        sans: ["Manrope", "sans-serif"],
+                    },
+                    animation: {
+                        "fade-in": "fadeIn 0.5s ease-out",
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            "0%": { opacity: "0", transform: "translateY(10px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" },
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+
     <style>
         body {
-            font-family: 'Outfit', sans-serif;
-            background-color: #F5F8FF;
-            color: #1E293B;
+            background-color: #050A1F;
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(127, 13, 242, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            color: white;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(5, 10, 31, 0.7);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 6px -1px rgba(134, 179, 244, 0.1), 0 2px 4px -1px rgba(134, 179, 244, 0.06);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        .sidebar-link.active {
-            background: rgba(134, 179, 244, 0.15);
-            border-left: 3px solid #4B8CF2;
-            color: #1E293B;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
         }
 
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(168, 85, 247, 0.5);
+            outline: none;
+        }
+
+        /* Sidebar & Nav */
         .sidebar-link {
-            color: #64748B;
+            transition: all 0.2s;
+            color: rgba(255, 255, 255, 0.6);
         }
 
-        .sidebar-link:hover {
-            background: rgba(134, 179, 244, 0.1);
-            color: #4B8CF2;
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(127, 13, 242, 0.15);
+            color: #a855f7;
         }
 
-        /* Custom Scrollbar */
+        .bottom-nav-item {
+            color: rgba(255, 255, 255, 0.5);
+            transition: all 0.2s;
+        }
+
+        .bottom-nav-item.active {
+            color: #a855f7;
+        }
+
+        .bottom-nav-item.active .icon-container {
+            background: rgba(127, 13, 242, 0.2);
+        }
+
+        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -49,556 +131,389 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(134, 179, 244, 0.3);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(134, 179, 244, 0.5);
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .mood-btn.selected {
-            opacity: 1;
+        .mood-btn.selected div {
             transform: scale(1.1);
+            background-color: rgba(127, 13, 242, 0.2);
+            border-color: #a855f7;
         }
     </style>
-    <!-- Environment Config -->
-    <script src="/config.js"></script>
+    <script src="/config.js?v=2"></script>
 </head>
 
-<body class="h-screen flex overflow-hidden bg-[#F5F8FF]">
+<body class="flex h-screen overflow-hidden">
 
-    <!-- Sidebar -->
-    <aside id="sidebar"
-        class="w-64 bg-white border-r border-blue-100 flex-shrink-0 hidden md:flex flex-col fixed md:relative z-30 h-full transition-transform transform -translate-x-full md:translate-x-0 shadow-sm">
-        <div class="h-20 flex items-center px-6 border-b border-blue-50 justify-between">
-            <div class="flex items-center">
-                <div
-                    class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#86B3F4] to-[#D1C4E9] flex items-center justify-center mr-3 shadow-md shadow-blue-100">
-                    <span class="font-bold text-white">R</span>
-                </div>
-                <span class="font-bold text-lg text-slate-800">Reflection AI</span>
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="hidden md:flex w-72 flex-col glass border-r border-white/5 z-20">
+        <div class="h-20 flex items-center px-6 border-b border-white/5">
+            <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center mr-3 shadow-lg shadow-primary/20">
+                <span class="font-bold text-white text-lg">M</span>
             </div>
-            <button id="closeSidebar" class="md:hidden text-slate-400 hover:text-slate-600">
-                <i class="fas fa-times"></i>
-            </button>
+            <span class="font-bold text-xl tracking-tight">Miru</span>
         </div>
 
-        <nav class="flex-1 px-3 py-6 space-y-1">
-            <a href="/app"
-                class="sidebar-link active flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all">
-                <i class="fas fa-book-open w-6 text-center mr-3 text-[#4B8CF2]"></i>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="/app" class="sidebar-link active flex items-center px-4 py-3.5 text-sm font-medium rounded-xl">
+                <span class="material-symbols-outlined mr-3 text-[22px]">book_2</span>
                 Nhật ký
             </a>
-            <a href="/app/chat"
-                class="sidebar-link flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all">
-                <i class="fas fa-comments w-6 text-center mr-3 text-[#8B5CF6]"></i>
+            <a href="/app/chat" class="sidebar-link flex items-center px-4 py-3.5 text-sm font-medium rounded-xl">
+                <span class="material-symbols-outlined mr-3 text-[22px]">chat_bubble</span>
                 Trò chuyện AI
             </a>
-            <a href="/app/insights"
-                class="sidebar-link flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all">
-                <i class="fas fa-chart-pie w-6 text-center mr-3 text-emerald-500"></i>
-                Thấu hiểu
+            <a href="/app/emotion-dashboard"
+                class="sidebar-link flex items-center px-4 py-3.5 text-sm font-medium rounded-xl">
+                <span class="material-symbols-outlined mr-3 text-[22px]">ssid_chart</span>
+                Cảm xúc
             </a>
-            <a href="/app/memories"
-                class="sidebar-link flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all">
-                <i class="fas fa-brain w-6 text-center mr-3 text-pink-400"></i>
+            <a href="/app/memories" class="sidebar-link flex items-center px-4 py-3.5 text-sm font-medium rounded-xl">
+                <span class="material-symbols-outlined mr-3 text-[22px]">psychology</span>
                 Ký ức
             </a>
-            <a href="/app/settings"
-                class="sidebar-link flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all">
-                <i class="fas fa-cog w-6 text-center mr-3 text-slate-400"></i>
+            <a href="/app/settings" class="sidebar-link flex items-center px-4 py-3.5 text-sm font-medium rounded-xl">
+                <span class="material-symbols-outlined mr-3 text-[22px]">settings</span>
                 Cài đặt
             </a>
         </nav>
 
-        <div class="p-4 border-t border-blue-50 bg-blue-50/30">
-            <div class="flex items-center justify-between">
+        <div class="p-4 border-t border-white/5">
+            <div
+                class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
                 <div class="flex items-center">
-                    <img class="h-9 w-9 rounded-full border-2 border-white shadow-sm"
-                        src="https://ui-avatars.com/api/?name=Alex&background=86B3F4&color=fff" alt="User">
+                    <img class="h-10 w-10 rounded-full border border-white/10"
+                        src="https://ui-avatars.com/api/?name=User&background=7f0df2&color=fff" alt="User">
                     <div class="ml-3">
-                        <p class="text-sm font-bold text-slate-700">Alex</p>
-                        <p class="text-xs text-slate-500">Free Plan</p>
+                        <p class="text-sm font-bold text-white">Người dùng</p>
+                        <p class="text-xs text-white/50">Free Plan</p>
                     </div>
                 </div>
-                <button id="logoutBtn"
-                    class="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                    title="Đăng xuất">
-                    <i class="fas fa-sign-out-alt"></i>
+                <button id="logoutBtn" class="text-white/40 hover:text-red-400 transition-colors p-2">
+                    <span class="material-symbols-outlined text-[20px]">logout</span>
                 </button>
             </div>
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col relative overflow-hidden h-full">
+        <!-- Desktop Header (Hidden on Mobile) -->
+        <header
+            class="hidden md:flex h-20 items-center justify-between px-8 border-b border-white/5 bg-[#050A1F]/50 backdrop-blur-sm z-10">
+            <div>
+                <h1 class="text-2xl font-bold" id="currentDate">Hôm nay</h1>
+                <p class="text-white/50 text-sm" id="currentDay">Thứ Hai</p>
+            </div>
+        </header>
+
         <!-- Mobile Header -->
-        <div class="md:hidden h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-white z-20">
+        <div class="md:hidden h-16 flex items-center justify-between px-4 glass z-20">
             <div class="flex items-center">
                 <div
-                    class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#86B3F4] to-[#D1C4E9] flex items-center justify-center mr-2">
-                    <span class="font-bold text-white text-sm">R</span>
+                    class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center mr-2">
+                    <span class="font-bold text-white text-sm">M</span>
                 </div>
-                <span class="font-bold text-slate-800">Reflection</span>
+                <span class="font-bold text-lg">Miru</span>
             </div>
-            <button id="mobileMenuBtn" class="text-slate-500 hover:text-slate-800">
-                <i class="fas fa-bars text-xl"></i>
+            <button id="logoutBtnMobile" class="text-white/60">
+                <span class="material-symbols-outlined">logout</span>
             </button>
         </div>
 
-        <!-- Journal Content -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-8">
-            <div class="max-w-4xl mx-auto">
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto pb-24 md:pb-8 p-4 md:p-8 scroll-smooth">
+            <div class="max-w-4xl mx-auto space-y-8 animate-fade-in">
 
-                <!-- Date Header -->
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-slate-800" id="currentDate">Hôm nay, 25 tháng 11</h1>
-                    <p class="text-slate-500 mt-1" id="currentDay">Thứ Hai</p>
+                <!-- Mobile Date (Show only on mobile) -->
+                <div class="md:hidden mb-4">
+                    <h2 class="text-2xl font-bold text-white/90" id="currentDateMobile">Hôm nay</h2>
+                    <p class="text-white/50" id="currentDayMobile">...</p>
                 </div>
 
                 <!-- AI Proactive Notification -->
-                <div id="aiNotificationCard" class="hidden mb-6">
-                    <div
-                        class="bg-gradient-to-r from-[#8B5CF6]/10 to-[#4B8CF2]/10 rounded-2xl p-5 border border-purple-200/50 relative overflow-hidden">
-                        <button id="dismissNotification"
-                            class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-white/50">
-                            <i class="fas fa-times text-sm"></i>
-                        </button>
-                        <div class="flex items-start gap-4">
-                            <div
-                                class="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#4B8CF2] flex items-center justify-center flex-shrink-0 shadow-lg">
-                                <i class="fas fa-robot text-white text-lg"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-slate-700 mb-1">Miru nhắn bạn</p>
-                                <p id="aiNotificationMessage" class="text-slate-600 text-sm leading-relaxed">Đang tải...
-                                </p>
-                                <div class="mt-3 flex gap-2">
-                                    <a href="/app/chat"
-                                        class="text-xs font-medium text-[#8B5CF6] hover:text-[#7c3aed] flex items-center gap-1">
-                                        <i class="fas fa-comment"></i> Trò chuyện ngay
-                                    </a>
+                <div id="aiNotificationCard" class="hidden">
+                    <div class="bg-gradient-to-r from-primary/20 to-blue-600/10 rounded-2xl p-0.5 relative group">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-primary/50 to-blue-600/50 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity">
+                        </div>
+                        <div class="bg-[#0A1029] rounded-2xl p-5 relative border border-white/10">
+                            <button id="dismissNotification"
+                                class="absolute top-3 right-3 text-white/30 hover:text-white/70 transition-colors">
+                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                            <div class="flex items-start gap-4">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-white">smart_toy</span>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-primary-light mb-1">Miru nhắn bạn</p>
+                                    <p id="aiNotificationMessage" class="text-white/80 text-sm leading-relaxed">Đang
+                                        tải...</p>
+                                    <div class="mt-4 flex gap-3">
+                                        <a href="/app/chat"
+                                            class="text-xs font-bold text-white bg-primary hover:bg-primary-light px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5">
+                                            <span class="material-symbols-outlined text-[16px]">chat</span> Trò chuyện
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Compose Area -->
-                <div
-                    class="glass rounded-3xl p-6 mb-8 transition-all focus-within:ring-2 focus-within:ring-blue-200 focus-within:shadow-lg">
-                    <!-- Mood Selector -->
-                    <div class="flex gap-4 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                <!-- COMPOSER -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div
+                        class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                        <span class="material-symbols-outlined text-[120px]">edit_note</span>
+                    </div>
+
+                    <!-- Moods -->
+                    <div class="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="happy">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😊</div>
-                            <span class="text-xs font-medium text-slate-600">Vui vẻ</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Vui vẻ</span>
                         </button>
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="calm">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😌</div>
-                            <span class="text-xs font-medium text-slate-600">Bình yên</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Bình
+                                yên</span>
                         </button>
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="neutral">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-gray-100 text-gray-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😐</div>
-                            <span class="text-xs font-medium text-slate-600">Bình thường</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Bình
+                                thường</span>
                         </button>
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="sad">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😔</div>
-                            <span class="text-xs font-medium text-slate-600">Buồn</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Buồn</span>
                         </button>
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="anxious">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😰</div>
-                            <span class="text-xs font-medium text-slate-600">Lo lắng</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Lo
+                                lắng</span>
                         </button>
-                        <button
-                            class="mood-btn flex flex-col items-center gap-2 min-w-[60px] opacity-60 hover:opacity-100 transition-all"
+                        <button class="mood-btn flex flex-col items-center gap-2 min-w-[64px] transition-all group/mood"
                             data-mood="tired">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center text-2xl shadow-sm">
+                                class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/mood:bg-white/10 transition-all">
                                 😫</div>
-                            <span class="text-xs font-medium text-slate-600">Mệt mỏi</span>
+                            <span class="text-xs font-medium text-white/50 group-hover/mood:text-white/80">Mệt
+                                mỏi</span>
                         </button>
                     </div>
 
-                    <!-- Editor -->
                     <input type="text" id="journalTitle" placeholder="Tiêu đề (Tùy chọn)"
-                        class="w-full bg-transparent text-xl font-bold mb-4 focus:outline-none placeholder-slate-400 text-slate-800">
+                        class="w-full bg-transparent text-xl font-bold mb-4 focus:outline-none placeholder-white/30 text-white border-none p-0 focus:ring-0">
+
                     <textarea id="journalContent"
                         placeholder="Bạn đang cảm thấy thế nào? Hãy viết ra những suy nghĩ của bạn..."
-                        class="w-full bg-transparent text-slate-600 resize-none h-32 focus:outline-none placeholder-slate-400 leading-relaxed"></textarea>
+                        class="w-full bg-white/5 rounded-xl border-white/10 text-white resize-none h-32 focus:ring-1 focus:ring-primary/50 focus:bg-white/10 placeholder-white/30 leading-relaxed p-4 transition-all"></textarea>
 
-                    <!-- Actions -->
-                    <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
-                        <div class="flex gap-3 text-slate-400">
-                            <button class="hover:text-[#4B8CF2] transition-colors p-2 hover:bg-blue-50 rounded-full"><i
-                                    class="fas fa-image"></i></button>
-                            <button class="hover:text-[#4B8CF2] transition-colors p-2 hover:bg-blue-50 rounded-full"><i
-                                    class="fas fa-microphone"></i></button>
-                            <button class="hover:text-[#4B8CF2] transition-colors p-2 hover:bg-blue-50 rounded-full"><i
-                                    class="fas fa-tag"></i></button>
+                    <div class="flex justify-between items-center mt-6">
+                        <div class="flex gap-2">
+                            <button
+                                class="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-primary-light transition-colors">
+                                <span class="material-symbols-outlined text-[20px]">image</span>
+                            </button>
+                            <button
+                                class="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-primary-light transition-colors">
+                                <span class="material-symbols-outlined text-[20px]">mic</span>
+                            </button>
                         </div>
                         <button id="saveJournalBtn"
-                            class="bg-gradient-to-r from-[#4B8CF2] to-[#8B5CF6] hover:shadow-lg hover:shadow-blue-200 text-white px-6 py-2.5 rounded-full font-medium transition-all transform hover:-translate-y-0.5">
-                            Lưu Nhật ký
+                            class="bg-gradient-to-r from-primary to-primary-dark hover:shadow-lg hover:shadow-primary/30 text-white px-8 py-2.5 rounded-full font-semibold transition-all transform active:scale-95 flex items-center gap-2">
+                            <span>Lưu Nhật ký</span>
+                            <span class="material-symbols-outlined text-[18px]">send</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Goals & Reminders Widget -->
-                <div class="glass rounded-2xl p-5 mb-6 border border-blue-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fas fa-bullseye text-[#8B5CF6]"></i> Mục tiêu
+                <!-- GOALS WIDGET -->
+                <div class="glass-card rounded-2xl p-5 border border-white/5 relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-4 relative z-10">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary-light">flag</span> Mục tiêu
                         </h2>
                         <button id="toggleGoalsForm"
-                            class="text-[#4B8CF2] hover:text-[#8B5CF6] text-sm font-medium flex items-center gap-1">
-                            <i class="fas fa-plus"></i> Thêm
+                            class="text-primary-light hover:text-white text-sm font-medium flex items-center gap-1 transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">add</span> Thêm
                         </button>
                     </div>
 
-                    <!-- Add Goal Form (Hidden by default) -->
-                    <div id="addGoalForm" class="hidden mb-4 p-4 bg-blue-50 rounded-xl">
+                    <div id="addGoalForm" class="hidden mb-4 p-4 bg-white/5 rounded-xl border border-white/5">
                         <input type="text" id="goalTitleInput" placeholder="Mục tiêu của bạn..."
-                            class="w-full px-4 py-2 rounded-lg border border-blue-200 bg-white text-slate-800 mb-2 focus:outline-none focus:ring-2 focus:ring-[#4B8CF2]">
+                            class="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-black/20 text-white mb-3 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 placeholder-white/30">
                         <div class="flex gap-2">
                             <input type="date" id="goalDueDate"
-                                class="flex-1 px-3 py-2 rounded-lg border border-blue-200 bg-white text-slate-600 text-sm">
+                                class="flex-1 px-3 py-2 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:ring-1 focus:ring-primary">
                             <button id="saveGoalBtn"
-                                class="px-4 py-2 bg-[#8B5CF6] text-white rounded-lg font-medium hover:bg-[#7c3aed] transition-colors">
+                                class="px-5 py-2 bg-primary hover:bg-primary-light text-white rounded-lg font-medium transition-colors">
                                 Lưu
                             </button>
                         </div>
                     </div>
 
-                    <!-- Goals List -->
-                    <div id="goalsList" class="space-y-2">
-                        <p class="text-slate-400 text-sm text-center py-4">Chưa có mục tiêu nào</p>
+                    <div id="goalsList" class="space-y-2 relative z-10">
+                        <!-- Goals rendered via JS -->
                     </div>
                 </div>
 
-                <!-- Recent Entries -->
-                <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
-                    <i class="fas fa-history text-slate-400 text-sm"></i> Gần đây
-                </h2>
-
-                <div class="space-y-4" id="recentEntries">
-                    <!-- Entries will be loaded here -->
+                <!-- RECENT ENTRIES -->
+                <div>
+                    <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-white">
+                        <span class="material-symbols-outlined text-white/40">history</span> Gần đây
+                    </h2>
+                    <div class="space-y-4" id="recentEntries">
+                        <!-- Entries rendered via JS -->
+                    </div>
                 </div>
+
             </div>
         </div>
     </main>
 
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass z-50 pb-safe">
+        <div class="flex justify-around items-center h-16">
+            <a href="/app" class="bottom-nav-item active flex flex-col items-center justify-center w-full h-full">
+                <div
+                    class="icon-container w-10 h-8 rounded-2xl flex items-center justify-center mb-0.5 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">book_2</span>
+                </div>
+                <span class="text-[10px] font-medium">Nhật ký</span>
+            </a>
+            <a href="/app/chat" class="bottom-nav-item flex flex-col items-center justify-center w-full h-full">
+                <div
+                    class="icon-container w-10 h-8 rounded-2xl flex items-center justify-center mb-0.5 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">chat_bubble</span>
+                </div>
+                <span class="text-[10px] font-medium">Chat AI</span>
+            </a>
+            <a href="/app/emotion-dashboard"
+                class="bottom-nav-item flex flex-col items-center justify-center w-full h-full">
+                <div
+                    class="icon-container w-10 h-8 rounded-2xl flex items-center justify-center mb-0.5 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">ssid_chart</span>
+                </div>
+                <span class="text-[10px] font-medium">Cảm xúc</span>
+            </a>
+            <a href="/app/memories" class="bottom-nav-item flex flex-col items-center justify-center w-full h-full">
+                <div
+                    class="icon-container w-10 h-8 rounded-2xl flex items-center justify-center mb-0.5 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">psychology</span>
+                </div>
+                <span class="text-[10px] font-medium">Ký ức</span>
+            </a>
+        </div>
+    </nav>
+
     <script>
-        // Mobile Menu Logic
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const closeSidebarBtn = document.getElementById('closeSidebar');
-        const sidebar = document.getElementById('sidebar');
-
-        function toggleSidebar() {
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', toggleSidebar);
-        }
-
-        if (closeSidebarBtn) {
-            closeSidebarBtn.addEventListener('click', toggleSidebar);
-        }
-
-        // Register Service Worker and Push Notifications
+        // --- Service Worker ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
                 try {
                     const reg = await navigator.serviceWorker.register('/service-worker.js');
-                    console.log('✅ Service Worker registered:', reg.scope);
-
-                    // Request notification permission
                     if ('Notification' in window && localStorage.getItem('setting_notifications') !== 'false') {
-                        const permission = await Notification.requestPermission();
-                        if (permission === 'granted') {
-                            console.log('✅ Notifications enabled');
-                        }
+                        await Notification.requestPermission();
                     }
-                } catch (err) {
-                    console.error('❌ Service Worker registration failed:', err);
-                }
+                } catch (err) { console.error('SW Error:', err); }
             });
         }
 
-        // Simple script to handle mood selection
+        // --- Init ---
+        const userId = localStorage.getItem('user_id');
+        if (!userId) window.location.href = '/app/auth';
+
+        // Date Display
+        const now = new Date();
+        const dateStr = `Hôm nay, ${now.getDate()} tháng ${now.getMonth() + 1}`;
+        const dayStr = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][now.getDay()];
+
+        if (document.getElementById('currentDate')) document.getElementById('currentDate').innerText = dateStr;
+        if (document.getElementById('currentDay')) document.getElementById('currentDay').innerText = dayStr;
+
+        // Mobile Date
+        if (document.getElementById('currentDateMobile')) document.getElementById('currentDateMobile').innerText = dateStr;
+        if (document.getElementById('currentDayMobile')) document.getElementById('currentDayMobile').innerText = dayStr;
+
+        // Mood Selection
         document.querySelectorAll('.mood-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.mood-btn').forEach(b => {
-                    b.classList.remove('selected', 'opacity-100');
-                    b.classList.add('opacity-60');
-                });
-                btn.classList.remove('opacity-60');
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
             });
         });
 
-        // Set current date
-        const now = new Date();
-        document.getElementById('currentDate').innerText = `Hôm nay, ${now.getDate()} tháng ${now.getMonth() + 1}`;
+        // --- Load Data ---
+        loadEntries();
+        loadProactiveNotification();
+        loadGoals();
 
-        // --- Journal Logic ---
+        // --- Logic (Adapted for new IDs) ---
+
+        // Save Journal
         const saveBtn = document.getElementById('saveJournalBtn');
         const titleInput = document.getElementById('journalTitle');
         const contentInput = document.getElementById('journalContent');
-        const recentEntriesContainer = document.getElementById('recentEntries');
-
-        // Get User ID (from localStorage or default)
-        const userId = localStorage.getItem('user_id'); if (!userId) { window.location.href = '/app/auth'; }
-
-        // Load entries on start
-        loadEntries();
-
-        // Load proactive AI notification
-        loadProactiveNotification();
-
-        async function loadProactiveNotification() {
-            try {
-                const lastActive = localStorage.getItem('last_active_time');
-                const res = await fetch(window.APP_CONFIG.getApiUrl() + '/api/proactive/daily-message/' + userId);
-                const data = await res.json();
-
-                if (data.success && data.message) {
-                    const card = document.getElementById('aiNotificationCard');
-                    const messageEl = document.getElementById('aiNotificationMessage');
-
-                    if (card && messageEl) {
-                        messageEl.textContent = data.message.message || 'Chào bạn! Hôm nay bạn thế nào rồi?';
-                        card.classList.remove('hidden');
-                    }
-                }
-            } catch (e) {
-                console.log('Proactive notification skipped:', e);
-            }
-
-            // Update last active time
-            localStorage.setItem('last_active_time', new Date().toISOString());
-        }
-
-        // Dismiss notification handler
-        const dismissBtn = document.getElementById('dismissNotification');
-        if (dismissBtn) {
-            dismissBtn.addEventListener('click', () => {
-                document.getElementById('aiNotificationCard').classList.add('hidden');
-                sessionStorage.setItem('notification_dismissed', 'true');
-            });
-        }
-
-        // Don't show if already dismissed this session
-        if (sessionStorage.getItem('notification_dismissed') === 'true') {
-            const card = document.getElementById('aiNotificationCard');
-            if (card) card.classList.add('hidden');
-        }
-
-        // === GOALS WIDGET ===
-        const toggleGoalsFormBtn = document.getElementById('toggleGoalsForm');
-        const addGoalForm = document.getElementById('addGoalForm');
-        const goalTitleInput = document.getElementById('goalTitleInput');
-        const goalDueDateInput = document.getElementById('goalDueDate');
-        const saveGoalBtn = document.getElementById('saveGoalBtn');
-        const goalsList = document.getElementById('goalsList');
-
-        // Load goals on start
-        loadGoals();
-
-        // Toggle form visibility
-        if (toggleGoalsFormBtn) {
-            toggleGoalsFormBtn.addEventListener('click', () => {
-                addGoalForm.classList.toggle('hidden');
-                if (!addGoalForm.classList.contains('hidden')) {
-                    goalTitleInput.focus();
-                }
-            });
-        }
-
-        // Save new goal
-        if (saveGoalBtn) {
-            saveGoalBtn.addEventListener('click', async () => {
-                const title = goalTitleInput.value.trim();
-                if (!title) return;
-
-                saveGoalBtn.disabled = true;
-                try {
-                    await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            title: title,
-                            due_date: goalDueDateInput.value || null
-                        })
-                    });
-                    goalTitleInput.value = '';
-                    goalDueDateInput.value = '';
-                    addGoalForm.classList.add('hidden');
-                    loadGoals();
-                } catch (e) {
-                    console.error('Error saving goal:', e);
-                }
-                saveGoalBtn.disabled = false;
-            });
-        }
-
-        async function loadGoals() {
-            try {
-                const res = await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + userId);
-                const data = await res.json();
-                renderGoals(data.goals || []);
-            } catch (e) {
-                console.error('Error loading goals:', e);
-            }
-        }
-
-        function renderGoals(goals) {
-            if (!goals.length) {
-                goalsList.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">Chưa có mục tiêu nào</p>';
-                return;
-            }
-
-            goalsList.innerHTML = goals.slice(0, 5).map(g => `
-                <div class="flex items-center gap-3 p-3 rounded-xl ${g.completed ? 'bg-green-50' : 'bg-white'} border ${g.completed ? 'border-green-200' : 'border-slate-100'} group">
-                    <button onclick="toggleGoal(${g.id}, ${!g.completed})" class="w-6 h-6 rounded-full border-2 ${g.completed ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-[#8B5CF6]'} flex items-center justify-center transition-colors">
-                        ${g.completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
-                    </button>
-                    <div class="flex-1">
-                        <p class="text-sm font-medium ${g.completed ? 'text-slate-400 line-through' : 'text-slate-700'}">${g.title}</p>
-                        ${g.due_date ? `<p class="text-xs text-slate-400"><i class="far fa-calendar mr-1"></i>${new Date(g.due_date).toLocaleDateString('vi-VN')}</p>` : ''}
-                    </div>
-                    <button onclick="deleteGoal(${g.id})" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all p-1">
-                        <i class="fas fa-trash text-xs"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        window.toggleGoal = async function (goalId, completed) {
-            try {
-                await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + goalId, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ completed })
-                });
-                loadGoals();
-            } catch (e) {
-                console.error('Error toggling goal:', e);
-            }
-        };
-
-        window.deleteGoal = async function (goalId) {
-            if (!confirm('Xóa mục tiêu này?')) return;
-            try {
-                await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + goalId, { method: 'DELETE' });
-                loadGoals();
-            } catch (e) {
-                console.error('Error deleting goal:', e);
-            }
-        };
 
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
                 const content = contentInput.value.trim();
-                if (!content) {
-                    alert('Vui lòng viết gì đó...');
-                    return;
-                }
+                if (!content) return alert('Vui lòng viết gì đó...');
 
                 const title = titleInput.value.trim();
                 const selectedMoodBtn = document.querySelector('.mood-btn.selected');
                 const mood = selectedMoodBtn ? selectedMoodBtn.dataset.mood : null;
 
                 saveBtn.disabled = true;
-                saveBtn.innerText = 'Đang lưu...';
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Đang lưu...';
 
                 try {
                     const response = await fetch(window.APP_CONFIG.getApiUrl() + '/api/journal/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            content: content,
-                            title: title,
-                            mood: mood,
-                            tags: []
-                        })
+                        body: JSON.stringify({ user_id: userId, content, title, mood, tags: [] })
                     });
-
                     const result = await response.json();
-
                     if (result.success) {
                         contentInput.value = '';
                         titleInput.value = '';
-                        document.querySelectorAll('.mood-btn').forEach(b => {
-                            b.classList.remove('selected', 'opacity-100');
-                            b.classList.add('opacity-60');
-                        });
-
+                        document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
                         loadEntries();
-                        alert('Đã lưu nhật ký thành công!');
+                        // Simple toast could go here
                     } else {
-                        alert('Lỗi: ' + (result.error || 'Không xác định'));
+                        alert(result.error);
                     }
                 } catch (err) {
-                    console.error(err);
                     alert('Lỗi kết nối');
                 } finally {
                     saveBtn.disabled = false;
-                    saveBtn.innerText = 'Lưu Nhật ký';
-                }
-            });
-        }
-
-        // --- Logout Logic ---
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
-
-                try {
-                    const response = await fetch(window.APP_CONFIG.getApiUrl() + '/api/auth/logout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: userId })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        localStorage.removeItem('user_id');
-                        localStorage.clear();
-                        window.location.href = '/';
-                    } else {
-                        alert('Lỗi đăng xuất: ' + (result.error || 'Không xác định'));
-                    }
-                } catch (err) {
-                    console.error('Logout error:', err);
-                    localStorage.clear();
-                    window.location.href = '/';
+                    saveBtn.innerHTML = originalText;
                 }
             });
         }
@@ -607,85 +522,178 @@
             try {
                 const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/journal/${userId}?limit=5`);
                 const data = await response.json();
-
-                if (data.success && data.entries) {
-                    renderEntries(data.entries);
-                }
-            } catch (err) {
-                console.error('Failed to load entries', err);
-            }
+                if (data.success) renderEntries(data.entries);
+            } catch (err) console.error(err);
         }
 
         function renderEntries(entries) {
-            recentEntriesContainer.innerHTML = '';
-
-            if (entries.length === 0) {
-                recentEntriesContainer.innerHTML = '<p class="text-center text-slate-400 py-4">Chưa có nhật ký nào.</p>';
+            const container = document.getElementById('recentEntries');
+            if (!entries.length) {
+                container.innerHTML = '<p class="text-center text-white/30 py-4 italic">Chưa có nhật ký nào.</p>';
                 return;
             }
 
-            const moodIcons = {
-                'happy': '😊', 'calm': '😌', 'neutral': '😐',
-                'sad': '😔', 'anxious': '😰', 'tired': '😫'
-            };
-
+            const moodIcons = { 'happy': '😊', 'calm': '😌', 'neutral': '😐', 'sad': '😔', 'anxious': '😰', 'tired': '😫' };
             const moodColors = {
-                'happy': 'bg-green-50 text-green-600',
-                'calm': 'bg-blue-50 text-blue-600',
-                'neutral': 'bg-gray-50 text-gray-600',
-                'sad': 'bg-indigo-50 text-indigo-600',
-                'anxious': 'bg-yellow-50 text-yellow-600',
-                'tired': 'bg-red-50 text-red-600'
+                'happy': 'text-green-400 bg-green-500/10 border-green-500/20',
+                'calm': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+                'neutral': 'text-gray-400 bg-gray-500/10 border-gray-500/20',
+                'sad': 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                'anxious': 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+                'tired': 'text-red-400 bg-red-500/10 border-red-500/20'
             };
 
-            entries.forEach(entry => {
+            container.innerHTML = entries.map(entry => {
                 const date = new Date(entry.created_at);
                 const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                 const dateStr = date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric' });
-
                 const moodIcon = moodIcons[entry.mood] || '📝';
-                const moodClass = moodColors[entry.mood] || 'bg-slate-50 text-slate-600';
+                const moodClass = moodColors[entry.mood] || 'text-white/60 bg-white/5 border-white/10';
 
-                const html = `
-                    <div class="glass rounded-2xl p-6 hover:bg-white transition-all cursor-pointer group border border-transparent hover:border-blue-100 hover:shadow-md">
+                return `
+                    <div class="glass-card rounded-2xl p-5 hover:bg-white/5 cursor-pointer group">
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex items-center gap-3">
-                                <span class="text-2xl ${moodClass} p-2 rounded-xl">${moodIcon}</span>
+                                <span class="text-2xl w-10 h-10 flex items-center justify-center rounded-xl border ${moodClass}">
+                                    ${moodIcon}
+                                </span>
                                 <div>
-                                    <h3 class="font-bold text-lg text-slate-800 group-hover:text-[#4B8CF2] transition-colors">
+                                    <h3 class="font-bold text-lg text-white group-hover:text-primary-light transition-colors">
                                         ${entry.title || 'Không tiêu đề'}
                                     </h3>
-                                    <p class="text-xs text-slate-400">${timeStr} &bull; ${dateStr}</p>
+                                    <p class="text-xs text-white/40">${timeStr} &bull; ${dateStr}</p>
                                 </div>
                             </div>
-                            <button onclick="deleteEntry(${entry.id})" class="text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-2 hover:bg-red-50 rounded-full">
-                                <i class="fas fa-trash"></i>
+                            <button onclick="deleteEntry(${entry.id})" class="text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-2 hover:bg-white/5 rounded-full">
+                                <span class="material-symbols-outlined text-[20px]">delete</span>
                             </button>
                         </div>
-                        <p class="text-slate-600 line-clamp-2 text-sm leading-relaxed">
+                        <p class="text-white/70 line-clamp-2 text-sm leading-relaxed pl-[52px]">
                             ${entry.content}
                         </p>
                     </div>
                 `;
-                recentEntriesContainer.innerHTML += html;
-            });
+            }).join('');
         }
 
         window.deleteEntry = async (id) => {
-            if (!confirm('Bạn có chắc muốn xóa nhật ký này?')) return;
-
+            if (!confirm('Xóa nhật ký này?')) return;
             try {
-                const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/journal/${id}?user_id=${userId}`, { method: 'DELETE' });
-                const result = await response.json();
-                if (result.success) {
-                    loadEntries();
-                } else {
-                    alert('Lỗi xóa: ' + result.error);
-                }
-            } catch (err) {
-                alert('Lỗi kết nối');
+                const res = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/journal/${id}?user_id=${userId}`, { method: 'DELETE' });
+                if ((await res.json()).success) loadEntries();
+            } catch (e) { alert('Lỗi'); }
+        };
+
+        // --- Goals ---
+        const toggleGoalsFormBtn = document.getElementById('toggleGoalsForm');
+        const addGoalForm = document.getElementById('addGoalForm');
+
+        if (toggleGoalsFormBtn) {
+            toggleGoalsFormBtn.addEventListener('click', () => {
+                addGoalForm.classList.toggle('hidden');
+                if (!addGoalForm.classList.contains('hidden')) document.getElementById('goalTitleInput').focus();
+            });
+        }
+
+        const saveGoalBtn = document.getElementById('saveGoalBtn');
+        if (saveGoalBtn) {
+            saveGoalBtn.addEventListener('click', async () => {
+                const title = document.getElementById('goalTitleInput').value.trim();
+                const due_date = document.getElementById('goalDueDate').value;
+                if (!title) return;
+
+                try {
+                    await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId, title, due_date: due_date || null })
+                    });
+                    document.getElementById('goalTitleInput').value = '';
+                    addGoalForm.classList.add('hidden');
+                    loadGoals();
+                } catch (e) { console.error(e); }
+            });
+        }
+
+        async function loadGoals() {
+            try {
+                const res = await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + userId);
+                const data = await res.json();
+                renderGoals(data.goals || []);
+            } catch (e) console.error(e);
+        }
+
+        function renderGoals(goals) {
+            const list = document.getElementById('goalsList');
+            if (!goals.length) {
+                list.innerHTML = '<p class="text-white/30 text-sm text-center py-2">Chưa có mục tiêu</p>';
+                return;
+            }
+            list.innerHTML = goals.slice(0, 5).map(g => `
+                <div class="flex items-center gap-3 p-3 rounded-xl border ${g.completed ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/5'} hover:bg-white/10 transition-colors group">
+                    <button onclick="toggleGoal(${g.id}, ${!g.completed})" class="w-6 h-6 rounded-full border-2 ${g.completed ? 'bg-green-500 border-green-500' : 'border-white/30 hover:border-primary'} flex items-center justify-center transition-colors">
+                        ${g.completed ? '<span class="material-symbols-outlined text-white text-[14px]">check</span>' : ''}
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate ${g.completed ? 'text-white/40 line-through' : 'text-white/90'}">${g.title}</p>
+                        ${g.due_date ? `<p class="text-xs text-white/40 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">calendar_today</span> ${new Date(g.due_date).toLocaleDateString('vi-VN')}</p>` : ''}
+                    </div>
+                    <button onclick="deleteGoal(${g.id})" class="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all p-1">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        window.toggleGoal = async (id, completed) => {
+            await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed })
+            });
+            loadGoals();
+        };
+
+        window.deleteGoal = async (id) => {
+            if (confirm('Xóa?')) {
+                await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + id, { method: 'DELETE' });
+                loadGoals();
             }
         };
+
+        // --- Notifications ---
+        async function loadProactiveNotification() {
+            try {
+                const res = await fetch(window.APP_CONFIG.getApiUrl() + '/api/proactive/daily-message/' + userId);
+                const data = await res.json();
+                if (data.success && data.message && sessionStorage.getItem('notification_dismissed') !== 'true') {
+                    document.getElementById('aiNotificationMessage').textContent = data.message.message;
+                    document.getElementById('aiNotificationCard').classList.remove('hidden');
+                }
+            } catch (e) { }
+        }
+
+        document.getElementById('dismissNotification')?.addEventListener('click', () => {
+            document.getElementById('aiNotificationCard').classList.add('hidden');
+            sessionStorage.setItem('notification_dismissed', 'true');
+        });
+
+        // --- Logout ---
+        const handleLogout = async () => {
+            if (confirm('Đăng xuất?')) {
+                try {
+                    await fetch(window.APP_CONFIG.getApiUrl() + '/api/auth/logout', {
+                        method: 'POST', body: JSON.stringify({ user_id: userId }), headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (e) { }
+                localStorage.clear();
+                window.location.href = '/';
+            }
+        };
+
+        document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+        document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
+
     </script>
 </body>
 

@@ -7,6 +7,8 @@
     <title>Miru - AI hiểu bạn</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/pwa/images/favicon.svg">
+    <link rel="apple-touch-icon" href="/pwa/images/icon-192.svg">
     <style>
         * {
             margin: 0;
@@ -185,7 +187,7 @@
             border-radius: 8px;
         }
     </style>
-    <script src="/config.js"></script>
+    <script src="/config.js?v=2"></script>
     <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -223,7 +225,7 @@
 
         // Connect WebSocket
         function connectWS() {
-            const wsUrl = (window.APP_CONFIG?.getWsUrl?.() || 'ws://localhost:8000') + '/ws/chat/' + userId;
+            const wsUrl = (window.APP_CONFIG?.getWsUrl?.() || 'ws://localhost:8008') + '/ws/chat/' + userId;
             ws = new WebSocket(wsUrl);
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);

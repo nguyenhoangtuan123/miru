@@ -187,7 +187,8 @@ class MomentCheckin {
                 note: this.note || null
             };
 
-            const response = await fetch('/api/moment', {
+            // Use new daily check-in endpoint with streak tracking
+            const response = await fetch('/api/moment/daily-checkin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -198,9 +199,17 @@ class MomentCheckin {
             const result = await response.json();
 
             if (result.success) {
-                // Show success message in chat
+                // Show celebration if streak
+                if (result.streak > 0) {
+                    this.showStreakCelebration(result);
+                }
+
+                // Show message in chat
                 if (window.reflectionChat) {
-                    window.reflectionChat.addMessage('✨ Đã lưu khoảnh khắc của bạn!', 'ai');
+                    window.reflectionChat.addMessage(result.message, 'ai');
+                    if (result.insight) {
+                        window.reflectionChat.addMessage(result.insight, 'ai');
+                    }
                 }
                 this.close();
             } else {
@@ -210,6 +219,65 @@ class MomentCheckin {
             console.error('Error saving moment:', error);
             alert('Không thể kết nối. Vui lòng kiểm tra kết nối internet.');
         }
+    }
+
+    showStreakCelebration(result) {
+        const celebration = document.createElement('div');
+        celebration.className = 'streak-celebration';
+        celebration.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, rgba(127, 13, 242, 0.95), rgba(88, 28, 135, 0.95));
+                padding: 32px 48px;
+                border-radius: 24px;
+                text-align: center;
+                z-index: 2000;
+                animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            ">
+                <div style="font-size: 64px; margin-bottom: 16px;">🎉</div>
+                <div style="font-size: 24px; font-weight: 700; color: white; margin-bottom: 8px;">
+                    ${result.message}
+                </div>
+                ${result.streak >= 3 ? `
+                    <div style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: rgba(255, 255, 255, 0.2);
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        color: white;
+                        font-size: 14px;
+                        margin-top: 8px;
+                    "🔥 ${result.streak} ngày liên tiếp</div>
+                ` : ''}
+            </div>
+        `;
+        document.body.appendChild(celebration);
+
+        // Add animation keyframes
+        if (!document.getElementById('streakAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'streakAnimation';
+            style.textContent = `
+                @keyframes popIn {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+                    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            celebration.style.transition = 'opacity 0.5s';
+            celebration.style.opacity = '0';
+            setTimeout(() => celebration.remove(), 500);
+        }, 3000);
     }
 
     addStyles() {

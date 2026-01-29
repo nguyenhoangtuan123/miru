@@ -1,523 +1,1108 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html class="dark" lang="vi">
 
 <head>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Chat - Miru</title>
-    <link href="https://fonts.googleapis.com" rel="preconnect" />
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;700&amp;display=swap"
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <title>Miru Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
         rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#8b5cf6", // Muted Purple
-                        "secondary": "#d8b4fe", // Light Purple/Gold hint
-                        "background-light": "#1e1b2e", // Dark purple tint
-                        "background-dark": "#0f0c18", // Deep charcoal/midnight
-                        "surface-dark": "#181524", // Slightly lighter midnight
-                        "surface-light": "#2a2438", // Deep purple/grey
-                        "accent-teal": "#2dd4bf", // Muted teal for accents
-                        "accent-gold": "#fde047", // Soft gold
+                        primary: "#7f0df2",
+                        "primary-light": "#a855f7",
+                        "primary-dark": "#581c87",
+                        background: "#050A1F",
+                        surface: "rgba(255, 255, 255, 0.05)",
+                        "surface-highlight": "rgba(255, 255, 255, 0.1)",
                     },
                     fontFamily: {
-                        "display": ["Manrope", "sans-serif"]
+                        display: ["Manrope", "sans-serif"],
                     },
-                    borderRadius: {
-                        "DEFAULT": "1rem",
-                        "lg": "1.5rem",
-                        "xl": "2rem",
-                        "2xl": "2.5rem",
-                        "full": "9999px"
+                    animation: {
+                        "slide-in": "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                        "fade-in": "fadeIn 0.3s ease-out",
+                        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                     },
-                    backgroundImage: {
-                        'ethereal-gradient': 'radial-gradient(circle at 50% 0%, rgba(88, 28, 135, 0.15) 0%, rgba(15, 12, 24, 0) 60%)', // Deep purple glow
-                        'aurora-gradient': 'linear-gradient(180deg, rgba(30,27,46,0) 0%, rgba(88, 28, 135, 0.05) 100%)',
-                        'bubble-user': 'linear-gradient(135deg, #4c1d95 0%, #581c87 100%)', // Deep purple
-                        'bubble-user-soft': 'linear-gradient(135deg, rgba(76, 29, 149, 0.6) 0%, rgba(88, 28, 135, 0.4) 100%)', // Frosted purple
-                        'bubble-ai': 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)', // Glassy AI bubble
+                    keyframes: {
+                        slideIn: {
+                            "0%": { transform: "translateX(-100%)" },
+                            "100%": { transform: "translateX(0)" },
+                        },
+                        fadeIn: {
+                            "0%": { opacity: "0", transform: "translateY(10px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" },
+                        },
                     },
-                    boxShadow: {
-                        'glow-purple': '0 0 20px -5px rgba(139, 92, 246, 0.3)',
-                        'glow-gold': '0 0 15px -5px rgba(253, 224, 71, 0.2)',
-                    }
                 },
             },
-        }
+        };
     </script>
+
     <style>
+        body {
+            background-color: #050A1F;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(127, 13, 242, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(5, 10, 31, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Messages */
+        .bubble-user {
+            background: linear-gradient(135deg, #7f0df2 0%, #581c87 100%);
+            border-radius: 20px 20px 4px 20px;
+            box-shadow: 0 4px 15px rgba(127, 13, 242, 0.2);
+        }
+
+        .bubble-ai {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px 20px 20px 4px;
+        }
+
+        /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
         }
 
         ::-webkit-scrollbar-track {
-            background: transparent;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
         }
 
-        .organic-bubble {
-            border-radius: 1.5rem;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
-        .organic-bubble-ai {
-            border-top-left-radius: 0.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        /* For Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
         }
 
-        .organic-bubble-user {
-            border-top-right-radius: 0.25rem;
-            border: 1px solid rgba(139, 92, 246, 0.2);
+        /* Typing Indicator */
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
         }
 
-        @keyframes pulse-glow {
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
 
             0%,
+            80%,
             100% {
+                transform: scale(0);
                 opacity: 0.5;
+            }
+
+            40% {
                 transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.8;
-                transform: scale(1.1);
+                opacity: 1;
             }
         }
 
-        .glow-dot {
-            animation: pulse-glow 4s infinite ease-in-out;
-            box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+        /* Markdown Styles */
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.2em;
+            margin: 0.5em 0;
         }
 
-        footer {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 100 !important;
+        .prose ol {
+            list-style-type: decimal;
+            padding-left: 1.2em;
+            margin: 0.5em 0;
         }
 
-        main {
-            padding-bottom: 100px !important;
+        .prose p {
+            margin-bottom: 0.5em;
         }
 
-        .frosted-glass {
-            background: rgba(15, 12, 24, 0.7);
+        /* Proactive Message Styles */
+        .proactive-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .proactive-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .proactive-card {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: linear-gradient(135deg, rgba(127, 13, 242, 0.15) 0%, rgba(88, 28, 135, 0.1) 100%);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(127, 13, 242, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 360px;
+            width: calc(100% - 32px);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(127, 13, 242, 0.1);
+        }
+
+        .proactive-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .proactive-card .icon-container {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #7f0df2 0%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 20px rgba(127, 13, 242, 0.3);
+        }
+
+        .proactive-card .message-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .proactive-card .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .proactive-card .action-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .proactive-card .action-btn.primary {
+            background: linear-gradient(135deg, #7f0df2 0%, #581c87 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(127, 13, 242, 0.3);
+        }
+
+        .proactive-card .action-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(127, 13, 242, 0.4);
+        }
+
+        .proactive-card .action-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .proactive-card .action-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .proactive-card .dismiss-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white/60;
+            transition: all 0.2s ease;
+        }
+
+        .proactive-card .dismiss-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .prose p:last-child {
+            margin-bottom: 0;
+        }
+
+        .prose strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .prose a {
+            color: #a855f7;
+            text-decoration: underline;
         }
     </style>
-    <style>
-        body {
-            min-height: max(884px, 100dvh);
-        }
-    </style>
-    <style>
-        body {
-            min-height: max(884px, 100dvh);
-        }
-    </style>
-    <link rel="manifest" href="/manifest.json">\n
 </head>
 
-<body
-    class="bg-background-dark font-display text-white overflow-auto h-screen flex flex-col relative selection:bg-primary/30">
-    <div class="absolute inset-0 bg-ethereal-gradient pointer-events-none z-0"></div>
-    <div
-        class="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[100px] pointer-events-none z-0">
-    </div>
-    <div
-        class="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-950/20 rounded-full blur-[80px] pointer-events-none z-0">
-    </div>
-    <header class="relative z-10 flex items-center bg-transparent px-4 py-3 justify-between">
-        <!-- Left: History + Back -->
-        <div class="flex items-center gap-1">
-            <button id="historyBtn"
-                class="text-white/60 hover:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
-                title="Lịch sử chat">
-                <span class="material-symbols-outlined">menu</span>
+<body class="font-display text-white h-[100dvh] flex flex-col">
+
+    <!-- Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity opacity-0"
+        onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar"
+        class="fixed inset-y-0 left-0 w-80 bg-[#050A1F] z-50 transform -translate-x-full transition-transform duration-300 border-r border-white/5 flex flex-col shadow-2xl">
+        <div class="h-16 flex items-center justify-between px-4 border-b border-white/5">
+            <h2 class="font-semibold text-lg tracking-tight">Lịch sử trò chuyện</h2>
+            <button onclick="toggleSidebar()"
+                class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5">
+                <span class="material-symbols-outlined text-white/60">close</span>
             </button>
         </div>
-        <div class="flex flex-col items-center">
-            <h2 class="text-white/90 text-lg font-medium leading-tight tracking-wide drop-shadow-md">Trò chuyện</h2>
-            <div class="flex items-center gap-1.5 opacity-60">
-                <span class="size-1.5 rounded-full bg-accent-teal glow-dot"></span>
-                <span class="text-[10px] font-medium tracking-widest uppercase text-accent-teal/80">Connected</span>
+
+        <div class="p-3">
+            <button onclick="createNewSession()"
+                class="w-full h-12 bg-primary hover:bg-primary-light text-white rounded-xl flex items-center justify-center gap-2 font-medium transition-all active:scale-95 shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined">add_comment</span>
+                Cuộc trò chuyện mới
+            </button>
+        </div>
+
+        <div id="sessionList" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <!-- Sessions will be loaded here -->
+            <div id="sidebarLoadingIcon" class="flex justify-center py-4">
+                <span class="material-symbols-outlined animate-spin text-white/20">progress_activity</span>
             </div>
         </div>
-        <!-- Right: Back to App -->
-        <a href="/app"
-            class="text-white/60 hover:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
-            title="Về trang chủ">
-            <span class="material-symbols-outlined">home</span>
-        </a>
-    </header>
-    <!-- Session Sidebar - Toggle Panel -->
-    <div id="sessionSidebar"
-        class="fixed inset-y-0 left-0 w-72 bg-surface-dark/95 backdrop-blur-xl z-50 flex flex-col border-r border-white/5 hidden">
-        <div class="flex items-center justify-between p-4 border-b border-white/5">
-            <h3 class="text-white font-semibold">Lịch sử trò chuyện</h3>
-            <button id="closeSidebar" class="text-white/60 hover:text-white p-2 rounded-lg hover:bg-white/5">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <button id="newChatBtn"
-            class="m-3 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors">
-            <span class="material-symbols-outlined">add</span>
-            Cuộc trò chuyện mới
-        </button>
-        <div id="sessionList" class="flex-1 overflow-y-auto p-2 space-y-2">
-            <div class="text-white/40 text-sm text-center py-4">Đang tải...</div>
+
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center font-bold text-sm">
+                    M
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">Miru AI</div>
+                    <div class="text-xs text-white/40">Premium Plan</div>
+                </div>
+                <a href="/app/settings" class="w-9 h-9 rounded-full hover:bg-white/5 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white/60">settings</span>
+                </a>
+            </div>
         </div>
     </div>
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden"></div>
 
-    <main class="relative z-10 flex-1 overflow-y-auto px-4 py-6 pb-32 flex flex-col gap-8 scroll-smooth"
-        id="chat-container" style="max-height: calc(100vh - 180px);">
-        <!-- Welcome message -->
-        <div class="flex justify-center mt-10">
-            <div class="text-center">
+    <!-- Header -->
+    <header class="h-14 glass fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()"
+                class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center -ml-2">
+                <span class="material-symbols-outlined text-white/80">menu</span>
+            </button>
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2">
+                    <span id="sessionTitle" class="font-semibold text-sm leading-tight">Cuộc trò chuyện</span>
+                    <button onclick="editSessionTitle()"
+                        class="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors"
+                        title="Đổi tên cuộc trò chuyện">
+                        <span class="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="connectionStatus" class="text-[10px] text-emerald-500 font-medium">Online</span>
+                </div>
+            </div>
+        </div>
 
-                <h2 class="text-white/90 text-xl font-medium">Xin chào!</h2>
-                <p class="text-white/50 text-sm mt-2">Hãy chia sẻ suy nghĩ của bạn với Miru</p>
+        <div class="flex items-center gap-1">
+            <a href="/app/emotion-dashboard"
+                class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-white/60 hover:text-primary-light transition-colors"
+                title="Cảm xúc">
+                <span class="material-symbols-outlined text-[22px]">ssid_chart</span>
+            </a>
+            <a href="/app"
+                class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-white/60 hover:text-white transition-colors">
+                <span class="material-symbols-outlined text-[22px]">home</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Chat Area -->
+    <main id="chatContainer" class="flex-1 overflow-y-scroll pt-20 pb-24 px-4" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+        <!-- Welcome State -->
+        <div id="welcomeState" class="flex flex-col items-center justify-center min-h-[50vh] opacity-0 animate-fade-in">
+            <div class="w-20 h-20 rounded-full bg-surface mb-6 relative flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full bg-primary/20 animate-pulse-slow"></div>
+                <span class="material-symbols-outlined text-4xl text-primary-light">temp_preferences_custom</span>
+            </div>
+            <h2 class="text-xl font-semibold mb-2">Xin chào bạn!</h2>
+            <p class="text-white/40 text-sm text-center max-w-[250px]">Miru đã sẵn sàng lắng nghe. Hãy chia sẻ bất cứ
+                điều gì bạn đang nghĩ.</p>
+        </div>
+
+        <!-- Messages -->
+        <div id="messagesList" class="space-y-6 max-w-2xl mx-auto"></div>
+
+        <!-- Typing Indicator (Hidden by default) -->
+        <div id="typingIndicator" class="hidden max-w-2xl mx-auto mt-4 ml-12 animate-fade-in">
+            <div class="bubble-ai inline-flex items-center gap-1.5 px-4 py-3">
+                <div class="typing-dot text-white/40"></div>
+                <div class="typing-dot text-white/40"></div>
+                <div class="typing-dot text-white/40"></div>
             </div>
         </div>
     </main>
-    <footer class="relative z-20 p-4 pb-8 frosted-glass">
-        <div class="flex items-end gap-3 max-w-4xl mx-auto">
-            <button aria-label="Add attachment"
-                class="hidden text-white/40 hover:text-secondary transition-colors p-2.5 rounded-full hover:bg-white/5 shrink-0">
-                <span class="material-symbols-outlined font-light">add</span>
+
+    <!-- Proactive Message Overlay -->
+    <div id="proactiveOverlay" class="proactive-overlay" onclick="dismissProactiveMessage()"></div>
+
+    <!-- Proactive Message Card -->
+    <div id="proactiveCard" class="proactive-card">
+        <button class="dismiss-btn" onclick="dismissProactiveMessage()">
+            <span class="material-symbols-outlined text-[14px]">close</span>
+        </button>
+        <div class="icon-container">
+            <span class="material-symbols-outlined text-white text-[24px]">lightbulb</span>
+        </div>
+        <div id="proactiveMessageText" class="message-text"></div>
+        <div id="proactiveActions" class="actions"></div>
+    </div>
+
+    <!-- Footer Input -->
+    <footer class="fixed bottom-0 left-0 right-0 p-4 transition-all duration-300 z-30">
+        <!-- Image Previews -->
+        <div id="imagePreviewContainer" class="hidden mb-3 gap-2 px-2 overflow-x-auto"></div>
+
+        <div
+            class="max-w-2xl mx-auto glass-input rounded-[28px] p-1.5 pl-4 flex items-end gap-2 shadow-2xl shadow-primary/5">
+            <!-- Upload Button -->
+            <button onclick="document.getElementById('imageInput').click()"
+                class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-primary-light transition-colors shrink-0 mb-0.5">
+                <span class="material-symbols-outlined text-[22px]">add_photo_alternate</span>
             </button>
-            <div
-                class="flex-1 bg-white/5 rounded-full flex items-center border-0 focus-within:border-secondary/30 focus-within:bg-surface-light/50 transition-all group backdrop-blur-sm">
-                <textarea
-                    class="w-full bg-transparent text-white placeholder-white/30 text-[15px] px-5 py-4 focus:outline-none resize-none overflow-hidden font-light leading-normal"
-                    placeholder="Viết ra suy nghĩ của bạn..." rows="1" style="min-height: 54px;"></textarea>
-                <button aria-label="Voice input"
-                    class="hidden text-white/40 group-focus-within:text-white/60 hover:text-white transition-colors p-2 mr-2 rounded-full shrink-0">
-                    <span class="material-symbols-outlined font-light">mic</span>
-                </button>
-            </div>
-            <button aria-label="Send message"
-                class="bg-white/10 hover:bg-secondary/20 hover:text-secondary hover:border-secondary/30 border border-white/10 text-white/80 w-[54px] h-[54px] rounded-full shrink-0 flex items-center justify-center transition-all transform active:scale-95 shadow-lg backdrop-blur-sm group">
-                <span
-                    class="material-symbols-outlined group-hover:translate-x-0.5 transition-transform">arrow_upward</span>
+            <input type="file" id="imageInput" accept="image/*" multiple class="hidden"
+                onchange="handleImageUpload(this)">
+
+            <!-- Text Input -->
+            <textarea id="messageInput" rows="1"
+                class="flex-1 bg-transparent border-0 focus:ring-0 text-white placeholder-white/30 py-3 px-0 min-h-[44px] max-h-[120px] resize-none leading-relaxed"
+                placeholder="Nhập tin nhắn..."></textarea>
+
+            <!-- Send Button -->
+            <button onclick="sendMessage()" id="sendBtn"
+                class="w-11 h-11 rounded-full bg-primary hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-white shadow-lg shadow-primary/30 transition-all active:scale-95 shrink-0">
+                <span class="material-symbols-outlined text-[22px] translate-x-0.5">send</span>
             </button>
         </div>
     </footer>
-    <div class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md">
-    </div>
 
-
-    <script src="/config.js"></script>
+    <script src="/config.js?v=2"></script>
     <script>
-        // ========== INITIALIZATION ==========
-        const userId = localStorage.getItem('user_id');
-        if (!userId) window.location.href = '/app/auth';
+        // Constants
+        const API_URL = window.location.origin;
+        const USER_ID = localStorage.getItem('user_id');
+        let WS = null;
+        let CURRENT_SESSION_ID = localStorage.getItem('current_session_id');
+        let PENDING_IMAGES = [];
 
-        const messages = document.getElementById('chat-container');
-        const apiBase = window.APP_CONFIG?.getApiUrl?.() || '';
-        let ws = null;
-        let currentSessionId = null;
+        // Proactive Message Variables
+        let PROACTIVE_TIMER = null;
+        let PROACTIVE_TIMEOUT = 1 * 60 * 1000; // 1 phút không hoạt động
+        let PROACTIVE_LAST_ACTIVITY = Date.now();
+        let PROACTIVE_DISMISSED_TYPES = [];
 
-        // ========== WEBSOCKET ==========
-        let reconnectAttempts = 0;
-        let reconnectTimeout = null;
+        // Initialization
+        if (!USER_ID) window.location.href = '/app/auth';
 
-        function connectWS() {
-            if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
-            if (ws && ws.readyState !== WebSocket.CLOSED) { ws.close(); }
-
-            const wsUrl = (window.APP_CONFIG?.getWsUrl?.() || 'ws://localhost:8000') + '/ws/chat/' + userId;
-            ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => { console.log('WebSocket connected'); reconnectAttempts = 0; };
-
-            ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                console.log('WebSocket received:', data);
-                if (data.type === 'ai_response') {
-                    addAIMessage(data.message);
-                }
-                if (data.crisis_detected) {
-                    showCrisisAlert(data.crisis_data);
-                }
-            };
-
-            ws.onerror = () => {
-                if (!reconnectTimeout) {
-                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-                    reconnectAttempts++;
-                    reconnectTimeout = setTimeout(connectWS, delay);
-                }
-            };
-            ws.onclose = () => {
-                if (!reconnectTimeout) {
-                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-                    reconnectAttempts++;
-                    reconnectTimeout = setTimeout(connectWS, delay);
-                }
-            };
-        }
-
-        // ========== SEND MESSAGE ==========
-        async function sendMessage() {
-            const textarea = document.querySelector('textarea');
-            const msg = textarea.value.trim();
-            if (!msg) return;
-
-            addUserMessage(msg);
-            textarea.value = '';
-
-            // Check for contextual UI triggers
-            await checkContextualUI(msg);
-
-            // Send to WebSocket
-            if (ws?.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ message: msg, session_id: currentSessionId }));
-            }
-        }
-
-        // ========== CONTEXTUAL UI ==========
-        async function checkContextualUI(msg) {
-            const m = msg.toLowerCase();
-
-            // Graph trigger
-            if (m.includes('graph') || m.includes('quan hệ') || m.includes('mối') || m.includes('rối')) {
-                try {
-                    const res = await fetch(apiBase + '/api/memories/' + userId + '/graph');
-                    const data = await res.json();
-                    if (data.success && data.graph?.nodes?.length > 0) {
-                        addContextualCard('graph', data.graph);
-                    }
-                } catch (e) { console.error(e); }
-            }
-
-            // Emotion trigger  
-            if (m.includes('cảm xúc') || m.includes('tâm trạng') || m.includes('tuần này')) {
-                try {
-                    const res = await fetch(apiBase + '/api/emotions/chart/' + userId);
-                    const data = await res.json();
-                    if (data.emotions?.length > 0) {
-                        addContextualCard('emotion', data);
-                    }
-                } catch (e) { console.error(e); }
-            }
-        }
-
-        // ========== ADD MESSAGES ==========
-        function addUserMessage(text) {
-            const html = `
-        <div class="flex items-end gap-3 w-full max-w-[85%] self-end justify-end group">
-            <div class="flex flex-col gap-1 items-end">
-                <div class="text-[15px] font-light leading-relaxed p-5 bg-bubble-user-soft text-white organic-bubble organic-bubble-user shadow-glow-purple backdrop-blur-md border border-purple-500/20">
-                    ${text}
-                </div>
-            </div>
-        </div>`;
-            messages.insertAdjacentHTML('beforeend', html);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function addAIMessage(text) {
-            if (!text) {
-                console.log('Empty AI message, skipping');
-                return;
-            }
-            console.log('Adding AI message:', text);
-            const html = `
-        <div class="flex items-end gap-3 w-full max-w-[85%] self-start group">
-            <div class="relative w-10 h-10 shrink-0">
-                <div class="absolute inset-0 bg-purple-500/20 rounded-full blur-md"></div>
-                <div class="relative bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full w-10 h-10 flex items-center justify-center text-white">✨</div>
-            </div>
-            <div class="flex flex-col gap-1 items-start">
-                <div class="text-[15px] font-light leading-relaxed p-5 bg-white/5 text-white/90 rounded-2xl backdrop-blur-xl border border-white/10">
-                    ${text.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-        </div>`;
-            messages.insertAdjacentHTML('beforeend', html);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function addContextualCard(type, data) {
-            let html = '';
-            const id = type + '-' + Date.now();
-
-            if (type === 'emotion') {
-                html = `
-            <div class="flex flex-col gap-3 w-full max-w-sm self-start ml-12">
-                <div class="flex items-center gap-2 mb-1 pl-1">
-                    <span class="material-symbols-outlined text-secondary text-sm animate-pulse">grain</span>
-                    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-80">Phân tích cảm xúc</span>
-                </div>
-                <div class="bg-surface-light/40 border border-white/5 rounded-3xl overflow-hidden shadow-lg backdrop-blur-md relative">
-                    <div class="p-5 pb-2">
-                        <p class="text-white/90 text-[15px] font-medium">Biểu đồ tâm trạng</p>
-                        <p class="text-white/40 text-xs mt-1 font-light">Dựa trên ${data.emotions.length} ký ức gần đây</p>
-                    </div>
-                    <div class="w-full h-36 flex items-end justify-between px-6 pb-6 gap-2">
-                        ${data.emotions.map(e => `<div class="flex-1 bg-gradient-to-t from-purple-500/40 to-purple-500/10 rounded-t-sm" style="height:${e * 10}%"></div>`).join('')}
-                    </div>
-                </div>
-            </div>`;
-            }
-
-            messages.insertAdjacentHTML('beforeend', html);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        // ========== CRISIS ALERT ==========
-        function showCrisisAlert(data) {
-            const html = `
-        <div class="flex flex-col gap-2 w-full self-center mx-4">
-            <div class="bg-gradient-to-br from-rose-950/40 to-surface-dark border border-rose-500/20 rounded-3xl p-5 flex gap-4 items-start shadow-lg backdrop-blur-md">
-                <div class="bg-rose-500/10 p-2.5 rounded-2xl shrink-0 text-rose-400 border border-rose-500/10">
-                    <span class="material-symbols-outlined text-[20px]">spa</span>
-                </div>
-                <div class="flex-1">
-                    <h3 class="text-white/90 font-medium text-sm mb-1">Chúng tôi quan tâm đến bạn</h3>
-                    <p class="text-white/60 text-[13px] leading-relaxed mb-4">
-                        ${data?.message || 'Nếu bạn cần sự giúp đỡ ngay lập tức, hãy liên hệ với chuyên gia.'}
-                    </p>
-                    <div class="flex gap-3 flex-wrap">
-                        <a href="tel:1800599920" class="bg-rose-500/80 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 px-5 rounded-full uppercase">Gọi đường dây nóng</a>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-            messages.insertAdjacentHTML('beforeend', html);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        // ========== EVENT LISTENERS ==========
-        document.querySelector('button[aria-label="Send message"]').onclick = sendMessage;
-        document.querySelector('textarea').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        document.addEventListener('DOMContentLoaded', () => {
+            initSession();
+            setupAutoResize();
+            setupKeyboard();
+            initProactiveTimer();
+            // Track user activity
+            document.addEventListener('click', resetProactiveTimer);
+            document.addEventListener('keydown', resetProactiveTimer);
         });
 
+        // Setup WebSocket
+        function connectWebSocket() {
+            if (WS) WS.close();
 
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${USER_ID}`;
 
-        // ========== SESSION MANAGEMENT ==========
-        const sidebar = document.getElementById('sessionSidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const sessionList = document.getElementById('sessionList');
-        let conversation_history = [];
+            WS = new WebSocket(wsUrl);
 
-        function openSidebar() {
-            sidebar.classList.remove('hidden');
-            overlay.classList.remove('hidden');
-            loadSessions();
+            WS.onopen = () => {
+                document.getElementById('connectionStatus').textContent = 'Online';
+                document.getElementById('connectionStatus').classList.remove('text-red-500');
+                document.getElementById('connectionStatus').classList.add('text-emerald-500');
+            };
+
+            WS.onclose = () => {
+                document.getElementById('connectionStatus').textContent = 'Offline';
+                document.getElementById('connectionStatus').classList.remove('text-emerald-500');
+                document.getElementById('connectionStatus').classList.add('text-red-500');
+                setTimeout(connectWebSocket, 3000); // Reconnect
+            };
+
+            WS.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                hideTyping();
+
+                if (data.type === 'ai_response') {
+                    appendMessage('ai', data.message);
+                    // Reset proactive timer khi nhận tin nhắn từ AI
+                    resetProactiveTimer();
+                } else if (data.type === 'error') {
+                    console.error('[WS] Error from server:', data.message);
+                    appendMessage('ai', `⚠️ Lỗi: ${data.message}`);
+                } else if (data.type === 'save_error') {
+                    console.error('[WS] Message save error:', data.message);
+                    // Optionally show a subtle warning
+                } else if (data.crisis_detected) {
+                    appendCrisisAlert(data.crisis_data);
+                }
+            };
+
+            WS.onerror = (error) => {
+                console.error('[WS] WebSocket error:', error);
+            };
         }
 
-        function closeSidebar() {
-            sidebar.classList.add('hidden');
-            overlay.classList.add('hidden');
-        }
-
-        async function loadSessions() {
-            try {
-                const res = await fetch(apiBase + '/api/chat/sessions/' + userId);
-                const data = await res.json();
-                if (data.success && data.sessions.length > 0) {
-                    sessionList.innerHTML = data.sessions.map(s => `
-                    <div class="session-item p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-colors ${s.id == currentSessionId ? 'bg-primary/20 border border-primary/30' : ''}" data-id="${s.id}">
-                        <div class="text-white text-sm font-medium truncate">${s.title || 'Cuộc trò chuyện'}</div>
-                        <div class="text-white/40 text-xs mt-1">${s.date || ''} ${s.time || ''}</div>
-                    </div>
-                `).join('');
-
-                    sessionList.querySelectorAll('.session-item').forEach(el => {
-                        el.onclick = () => switchSession(el.dataset.id);
-                    });
+        // Session Management
+        async function initSession() {
+            console.log('[initSession] Current session_id from localStorage:', CURRENT_SESSION_ID);
+            
+            if (!CURRENT_SESSION_ID) {
+                console.log('[initSession] No saved session, creating new...');
+                await createNewSession(false);
+            } else {
+                // Validate session_id format
+                const sessionIdInt = parseInt(CURRENT_SESSION_ID, 10);
+                if (isNaN(sessionIdInt)) {
+                    console.warn('[initSession] Invalid session_id format, creating new session');
+                    localStorage.removeItem('current_session_id');
+                    await createNewSession(false);
                 } else {
-                    sessionList.innerHTML = '<div class="text-white/40 text-sm text-center py-4">Chưa có cuộc trò chuyện</div>';
+                    console.log('[initSession] Loading messages for session', CURRENT_SESSION_ID);
+                    await loadMessages(CURRENT_SESSION_ID);
                 }
-            } catch (e) {
-                console.error('Load sessions error:', e);
             }
+            connectWebSocket();
+            loadSessionList();
         }
 
-        function switchSession(sessionId) {
-            currentSessionId = sessionId;
-            localStorage.setItem('current_session_id', sessionId);
-            closeSidebar();
-            messages.innerHTML = '';
-            conversation_history = [];
-        }
-
-
-        async function saveCurrentSession() {
-            if (currentSessionId && conversation_history.length >= 2) {
-                try {
-                    await fetch(apiBase + '/api/chat/sessions/' + currentSessionId + '/generate-title', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages: conversation_history.slice(0, 6) })
-                    });
-                    console.log('Session saved with AI title');
-                } catch (e) { console.log('Title generation:', e); }
-            }
-        }
-
-        async function createNewSession() {
+        async function createNewSession(refresh = true) {
             try {
-                await saveCurrentSession();
-                const res = await fetch(apiBase + '/api/chat/sessions/' + userId, { method: 'POST' });
+                console.log('[createNewSession] Creating new session for user:', USER_ID);
+                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`, { method: 'POST' });
                 const data = await res.json();
+
+                console.log('[createNewSession] API response:', data);
+
                 if (data.success && data.session) {
-                    currentSessionId = data.session.id;
-                    localStorage.setItem('current_session_id', currentSessionId);
-                    messages.innerHTML = '';
-                    conversation_history = [];
-                    closeSidebar();
+                    CURRENT_SESSION_ID = String(data.session.id);
+                    localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
+                    console.log('[createNewSession] New session created:', CURRENT_SESSION_ID);
+
+                    document.getElementById('messagesList').innerHTML = '';
+                    document.getElementById('welcomeState').classList.remove('hidden');
+
+                    if (refresh) {
+                        toggleSidebar(false);
+                        loadSessionList();
+                    }
+                } else {
+                    console.error('[createNewSession] Failed to create session:', data.error);
                 }
-            } catch (e) {
-                console.error('Create session error:', e);
+            } catch (err) {
+                console.error('[createNewSession] Error creating session:', err);
             }
         }
 
-        // Sidebar event listeners
-        document.getElementById('historyBtn').onclick = openSidebar;
-        document.getElementById('closeSidebar').onclick = closeSidebar;
-        document.getElementById('sidebarOverlay').onclick = closeSidebar;
-        document.getElementById('newChatBtn').onclick = createNewSession;
+        async function loadSessionList() {
+            try {
+                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`);
+                const data = await res.json();
+                const list = document.getElementById('sessionList');
 
-        // Init session - auto-create if none exists
-        currentSessionId = localStorage.getItem('current_session_id');
-        if (!currentSessionId) {
-            fetch(apiBase + '/api/chat/sessions/' + userId, { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success && data.session) {
-                        currentSessionId = data.session.id;
-                        localStorage.setItem('current_session_id', currentSessionId);
-                        console.log('Auto-created session:', currentSessionId);
+                if (data.success && data.sessions) {
+                    // Update current session title in header
+                    const currentSession = data.sessions.find(s => String(s.id) === String(CURRENT_SESSION_ID));
+                    if (currentSession) {
+                        document.getElementById('sessionTitle').textContent = currentSession.title || 'Cuộc trò chuyện';
                     }
-                });
+
+                    list.innerHTML = data.sessions.map(s => `
+                        <div onclick="switchSession('${s.id}')" class="p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors ${String(s.id) === String(CURRENT_SESSION_ID) ? 'bg-white/10 border border-white/5' : ''}">
+                            <div class="font-medium text-sm text-white/90 truncate">${s.title || 'Cuộc trò chuyện mới'}</div>
+                            <div class="text-xs text-white/40 mt-1 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[10px]">schedule</span>
+                                ${s.date} ${s.time}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="text-center text-white/30 text-sm py-4">Chưa có lịch sử</div>';
+                }
+            } catch (err) {
+                console.error('Error loading sessions:', err);
+            }
         }
-        console.log('Using session:', currentSessionId);
 
+        async function switchSession(sessionId) {
+            // Ensure we store as string but use as integer where needed
+            CURRENT_SESSION_ID = String(sessionId);
+            localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
+            console.log(`[switchSession] Switching to session ${CURRENT_SESSION_ID}`);
+            await loadMessages(CURRENT_SESSION_ID);
+            toggleSidebar(false);
+            loadSessionList(); // Refresh active state
+        }
 
-        // Connect WebSocket on load
-        connectWS();
+        async function loadMessages(sessionId) {
+            document.getElementById('messagesList').innerHTML = '';
+            document.getElementById('welcomeState').classList.add('hidden');
+
+            // Ensure sessionId is valid
+            if (!sessionId) {
+                console.error('[loadMessages] No session_id provided');
+                document.getElementById('welcomeState').classList.remove('hidden');
+                return;
+            }
+
+            // Convert to integer for API
+            const sessionIdInt = parseInt(sessionId, 10);
+            if (isNaN(sessionIdInt)) {
+                console.error('[loadMessages] Invalid session_id:', sessionId);
+                document.getElementById('welcomeState').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                console.log(`[loadMessages] Fetching messages for session ${sessionIdInt}...`);
+                const res = await fetch(`${API_URL}/api/chat/sessions/${sessionIdInt}/messages`);
+                const data = await res.json();
+
+                console.log('[loadMessages] API response:', data);
+
+                if (data.success && data.messages && data.messages.length > 0) {
+                    // Update session title from first message if needed
+                    data.messages.forEach(msg => appendMessage(msg.role === 'user' ? 'user' : 'ai', msg.content, false));
+                    scrollToBottom();
+                } else if (data.success && (!data.messages || data.messages.length === 0)) {
+                    // No messages yet - show welcome state
+                    console.log('[loadMessages] Session exists but no messages');
+                    document.getElementById('welcomeState').classList.remove('hidden');
+                } else {
+                    // API returned error
+                    console.error('[loadMessages] API error:', data.error);
+                    document.getElementById('welcomeState').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('[loadMessages] Error loading messages:', err);
+                document.getElementById('welcomeState').classList.remove('hidden');
+            }
+        }
+
+        // Messaging
+        function appendMessage(role, text, animate = true) {
+            document.getElementById('welcomeState').classList.add('hidden');
+            const list = document.getElementById('messagesList');
+            const div = document.createElement('div');
+
+            // Markdown parsing for AI
+            const content = role === 'ai' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+
+            // Animation class
+            const animationClass = animate ? 'animate-fade-in' : '';
+
+            if (role === 'user') {
+                div.className = `flex justify-end ${animationClass}`;
+                div.innerHTML = `
+                    <div class="bubble-user text-white px-5 py-3 text-[15px] leading-relaxed max-w-[85%] break-words">
+                        ${content}
+                    </div>
+                `;
+            } else {
+                div.className = `flex gap-3 ${animationClass}`;
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-surface border border-white/10 flex items-center justify-center shrink-0 mt-1">
+                        <span class="material-symbols-outlined text-primary-light text-sm">smart_toy</span>
+                    </div>
+                    <div class="bubble-ai text-white/90 px-5 py-3 text-[15px] leading-relaxed max-w-[85%] prose prose-invert">
+                        ${content}
+                    </div>
+                `;
+            }
+
+            list.appendChild(div);
+            scrollToBottom();
+        }
+
+        function appendCrisisAlert(data) {
+            const list = document.getElementById('messagesList');
+            const div = document.createElement('div');
+            div.className = 'mx-4 my-2 animate-fade-in';
+            div.innerHTML = `
+                <div class="bg-gradient-to-br from-rose-950/50 to-rose-900/20 border border-rose-500/30 rounded-2xl p-4 flex gap-4 backdrop-blur-md">
+                    <div class="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center shrink-0 text-rose-400">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-rose-200 text-sm mb-1">Chúng tôi luôn ở đây vì bạn</h4>
+                        <p class="text-white/70 text-sm leading-relaxed mb-3">${data.message}</p>
+                        <a href="tel:111" class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2 px-4 rounded-full transition-colors">
+                            <span class="material-symbols-outlined text-sm">call</span>
+                            Đường dây nóng
+                        </a>
+                    </div>
+                </div>
+            `;
+            list.appendChild(div);
+            scrollToBottom();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            // Validate session exists
+            if (!CURRENT_SESSION_ID) {
+                console.error('[sendMessage] No session ID! Creating new session...');
+                await createNewSession(false);
+                if (!CURRENT_SESSION_ID) {
+                    alert('Không thể tạo phiên chat. Vui lòng tải lại trang.');
+                    return;
+                }
+            }
+
+            if (!text && PENDING_IMAGES.length === 0) return;
+
+            // UI Update
+            if (PENDING_IMAGES.length > 0) {
+                appendMessage('user', text + `\n[Đã gửi ${PENDING_IMAGES.length} ảnh]`);
+            } else {
+                appendMessage('user', text);
+            }
+
+            input.value = '';
+            input.style.height = 'auto'; // Reset height
+            showTyping();
+
+            // Prepare payload - ensure session_id is integer for backend
+            const sessionIdInt = parseInt(CURRENT_SESSION_ID, 10);
+            if (isNaN(sessionIdInt)) {
+                console.error('[sendMessage] Invalid session_id:', CURRENT_SESSION_ID);
+                hideTyping();
+                appendMessage('ai', 'Lỗi: Phiên chat không hợp lệ. Đang tạo phiên mới...');
+                await createNewSession(false);
+                return;
+            }
+
+            const payload = {
+                message: text,
+                session_id: sessionIdInt,
+                images: PENDING_IMAGES.map(img => ({
+                    base64: img.base64,
+                    mime_type: img.mimeType
+                }))
+            };
+
+            console.log('[sendMessage] Sending message to session:', sessionIdInt);
+
+            // Reset images
+            PENDING_IMAGES = [];
+            renderImagePreviews();
+
+            // Reset proactive timer
+            resetProactiveTimer();
+
+            // Send
+            if (WS && WS.readyState === WebSocket.OPEN) {
+                WS.send(JSON.stringify(payload));
+            } else {
+                console.error('WebSocket disconnected');
+                // Fallback or reconnect logic here
+            }
+        }
+
+        // Image Handling
+        function handleImageUpload(input) {
+            const files = Array.from(input.files);
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        PENDING_IMAGES.push({
+                            base64: e.target.result,
+                            mimeType: file.type
+                        });
+                        renderImagePreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            input.value = ''; // Reset
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('imagePreviewContainer');
+            if (PENDING_IMAGES.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = PENDING_IMAGES.map((img, idx) => `
+                <div class="relative w-16 h-16 shrink-0 group">
+                    <img src="${img.base64}" class="w-full h-full object-cover rounded-lg border border-white/20">
+                    <button onclick="removeImage(${idx})" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white shadow-md">
+                        <span class="material-symbols-outlined text-[12px]">close</span>
+                    </button>
+                    <div class="absolute inset-0 bg-white/10 hidden group-hover:block rounded-lg pointer-events-none"></div>
+                </div>
+            `).join('');
+        }
+
+        function removeImage(idx) {
+            PENDING_IMAGES.splice(idx, 1);
+            renderImagePreviews();
+        }
+
+        // UI Helpers
+        function toggleSidebar(force) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+            const shouldShow = force !== undefined ? force : isHidden;
+
+            if (shouldShow) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        function showTyping() {
+            document.getElementById('typingIndicator').classList.remove('hidden');
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            document.getElementById('typingIndicator').classList.add('hidden');
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            if (container) {
+                // Use smooth scrolling and ensure it works
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: 'smooth'
+                });
+                
+                // Fallback for older browsers
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function setupAutoResize() {
+            const textarea = document.getElementById('messageInput');
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        }
+
+        function setupKeyboard() {
+            const textarea = document.getElementById('messageInput');
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        // ==================== Proactive Message Functions ====================
+
+        function initProactiveTimer() {
+            // Check mỗi 15 giây
+            PROACTIVE_TIMER = setInterval(checkProactiveMessage, 15000);
+        }
+
+        function resetProactiveTimer() {
+            PROACTIVE_LAST_ACTIVITY = Date.now();
+        }
+
+        async function checkProactiveMessage() {
+            const timeSinceActivity = Date.now() - PROACTIVE_LAST_ACTIVITY;
+            console.log('[Proactive] Checking... Time since activity:', Math.floor(timeSinceActivity / 1000) + 's / timeout:', (PROACTIVE_TIMEOUT / 1000) + 's');
+
+            // Chỉ kiểm tra nếu đã đủ thời gian không hoạt động
+            if (timeSinceActivity < PROACTIVE_TIMEOUT) return;
+
+            console.log('[Proactive] Timeout reached, checking API...');
+
+            // Không hiện nếu đang có tin nhắn đang gõ
+            if (!document.getElementById('typingIndicator').classList.contains('hidden')) {
+                console.log('[Proactive] Skipping - typing indicator visible');
+                return;
+            }
+
+            try {
+                console.log('[Proactive] Calling /api/proactive/check...');
+                const res = await fetch(`${API_URL}/api/proactive/check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: USER_ID,
+                        session_id: CURRENT_SESSION_ID,
+                        last_active: new Date(PROACTIVE_LAST_ACTIVITY).toISOString(),
+                        include_daily_message: true
+                    })
+                });
+
+                const data = await res.json();
+                console.log('[Proactive] API response:', data);
+
+                // Xử lý notifications array
+                if (data.success && data.notifications && data.notifications.length > 0) {
+                    const notification = data.notifications[0];
+                    const type = notification.type || 'general';
+
+                    // Kiểm tra xem loại này đã bị dismiss chưa
+                    if (PROACTIVE_DISMISSED_TYPES.includes(type)) {
+                        console.log('[Proactive] Skipping - type dismissed:', type);
+                        return;
+                    }
+
+                    console.log('[Proactive] Showing message:', notification.message);
+                    showProactiveMessage(notification.message, notification.actions || [], type);
+                } else {
+                    console.log('[Proactive] No notifications to show');
+                }
+            } catch (err) {
+                console.error('[Proactive] Error:', err);
+            }
+        }
+
+        function showProactiveMessage(message, actions = [], type = 'general') {
+            const overlay = document.getElementById('proactiveOverlay');
+            const card = document.getElementById('proactiveCard');
+            const messageText = document.getElementById('proactiveMessageText');
+            const actionsContainer = document.getElementById('proactiveActions');
+
+            messageText.textContent = message;
+
+            // Tạo buttons cho actions
+            if (actions && actions.length > 0) {
+                actionsContainer.innerHTML = actions.map((action, idx) => `
+                    <button onclick="handleProactiveAction('${action.action}', '${type}')" 
+                        class="action-btn ${idx === 0 ? 'primary' : 'secondary'}">
+                        ${action.label}
+                    </button>
+                `).join('');
+            } else {
+                actionsContainer.innerHTML = `
+                    <button onclick="handleProactiveAction('dismiss', '${type}')" class="action-btn secondary">
+                        Để sau
+                    </button>
+                `;
+            }
+
+            // Reset animation
+            card.classList.remove('active');
+            overlay.classList.remove('active');
+
+            // Hiện card
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+                card.classList.add('active');
+            });
+
+            // Reset timer
+            resetProactiveTimer();
+        }
+
+        function dismissProactiveMessage() {
+            const overlay = document.getElementById('proactiveOverlay');
+            const card = document.getElementById('proactiveCard');
+
+            card.classList.remove('active');
+            overlay.classList.remove('active');
+
+            // Reset timer
+            resetProactiveTimer();
+        }
+
+        function handleProactiveAction(action, type) {
+            dismissProactiveMessage();
+
+            if (action === 'dismiss') {
+                // Lưu loại này vào dismissed list (session only)
+                PROACTIVE_DISMISSED_TYPES.push(type);
+                return;
+            }
+
+            // Xử lý các action khác
+            switch (action) {
+                case 'journal':
+                    window.location.href = '/app/journal';
+                    break;
+                case 'mood_checkin':
+                    window.location.href = '/app/moment-checkin';
+                    break;
+                case 'goals':
+                    window.location.href = '/app/goals';
+                    break;
+                case 'chat':
+                    // Mở chat với prompt có sẵn
+                    break;
+                default:
+                    console.log('Unknown action:', action);
+            }
+        }
+
+        // ==================== Edit Title Functions ====================
+
+        function editSessionTitle() {
+            const modal = document.getElementById('editTitleModal');
+            const input = document.getElementById('newTitleInput');
+            input.value = document.getElementById('sessionTitle').textContent;
+            modal.classList.remove('hidden');
+            input.focus();
+            input.select();
+        }
+
+        function closeEditTitleModal() {
+            document.getElementById('editTitleModal').classList.add('hidden');
+        }
+
+        async function saveNewTitle() {
+            const input = document.getElementById('newTitleInput');
+            const newTitle = input.value.trim();
+
+            if (!newTitle || !CURRENT_SESSION_ID) {
+                closeEditTitleModal();
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/chat/sessions/${CURRENT_SESSION_ID}/title`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle, user_id: USER_ID })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('sessionTitle').textContent = newTitle;
+                    loadSessionList(); // Refresh sidebar
+                    closeEditTitleModal();
+                } else {
+                    alert('Lỗi: ' + (data.error || 'Không thể cập nhật tiêu đề'));
+                }
+            } catch (err) {
+                console.error('Error saving title:', err);
+                alert('Lỗi khi lưu tiêu đề');
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('editTitleModal')?.addEventListener('click', function (e) {
+            if (e.target === this) closeEditTitleModal();
+        });
+
+        // Enter key to save
+        document.getElementById('newTitleInput')?.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') saveNewTitle();
+            if (e.key === 'Escape') closeEditTitleModal();
+        });
     </script>
+
+    <!-- Edit Title Modal -->
+    <div id="editTitleModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#0A0F1E] rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl">
+            <h3 class="text-lg font-semibold mb-4">Đổi tên cuộc trò chuyện</h3>
+            <input type="text" id="newTitleInput"
+                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-primary transition-colors"
+                placeholder="Nhập tên mới..." />
+            <div class="flex gap-3 mt-5">
+                <button onclick="closeEditTitleModal()"
+                    class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 font-medium transition-colors">
+                    Hủy
+                </button>
+                <button onclick="saveNewTitle()"
+                    class="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-light text-white font-medium transition-colors shadow-lg shadow-primary/20">
+                    Lưu
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

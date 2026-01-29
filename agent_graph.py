@@ -5,7 +5,7 @@ LangGraph Multi-Agent System for Miru
 """
 
 import os
-from typing import TypedDict, Annotated, Sequence, Literal
+from typing import TypedDict, Annotated, Sequence, Literal, Any
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,6 +22,7 @@ from langchain_core.tools import tool
 # Local imports
 from crisis_detector import get_crisis_detector, CrisisLevel
 from memory_service import get_memory_service
+from ai_service import get_ai_service
 
 
 # === STATE DEFINITION ===
@@ -29,10 +30,13 @@ class AgentState(TypedDict):
     """State shared across all agents"""
     messages: Sequence[BaseMessage]
     user_id: str
+    session_id: Any
     user_message: str
+    images: list               # List of {base64, mime_type} dictionaries
     crisis_level: str
     crisis_detected: bool
-    memories: str
+    memories: str          # Long-term (Mem0)
+    session_facts: str     # Short-term (facts.txt)
     actions_taken: list
     final_response: str
 
@@ -183,7 +187,16 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
                 final_memories.append(mem_with_time)
                 seen_memories.add(mem_text)
         
-        # === STEP 3: Build final context ===
+        # === STEP 3: Fetch Session Facts (facts.txt) ===
+        try:
+            session_facts = memory_service.get_session_facts(state["session_id"])
+            state["session_facts"] = session_facts
+            print(f"   📂 Loaded session facts for {state['session_id']}")
+        except Exception as e:
+            print(f"   ⚠️ Error loading session facts: {e}")
+            state["session_facts"] = ""
+        
+        # === STEP 4: Build final context ===
         final_memories = final_memories[:5]
         
         if final_memories:
@@ -204,20 +217,9 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
     return state
 
 
-def empathy_response_node(state: AgentState) -> AgentState:
-    """Tạo phản hồi đồng cảm dựa trên context."""
-    # Use stable model - openai/gpt-oss-120b can be unstable
-    model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-    # Override unstable models
-    if "gpt-oss" in model_name or "openai" in model_name:
-        model_name = "llama-3.3-70b-versatile"
-        print(f"   ⚠️ Using stable model: {model_name}")
-    
-    llm = ChatGroq(
-        model=model_name,
-        api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0.7
-    )
+async def empathy_response_node(state: AgentState) -> AgentState:
+    """Tạo phản hồi đồng cảm dựa trên context sử dụng Gemini."""
+    ai = get_ai_service()
     
     # Build system prompt based on crisis level
     crisis_instructions = ""
@@ -236,7 +238,7 @@ def empathy_response_node(state: AgentState) -> AgentState:
 - Nếu phù hợp, nhắc đến có thể nói chuyện với chuyên gia
 """
     
-    print(f"\n💚 [Empathy Node] Memories in context: {state['memories'][:200] if state['memories'] else 'NONE'}...")
+    print(f"\n💚 [Empathy Node] Memories in context: {state['memories'][:200] if state['memories'] else 'NONE'}...", flush=True)
     
     # Build a much better system prompt with current time
     from datetime import datetime, timezone, timedelta
@@ -245,13 +247,37 @@ def empathy_response_node(state: AgentState) -> AgentState:
     current_time = now.strftime('%H:%M ngày %d/%m/%Y')
     day_of_week = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'][now.weekday()]
     
+    # === CONVERSATION CONTEXT INDICATOR ===
+    messages = state.get("messages", [])
+    msg_count = len(messages)
+    
+    if msg_count == 0:
+        conversation_context = """## TRẠNG THÁI HỘI THOẠI: ĐÂY LÀ TIN NHẮN ĐẦU TIÊN
+Người dùng vừa mới bắt đầu cuộc trò chuyện. Bạn có thể chào họ một cách ấm áp."""
+    else:
+        conversation_context = f"""## LỊCH SỬ TRÒ CHUYỆN ({msg_count} tin nhắn gần nhất):
+Đây là {msg_count} tin nhắn cuối cùng của cuộc trò chuyện. Hãy dùng chúng để tiếp nối mạch câu chuyện một cách tự nhiên liền mạch.
+⚠️ LƯU Ý: Đừng lặp lại nội dung đã nói, và KHÔNG chào lại nếu đã chào rồi."""
+    
     system_prompt = f"""Bạn là Miru - một người bạn thân thiết, quan tâm sâu sắc và luôn lắng nghe.
+
+{conversation_context}
 
 ## THỜI GIAN HIỆN TẠI:
 Bây giờ là {current_time} ({day_of_week}). Hãy nhận thức về thời gian khi trò chuyện (ví dụ: chào buổi sáng/chiều/tối phù hợp).
 
 ## Những gì bạn nhớ về người này:
-{state['memories'] if state['memories'] else "Chưa có thông tin cụ thể, nhưng bạn vẫn quan tâm đến họ."}
+{state['memories'] if state['memories'] else "Chưa có thông tin cụ thể."}
+
+## NHẬT KÝ PHIÊN CHAT (BẮT BUỘC TUÂN THỦ):
+{state['session_facts']}
+
+
+Lưu ý: "Nhật ký phiên chat" ở trên chứa 4 phần quan trọng:
+1. [THE HOOK]: Lý do cốt lõi/tâm trạng ban đầu của user. Đừng quên điều này.
+2. [EMOTIONAL ARC]: Hành trình cảm xúc của user. Hãy điều chỉnh tông giọng cho phù hợp với trạng thái hiện tại.
+3. [KEY DECISIONS]: Những gì đã chốt, ĐỪNG hỏi lại.
+4. [UNSPOKEN CONTEXT]: Những nhu cầu ngầm mà bạn nên tinh tế nhận ra.
 
 {crisis_instructions}
 
@@ -301,57 +327,39 @@ Ví dụ tốt: "Cảm ơn bạn đã chia sẻ chi tiết như vậy với mìn
         if word_count > 1000:
             words = user_message.split()
             user_message = " ".join(words[:500]) + "\n\n[... văn bản đã được rút gọn ...]\n\n" + " ".join(words[-200:])
-            print(f"   📄 Long text truncated: {word_count} → ~700 words")
+            print(f"   📄 Long text truncated: {word_count} → ~700 words", flush=True)
     
-    # Build messages in correct order: System → History → Current User Message
-    messages = [SystemMessage(content=system_prompt)]
-    
-    # Add conversation history FIRST (for context)
+    # Convert system prompt to history for Gemini
+    history = []
     if state["messages"]:
-        messages.extend(state["messages"])
-        print(f"   📜 Conversation history: {len(state['messages'])} messages")
+        for m in state["messages"]:
+            history.append({
+                "role": "user" if isinstance(m, HumanMessage) else "assistant",
+                "content": m.content
+            })
     
-    # Current user message LAST
-    messages.append(HumanMessage(content=user_message))
+    full_prompt = f"{system_prompt}\n\nTin nhắn người dùng: {user_message}"
     
-    # LLM call with retry and fallback
-    max_retries = 2
-    fallback_responses = [
-        "Mình xin lỗi, có vẻ như mình đang gặp chút trục trặc. Bạn có thể chia sẻ lại được không?",
-        "Mình cần một chút thời gian để suy nghĩ... Bạn có thể nói thêm cho mình hiểu không?",
-        "Mình đang lắng nghe đây. Bạn có muốn chia sẻ thêm không?"
-    ]
-    
-    response_content = ""
-    total_tokens = len(system_prompt.split()) + len(user_message.split())
-    print(f"   📊 Total prompt tokens (approx): {total_tokens}")
-    
-    for attempt in range(max_retries + 1):
-        try:
-            response = llm.invoke(messages)
-            response_content = response.content if response and response.content else ""
-            
-            # Check if response is meaningful (not empty or too short)
-            if response_content and len(response_content.strip()) > 10:
-                print(f"   ✅ LLM response: {len(response_content)} chars")
-                break
-            else:
-                print(f"   ⚠️ LLM returned empty/short response, attempt {attempt + 1}/{max_retries + 1}")
-                
-        except Exception as e:
-            print(f"   ❌ LLM error (attempt {attempt + 1}): {e}")
-            if attempt == max_retries:
-                import random
-                response_content = random.choice(fallback_responses)
-    
-    # Final fallback if still empty
-    if not response_content or len(response_content.strip()) < 10:
-        import random
-        response_content = random.choice(fallback_responses)
-        print(f"   🔄 Using fallback response")
+    try:
+        # Check if images are present
+        images = state.get("images", [])
+        if images and len(images) > 0:
+            # Use multimodal API for images
+            print(f"   🖼️ Processing {len(images)} image(s) with text...", flush=True)
+            response_content = await ai.generate_response_with_images(
+                prompt=full_prompt,
+                images=images,
+                history=history
+            )
+        else:
+            # Text-only response
+            response_content = await ai.generate_response(full_prompt, history)
+    except Exception as e:
+        print(f"   ❌ Gemini error: {e}", flush=True)
+        response_content = "Mình xin lỗi, mình đang gặp chút trục trặc kỹ thuật. Chúng mình nói chuyện sau nhé?"
     
     state["final_response"] = response_content
-    state["actions_taken"].append("Tạo phản hồi đồng cảm")
+    state["actions_taken"].append("Tạo phản hồi đồng cảm (Gemini)")
     
     return state
 
@@ -430,9 +438,16 @@ def get_agent_graph():
 
 
 # === RUN AGENT ===
-async def run_agent(user_id: str, user_message: str, conversation_history: list = None) -> dict:
+async def run_agent(user_id: str, user_message: str, session_id: Any, conversation_history: list = None, images: list = None) -> dict:
     """
     Chạy agent graph và trả về kết quả.
+    
+    Args:
+        user_id: User ID
+        user_message: Text message from user
+        session_id: Chat session ID
+        conversation_history: Previous messages
+        images: List of {base64, mime_type} dictionaries (optional)
     
     Returns:
         {
@@ -456,10 +471,13 @@ async def run_agent(user_id: str, user_message: str, conversation_history: list 
     initial_state = {
         "messages": messages,
         "user_id": user_id,
+        "session_id": session_id,
         "user_message": user_message,
+        "images": images or [],
         "crisis_level": "NONE",
         "crisis_detected": False,
         "memories": "",
+        "session_facts": "",
         "actions_taken": [],
         "final_response": ""
     }

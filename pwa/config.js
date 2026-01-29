@@ -22,7 +22,7 @@ const CONFIG = {
 
         switch (env) {
             case 'development':
-                return 'http://localhost:8000';
+                return 'http://localhost:8008';
 
             case 'render':
                 // Legacy Render deployment (deprecated)
@@ -37,7 +37,7 @@ const CONFIG = {
                 return 'https://miru-production.up.railway.app';
 
             default:
-                return 'http://localhost:8000';
+                return 'http://localhost:8008';
         }
     },
 

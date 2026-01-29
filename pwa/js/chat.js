@@ -13,36 +13,71 @@ class ReflectionChat {
         this.isConnected = false;
         this.messageHistory = [];
 
-        // Load chat history from localStorage
-        this.loadChatHistory();
+        // Proactive message tracking
+        this.lastActivityTime = Date.now();
+        this.proactiveTimer = null;
+        this.proactiveShown = false;
+        this.INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        this.sessionId = this.getSessionIdFromUrl();
+        this.msgLimit = 50;
+
+        // Load chat history from Server (Source of Truth)
+        if (this.sessionId) {
+            this.loadHistoryFromServer();
+        } else {
+            console.log('ℹ️ No session ID found in URL');
+        }
 
         this.init();
     }
 
-    getUserId() {
-        // Fallback if no userId provided (should not happen in auth mode)
-        let userId = localStorage.getItem('user_id');
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('user_id', userId);
-        }
-        return userId;
+    getSessionIdFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('session_id');
     }
 
-    loadChatHistory() {
+    async loadHistoryFromServer() {
         try {
-            const saved = localStorage.getItem(`chat_history_${this.userId}`);
-            if (saved) {
-                const messages = JSON.parse(saved);
-                // Restore messages to DOM
-                messages.forEach(msg => {
-                    this.addMessageToDOM(msg.content, msg.isUser, false); // false = don't save again
+            console.log(`🔄 Fetching history for session ${this.sessionId}...`);
+            console.log(`[DEBUG] Request URL: /api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+
+            const response = await fetch(`/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+            console.log(`[DEBUG] Response status: ${response.status}`);
+
+            const data = await response.json();
+            console.log(`[DEBUG] Response data:`, data);
+
+            if (data.success && data.messages) {
+                console.log(`[DEBUG] Received ${data.messages.length} messages from server`);
+
+                // Clear existing messages? Maybe not if we want to keep welcome msg
+                // this.chatContainer.innerHTML = '';
+
+                data.messages.forEach((msg, index) => {
+                    console.log(`[DEBUG] Processing message ${index}: role=${msg.role}, content_length=${msg.content?.length}`);
+                    const isUser = msg.role === 'user';
+                    // Don't save to history array again, just render
+                    this.addMessageToDOM(msg.content, isUser, false);
                 });
-                console.log(`✅ Loaded ${messages.length} messages from history`);
+                console.log(`✅ Loaded ${data.messages.length} messages from server`);
+
+                // Scroll to bottom
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            } else {
+                console.warn(`[DEBUG] No messages loaded. success=${data.success}, messages=${data.messages}`);
+                if (data.error) {
+                    console.error(`[DEBUG] Server error: ${data.error}`);
+                }
             }
         } catch (e) {
-            console.error('Error loading chat history:', e);
+            console.error('❌ Error loading server history:', e);
         }
+    }
+
+    // Deprecated: loadChatHistory (Local Storage)
+    loadChatHistory() {
+        // No-op or migration logic if needed
     }
 
     saveChatHistory() {
@@ -88,6 +123,148 @@ class ReflectionChat {
                 }
             }
         });
+
+        // Start proactive message timer
+        this.startProactiveTimer();
+    }
+
+    // ========== Proactive Message Methods ==========
+
+    startProactiveTimer() {
+        // Clear any existing timer
+        if (this.proactiveTimer) {
+            clearTimeout(this.proactiveTimer);
+        }
+
+        // Set new timer for 5 minutes
+        this.proactiveTimer = setTimeout(() => {
+            this.checkAndShowProactiveMessage();
+        }, this.INACTIVITY_THRESHOLD);
+
+        console.log('🕐 Proactive timer started (5 minutes) - will trigger at:', new Date(Date.now() + this.INACTIVITY_THRESHOLD).toLocaleTimeString());
+    }
+
+    resetProactiveTimer() {
+        this.lastActivityTime = Date.now();
+        this.proactiveShown = false;
+        this.startProactiveTimer();
+    }
+
+    async checkAndShowProactiveMessage() {
+        // Don't show if already shown or no connection
+        if (this.proactiveShown || !this.isConnected) {
+            console.log('⏭️ Skipping proactive message - already shown or not connected');
+            return;
+        }
+
+        console.log('🔍 Checking for proactive message...');
+
+        try {
+            const response = await fetch('/api/proactive/check', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.userId,
+                    last_active: new Date(this.lastActivityTime).toISOString(),
+                    include_daily_message: true
+                })
+            });
+
+            console.log('📡 API response status:', response.status);
+
+            if (!response.ok) throw new Error('Failed to fetch proactive message');
+
+            const data = await response.json();
+            console.log('📨 API response data:', data);
+
+            if (data.success && data.notifications && data.notifications.length > 0) {
+                // Show the first notification
+                const notification = data.notifications[0];
+                console.log('✅ Showing proactive message:', notification.message);
+                this.showProactiveMessage(notification);
+                this.proactiveShown = true;
+            } else {
+                console.log('ℹ️ No proactive messages to show');
+            }
+        } catch (error) {
+            console.error('❌ Error fetching proactive message:', error);
+        }
+    }
+
+    showProactiveMessage(notification) {
+        // Create proactive message element
+        const messageGroup = document.createElement('div');
+        messageGroup.className = 'message-group fade-in proactive-message';
+        messageGroup.id = 'proactiveMessage';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        messageGroup.appendChild(avatar);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble ai proactive';
+
+        // Message content
+        const content = document.createElement('div');
+        content.className = 'proactive-content';
+        content.innerHTML = `<p>${notification.message}</p>`;
+        bubble.appendChild(content);
+
+        // Action buttons
+        const actions = document.createElement('div');
+        actions.className = 'proactive-actions';
+        actions.style.cssText = 'display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;';
+
+        // Reply button
+        const replyBtn = document.createElement('button');
+        replyBtn.className = 'btn-proactive-reply';
+        replyBtn.textContent = '💭 Trả lờ';
+        replyBtn.style.cssText = 'padding: 6px 12px; border-radius: 16px; border: 1px solid rgba(127, 13, 242, 0.5); background: rgba(127, 13, 242, 0.2); color: white; cursor: pointer; font-size: 13px;';
+        replyBtn.onclick = () => {
+            this.dismissProactiveMessage();
+            this.chatInput.focus();
+        };
+        actions.appendChild(replyBtn);
+
+        // Check-in button
+        const checkinBtn = document.createElement('button');
+        checkinBtn.className = 'btn-proactive-checkin';
+        checkinBtn.textContent = '✅ Check-in';
+        checkinBtn.style.cssText = 'padding: 6px 12px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.2); color: white; cursor: pointer; font-size: 13px;';
+        checkinBtn.onclick = () => {
+            this.dismissProactiveMessage();
+            if (window.momentCheckin) {
+                window.momentCheckin.open();
+            }
+        };
+        actions.appendChild(checkinBtn);
+
+        // Dismiss button
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className = 'btn-proactive-dismiss';
+        dismissBtn.textContent = '✕';
+        dismissBtn.style.cssText = 'padding: 6px 10px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: white; cursor: pointer; font-size: 13px;';
+        dismissBtn.onclick = () => this.dismissProactiveMessage();
+        actions.appendChild(dismissBtn);
+
+        bubble.appendChild(actions);
+        messageGroup.appendChild(bubble);
+
+        this.chatContainer.appendChild(messageGroup);
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+
+        console.log('🤖 Proactive message shown:', notification.message);
+    }
+
+    dismissProactiveMessage() {
+        const proactiveMsg = document.getElementById('proactiveMessage');
+        if (proactiveMsg) {
+            proactiveMsg.remove();
+        }
+        // Restart timer
+        this.resetProactiveTimer();
     }
 
     connectWebSocket() {
@@ -143,6 +320,8 @@ class ReflectionChat {
 
         if (data.type === 'message') {
             this.addMessage(data.content, false);
+            // Reset proactive timer on AI response
+            this.resetProactiveTimer();
         } else if (data.type === 'error') {
             this.addMessage(`Xin lỗi: ${data.content}`, false);
         }
@@ -165,6 +344,7 @@ class ReflectionChat {
         // Send to server
         this.ws.send(JSON.stringify({
             message: message,
+            session_id: this.sessionId, // Critical for backend saving
             timestamp: new Date().toISOString()
         }));
 
@@ -173,13 +353,19 @@ class ReflectionChat {
             this.hideTypingIndicator();
             this.addMessage('Xin lỗi, AI đang phản hồi chậm. Vui lòng thử lại.', false);
         }, 30000); // 30 seconds timeout
+
+        // Reset proactive timer on user message
+        this.resetProactiveTimer();
+
+        // Dismiss any existing proactive message
+        this.dismissProactiveMessage();
     }
 
-    addMessage(content, isUser = false) {
-        this.addMessageToDOM(content, isUser, true); // true = save to history
+    addMessage(content, isUser = false, isProactive = false) {
+        this.addMessageToDOM(content, isUser, true, isProactive); // true = save to history
     }
 
-    addMessageToDOM(content, isUser = false, saveToHistory = true) {
+    addMessageToDOM(content, isUser = false, saveToHistory = true, isProactive = false) {
         const messageGroup = document.createElement('div');
         messageGroup.classList.add('message-group');
         if (isUser) {
@@ -197,6 +383,12 @@ class ReflectionChat {
         const bubble = document.createElement('div');
         bubble.classList.add('message-bubble');
         bubble.classList.add(isUser ? 'user' : 'ai');
+
+        // Add proactive styling
+        if (isProactive) {
+            bubble.classList.add('proactive');
+            bubble.style.borderLeft = '3px solid #7f0df2';
+        }
 
         // Render Markdown for AI messages
         if (!isUser && typeof marked !== 'undefined') {

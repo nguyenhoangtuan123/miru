@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html class="dark" lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Miru - Emotion Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Chart.js - More reliable CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "primary-light": "#a855f7",
+                        "background-dark": "#050A1F",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #050A1F 0%, #0a0520 50%, #050A1F 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glow-purple {
+            box-shadow: 0 0 60px rgba(127, 13, 242, 0.3);
+        }
+
+        .emotion-dot {
+            animation: pulse-soft 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-soft {
+
+            0%,
+            100% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(127, 13, 242, 0.2);
+            border-top: 3px solid #7f0df2;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="font-display text-white overflow-x-hidden">
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div
+            class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[150px] mix-blend-screen opacity-30">
+        </div>
+        <div
+            class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#3b0764]/30 rounded-full blur-[120px] mix-blend-screen opacity-25">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 min-h-screen p-4 md:p-6 max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Emotion Analytics</h1>
+                <p class="text-white/50 text-sm">Phân tích cảm xúc từ các phiên chat</p>
+            </div>
+            <a href="/app"
+                class="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:border-primary/30 transition-colors">
+                <span class="material-symbols-outlined text-white/70">close</span>
+            </a>
+        </header>
+
+        <!-- Session Selector -->
+        <div id="session-selector" class="flex gap-3 overflow-x-auto pb-4 mb-6"></div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="flex items-center justify-center py-20">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-white/60">Đang tải dữ liệu...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden glass-card rounded-2xl p-6 mb-6 border-red-500/30">
+            <p class="text-red-400" id="error-message"></p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard-content" class="hidden space-y-6">
+            <!-- Summary Card -->
+            <div class="glass-card glow-purple rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">Tổng quan cảm xúc</h2>
+                    <span id="emotion-badge"
+                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"></span>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div id="avg-score" class="text-3xl font-bold text-primary-light">-</div>
+                        <div class="text-xs text-white/50 mt-1">Điểm trung bình</div>
+                    </div>
+                    <div>
+                        <div id="dominant-emotion" class="text-2xl font-bold capitalize">-</div>
+                        <div class="text-xs text-white/50 mt-1">Cảm xúc chính</div>
+                    </div>
+                    <div>
+                        <div id="trend-icon" class="text-3xl font-bold flex items-center justify-center">
+                            <span class="material-symbols-outlined">trending_flat</span>
+                        </div>
+                        <div class="text-xs text-white/50 mt-1" id="trend-label">Stable</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The Hook -->
+            <div id="hook-card" class="glass-card rounded-2xl p-6 hidden">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary-light">psychology</span>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold">The Hook</h2>
+                        <p class="text-xs text-white/50">Chủ đề cảm xúc chính</p>
+                    </div>
+                </div>
+                <p id="hook-content" class="text-white/80 text-sm leading-relaxed"></p>
+            </div>
+
+            <!-- Emotion Chart -->
+            <div class="glass-card rounded-2xl p-6">
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-light">show_chart</span>
+                    Emotional Timeline
+                </h2>
+                <div class="h-64">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Insights -->
+            <div id="insights-section" class="hidden">
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-light">lightbulb</span>
+                    <span>Insights</span>
+                    <span id="insights-count" class="text-white/50 text-sm"></span>
+                </h2>
+                <div id="insights-list" class="space-y-4"></div>
+            </div>
+
+            <!-- Key Decisions -->
+            <div id="decisions-section" class="hidden">
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-light">task_alt</span>
+                    <span>Key Decisions</span>
+                    <span id="decisions-count" class="text-white/50 text-sm"></span>
+                </h2>
+                <div class="glass-card rounded-2xl p-6">
+                    <ul id="decisions-list" class="space-y-3"></ul>
+                </div>
+            </div>
+
+            <!-- Unspoken Context -->
+            <div id="context-section" class="hidden">
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-light">visibility_off</span>
+                    Unspoken Context
+                </h2>
+                <div id="context-list" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-8 text-white/30 text-sm">
+            Miru Emotion Analytics • Powered by AI
+        </footer>
+    </div>
+
+    <script>
+        // API URL - use same origin
+        const API_URL = window.location.origin;
+        let emotionChart = null;
+        let currentSession = null;
+
+        // Emotion colors
+        const emotionColors = {
+            happy: { bg: 'rgba(16, 185, 129, 0.2)', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+            anxious: { bg: 'rgba(245, 158, 11, 0.2)', text: 'text-amber-400', border: 'border-amber-500/30' },
+            confused: { bg: 'rgba(59, 130, 246, 0.2)', text: 'text-blue-400', border: 'border-blue-500/30' },
+            sad: { bg: 'rgba(239, 68, 68, 0.2)', text: 'text-red-400', border: 'border-red-500/30' },
+            neutral: { bg: 'rgba(107, 114, 128, 0.2)', text: 'text-gray-400', border: 'border-gray-500/30' },
+            hopeful: { bg: 'rgba(168, 85, 247, 0.2)', text: 'text-purple-400', border: 'border-purple-500/30' }
+        };
+
+        // Initialize
+        async function init() {
+            try {
+                const response = await fetch(`${API_URL}/api/insights/facts/sessions`);
+                const data = await response.json();
+
+                if (data.success && data.sessions.length > 0) {
+                    renderSessionSelector(data.sessions);
+                    loadSession(data.sessions[data.sessions.length - 1]);
+                } else {
+                    showError('Không có session nào. Hãy chat với Miru trước!');
+                }
+            } catch (error) {
+                showError('Không thể kết nối server: ' + error.message);
+            }
+        }
+
+        // Render session selector
+        function renderSessionSelector(sessions) {
+            const container = document.getElementById('session-selector');
+            container.innerHTML = sessions.map(session => `
+                <button onclick="loadSession('${session}')" 
+                    id="session-btn-${session}"
+                    class="px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap glass-card text-white/70 hover:text-white hover:border-primary/30">
+                    Session ${session}
+                </button>
+            `).join('');
+        }
+
+        // Load session data
+        async function loadSession(sessionId) {
+            currentSession = sessionId;
+
+            // Update button states
+            document.querySelectorAll('[id^="session-btn-"]').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/30');
+                btn.classList.add('glass-card', 'text-white/70');
+            });
+            const activeBtn = document.getElementById(`session-btn-${sessionId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('glass-card', 'text-white/70');
+                activeBtn.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/30');
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_URL}/api/insights/facts/${sessionId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderDashboard(data.data);
+                } else {
+                    showError(data.detail || 'Không thể tải dữ liệu session');
+                }
+            } catch (error) {
+                showError('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        // Show/hide states
+        function showLoading() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+
+        function showDashboard() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+        }
+
+        // Render dashboard
+        function renderDashboard(data) {
+            showDashboard();
+
+            // Summary
+            const summary = data.emotion_summary || {};
+            const emotion = summary.dominant_emotion || 'neutral';
+            const score = summary.average_score || 0.5;
+            const colors = emotionColors[emotion] || emotionColors.neutral;
+
+            document.getElementById('avg-score').textContent = Math.round(score * 100) + '%';
+            document.getElementById('dominant-emotion').textContent = emotion;
+
+            const badge = document.getElementById('emotion-badge');
+            badge.className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${colors.text} ${colors.border}`;
+            badge.style.backgroundColor = colors.bg;
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-current mr-2 emotion-dot"></span>${emotion} • ${Math.round(score * 100)}%`;
+
+            // Trend
+            const trend = summary.trend || 'stable';
+            const trendIcon = document.getElementById('trend-icon').querySelector('span');
+            const trendLabel = document.getElementById('trend-label');
+            if (trend === 'improving') {
+                trendIcon.textContent = 'trending_up';
+                trendIcon.parentElement.classList.add('text-emerald-400');
+            } else if (trend === 'declining') {
+                trendIcon.textContent = 'trending_down';
+                trendIcon.parentElement.classList.add('text-red-400');
+            } else {
+                trendIcon.textContent = 'trending_flat';
+            }
+            trendLabel.textContent = trend.charAt(0).toUpperCase() + trend.slice(1);
+
+            // Hook
+            if (data.hook) {
+                document.getElementById('hook-card').classList.remove('hidden');
+                document.getElementById('hook-content').textContent = data.hook;
+            } else {
+                document.getElementById('hook-card').classList.add('hidden');
+            }
+
+            // Chart
+            renderChart(data.emotional_arc || []);
+
+            // Insights
+            const insights = data.consolidated_insights || [];
+            if (insights.length > 0) {
+                document.getElementById('insights-section').classList.remove('hidden');
+                document.getElementById('insights-count').textContent = `(${insights.length})`;
+                document.getElementById('insights-list').innerHTML = insights.map(insight => `
+                    <div class="glass-card rounded-2xl p-6 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-primary-light text-2xl">emoji_objects</span>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-semibold text-sm mb-2">${insight.title || 'Insight ' + insight.number}</h3>
+                                <p class="text-white/60 text-sm leading-relaxed">${insight.content}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('insights-section').classList.add('hidden');
+            }
+
+            // Key Decisions
+            const decisions = data.key_decisions || [];
+            if (decisions.length > 0) {
+                document.getElementById('decisions-section').classList.remove('hidden');
+                document.getElementById('decisions-count').textContent = `(${decisions.length})`;
+                document.getElementById('decisions-list').innerHTML = decisions.slice(0, 5).map((decision, i) => `
+                    <li class="flex items-start gap-3 text-sm">
+                        <span class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs text-primary-light font-bold">${i + 1}</span>
+                        <span class="text-white/70">${decision}</span>
+                    </li>
+                `).join('') + (decisions.length > 5 ? `<li class="text-white/40 text-xs pl-9">+${decisions.length - 5} quyết định khác...</li>` : '');
+            } else {
+                document.getElementById('decisions-section').classList.add('hidden');
+            }
+
+            // Unspoken Context
+            const contexts = data.unspoken_context || [];
+            if (contexts.length > 0) {
+                document.getElementById('context-section').classList.remove('hidden');
+                document.getElementById('context-list').innerHTML = contexts.map(context => `
+                    <div class="glass-card rounded-2xl p-6 hover:border-primary/30 transition-colors">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-primary-light text-2xl">visibility_off</span>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-semibold text-sm mb-2">Nhu cầu ngầm</h3>
+                                <p class="text-white/60 text-sm leading-relaxed">${context}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('context-section').classList.add('hidden');
+            }
+        }
+
+        // Render Chart.js chart
+        function renderChart(emotionalArc) {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+
+            // Destroy existing chart
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+
+            if (!emotionalArc || emotionalArc.length === 0) {
+                ctx.font = '14px Manrope';
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.textAlign = 'center';
+                ctx.fillText('Chưa có dữ liệu timeline', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            const labels = emotionalArc.map(e => e.time);
+            const data = emotionalArc.map(e => Math.round(e.score * 100));
+
+            emotionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Emotion Score',
+                        data: data,
+                        borderColor: '#7f0df2',
+                        backgroundColor: 'rgba(127, 13, 242, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#7f0df2',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(5, 10, 31, 0.95)',
+                            borderColor: 'rgba(127, 13, 242, 0.5)',
+                            borderWidth: 1,
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 12
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: 'rgba(255,255,255,0.5)' }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: {
+                                color: 'rgba(255,255,255,0.5)',
+                                callback: value => value + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+
+</html>

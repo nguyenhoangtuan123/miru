@@ -70,13 +70,16 @@ def create_auth_cookie(token: str) -> Dict:
     Returns:
         Cookie configuration dict
     """
+    import os
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
+    
     return {
         "key": "access_token",
         "value": token,
         "httponly": True,  # Prevent XSS
-        "samesite": "lax",  # CSRF protection
+        "samesite": "strict" if is_production else "lax",  # CSRF protection
         "max_age": 14 * 24 * 60 * 60,  # 14 days in seconds
-        # "secure": True,  # Enable in production with HTTPS
+        "secure": is_production,  # HTTPS only in production
     }
 
 

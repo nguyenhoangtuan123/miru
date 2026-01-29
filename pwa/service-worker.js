@@ -1,17 +1,19 @@
-// Service Worker for Reflection PWA
+// Service Worker for Miru PWA
 // Provides offline support and caching
 
-const CACHE_NAME = 'reflection-v2';
+const CACHE_NAME = 'miru-v5';
 const ASSETS_TO_CACHE = [
-  '/app.html',
-  '/chat.html',
-  '/insights.html',
-  '/settings.html',
-  '/history.html',
+  '/',
+  '/app',
+  '/app/chat',
+  '/app/emotion-dashboard',
+  '/app/settings',
+  '/app/history',
+  '/app/memories',
   '/config.js',
   '/manifest.json',
-  '/images/icon-192.svg',
-  '/images/icon-512.svg'
+  '/pwa/images/icon-192.png',
+  '/pwa/images/icon-512.png'
 ];
 
 // Install event - cache assets
@@ -107,8 +109,8 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Miru nhắn bạn',
     body: 'Bạn có thông báo mới!',
-    icon: '/images/icon-192.svg',
-    badge: '/images/icon-192.svg',
+    icon: '/pwa/images/icon-192.png',
+    badge: '/pwa/images/icon-192.png',
     tag: 'miru-notification'
   };
 

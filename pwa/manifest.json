@@ -1,24 +1,39 @@
 {
-    "name": "Reflection",
-    "short_name": "Reflection",
-    "description": "Trợ lý tâm lý với bộ nhớ dài hạn",
-    "start_url": "/app.html",
+    "name": "Miru - AI Companion",
+    "short_name": "Miru",
+    "description": "Trợ lý sức khỏe tinh thần AI với bộ nhớ dài hạn",
+    "start_url": "/app",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#F5F8FF",
-    "theme_color": "#86B3F4",
+    "background_color": "#050A1F",
+    "theme_color": "#7f0df2",
     "orientation": "portrait-primary",
+    "lang": "vi",
+    "dir": "ltr",
     "icons": [
         {
-            "src": "/images/icon-192.svg",
+            "src": "/pwa/images/icon-192.png",
             "sizes": "192x192",
-            "type": "image/svg+xml",
+            "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "/images/icon-512.svg",
+            "src": "/pwa/images/icon-512.png",
             "sizes": "512x512",
-            "type": "image/svg+xml",
+            "type": "image/png",
             "purpose": "any"
+        },
+        {
+            "src": "/pwa/images/icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/pwa/images/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "categories": [
@@ -26,5 +41,7 @@
         "lifestyle",
         "medical"
     ],
-    "screenshots": []
+    "screenshots": [],
+    "prefer_related_applications": false,
+    "related_applications": []
 }
