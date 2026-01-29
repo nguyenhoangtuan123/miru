@@ -453,12 +453,17 @@
     <script src="/config.js?v=2"></script>
     <script>
         // Constants
-        // Constants
         const API_URL = window.APP_CONFIG.getApiUrl();
         const USER_ID = localStorage.getItem('user_id');
         let WS = null;
         let CURRENT_SESSION_ID = localStorage.getItem('current_session_id');
         let PENDING_IMAGES = [];
+
+        // Helper: Get token from cookie
+        function getAuthToken() {
+            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
+            return match ? match[2] : null;
+        }
 
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
@@ -483,8 +488,12 @@
         function connectWebSocket() {
             if (WS) WS.close();
 
-            const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
+            const token = getAuthToken();
+            const wsUrl = token 
+                ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}?token=${token}`
+                : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
 
+            console.log('[WS] Connecting to:', wsUrl);
             WS = new WebSocket(wsUrl);
 
             WS.onopen = () => {

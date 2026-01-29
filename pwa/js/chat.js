@@ -40,9 +40,9 @@ class ReflectionChat {
     async loadHistoryFromServer() {
         try {
             console.log(`🔄 Fetching history for session ${this.sessionId}...`);
-            console.log(`[DEBUG] Request URL: ${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+            console.log(`[DEBUG] Request URL: ${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?user_id=${this.userId}&limit=${this.msgLimit}`);
 
-            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?user_id=${this.userId}&limit=${this.msgLimit}`);
             console.log(`[DEBUG] Response status: ${response.status}`);
 
             const data = await response.json();
@@ -268,9 +268,18 @@ class ReflectionChat {
     }
 
     connectWebSocket() {
-        // Use APP_CONFIG for WebSocket URL
-        const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}`;
+        // Get auth token from cookie
+        const getAuthToken = () => {
+            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
+            return match ? match[2] : null;
+        };
+        
+        const token = getAuthToken();
+        const wsUrl = token 
+            ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}?token=${token}`
+            : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}`;
 
+        console.log('[WS] Connecting to:', wsUrl);
         this.statusText.textContent = 'Đang kết nối...';
 
         try {
