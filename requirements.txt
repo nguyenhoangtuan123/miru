@@ -16,3 +16,4 @@ mem0ai
 langgraph
 langchain-groq
 google-genai
+vecs
