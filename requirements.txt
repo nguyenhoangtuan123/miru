@@ -15,5 +15,5 @@ mcp
 mem0ai
 langgraph
 langchain-groq
-google-genai
+google-genai>=1.0.0
 vecs

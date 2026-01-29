@@ -40,9 +40,9 @@ class ReflectionChat {
     async loadHistoryFromServer() {
         try {
             console.log(`🔄 Fetching history for session ${this.sessionId}...`);
-            console.log(`[DEBUG] Request URL: /api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+            console.log(`[DEBUG] Request URL: ${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
 
-            const response = await fetch(`/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
+            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/chat/sessions/${this.sessionId}/messages?limit=${this.msgLimit}`);
             console.log(`[DEBUG] Response status: ${response.status}`);
 
             const data = await response.json();
@@ -160,7 +160,7 @@ class ReflectionChat {
         console.log('🔍 Checking for proactive message...');
 
         try {
-            const response = await fetch('/api/proactive/check', {
+            const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/proactive/check`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -268,8 +268,8 @@ class ReflectionChat {
     }
 
     connectWebSocket() {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${this.userId}`;
+        // Use APP_CONFIG for WebSocket URL
+        const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}`;
 
         this.statusText.textContent = 'Đang kết nối...';
 

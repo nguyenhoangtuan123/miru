@@ -381,7 +381,8 @@
     </header>
 
     <!-- Main Chat Area -->
-    <main id="chatContainer" class="flex-1 overflow-y-scroll pt-20 pb-24 px-4" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+    <main id="chatContainer" class="flex-1 overflow-y-scroll pt-20 pb-24 px-4"
+        style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
         <!-- Welcome State -->
         <div id="welcomeState" class="flex flex-col items-center justify-center min-h-[50vh] opacity-0 animate-fade-in">
             <div class="w-20 h-20 rounded-full bg-surface mb-6 relative flex items-center justify-center">
@@ -452,7 +453,8 @@
     <script src="/config.js?v=2"></script>
     <script>
         // Constants
-        const API_URL = window.location.origin;
+        // Constants
+        const API_URL = window.APP_CONFIG.getApiUrl();
         const USER_ID = localStorage.getItem('user_id');
         let WS = null;
         let CURRENT_SESSION_ID = localStorage.getItem('current_session_id');
@@ -481,8 +483,7 @@
         function connectWebSocket() {
             if (WS) WS.close();
 
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${USER_ID}`;
+            const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
 
             WS = new WebSocket(wsUrl);
 
@@ -526,7 +527,7 @@
         // Session Management
         async function initSession() {
             console.log('[initSession] Current session_id from localStorage:', CURRENT_SESSION_ID);
-            
+
             if (!CURRENT_SESSION_ID) {
                 console.log('[initSession] No saved session, creating new...');
                 await createNewSession(false);
@@ -859,7 +860,7 @@
                     top: container.scrollHeight,
                     behavior: 'smooth'
                 });
-                
+
                 // Fallback for older browsers
                 setTimeout(() => {
                     container.scrollTop = container.scrollHeight;

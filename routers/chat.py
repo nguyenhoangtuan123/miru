@@ -182,7 +182,6 @@ async def get_session_messages(session_id: int, limit: int = 100):
         return {"success": False, "messages": [], "error": result.get("error")}
     except Exception as e:
         print(f"[Get Messages] Error: {e}")
-        import traceback
         traceback.print_exc()
         return {"success": False, "messages": [], "error": str(e)}
 
@@ -261,7 +260,6 @@ async def websocket_chat(websocket: WebSocket, user_id: str):
                         })
                 except Exception as e:
                     print(f"[ERROR] [WS] Failed to save user message: {e}")
-                    import traceback
                     traceback.print_exc()
             else:
                 print("[WARN] [WS] Message received WITHOUT session_id - Not saving to DB!")
@@ -311,7 +309,6 @@ async def websocket_chat(websocket: WebSocket, user_id: str):
                             print(f"[ERROR] [WS] AI msg save FAILED: {save_res.get('error')}")
                     except Exception as e:
                         print(f"[ERROR] [WS] Failed to save AI message: {e}")
-                        import traceback
                         traceback.print_exc()
                 
                 # Save to Mem0 & Update facts.txt (Background)

@@ -55,7 +55,7 @@ class GoogleLLMIntegration:
         
         # Cấu hình GenerateContentConfig
         if is_thinking:
-            # Dùng mẫu config Thinking
+            # Dùng mẫu config Thinking theo code mẫu Google
             self.config = types.GenerateContentConfig(
                 temperature=TEMPERATURE,
                 max_output_tokens=MAX_TOKENS,
