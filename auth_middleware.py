@@ -60,6 +60,39 @@ async def require_auth(request: Request) -> Dict:
     return user
 
 
+async def require_auth_for_user(request: Request, user_id: str = None) -> Dict:
+    """
+    Middleware to require authentication and verify user ownership
+    For therapist routes that need user-specific access
+    
+    Args:
+        request: FastAPI request object
+        user_id: Optional user ID to verify ownership
+    
+    Returns:
+        User payload dict
+    
+    Raises:
+        HTTPException: 401 if not authenticated, 403 if wrong user
+    """
+    user = await get_current_user(request)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    
+    # If user_id is provided, verify the authenticated user matches
+    if user_id and user.get("sub") != user_id and user.get("user_id") != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    return user
+
+
 def create_auth_cookie(token: str) -> Dict:
     """
     Create cookie configuration for JWT token
