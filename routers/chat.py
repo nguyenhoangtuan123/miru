@@ -13,6 +13,7 @@ from services import (
 from config import TITLE_MODEL_NAME
 from agent_graph import run_agent
 from auth_middleware import require_auth_for_user
+from auth import verify_token
 
 router = APIRouter(tags=["Chat"])
 
@@ -201,8 +202,19 @@ async def get_session_messages(session_id: int, limit: int = 100):
 # ==================== WebSocket Chat ====================
 
 @router.websocket("/ws/chat/{user_id}")
-async def websocket_chat(websocket: WebSocket, user_id: str):
-    """Real-time chat WebSocket endpoint"""
+async def websocket_chat(websocket: WebSocket, user_id: str, token: Optional[str] = None):
+    """Real-time chat WebSocket endpoint with JWT authentication"""
+    # Verify JWT token before accepting connection
+    if not token:
+        token = websocket.cookies.get("access_token")
+    
+    payload = verify_token(token) if token else None
+    if not payload or payload.get("sub") != user_id:
+        print(f"[WebSocket] Auth failed for user_id: {user_id}")
+        await websocket.close(code=1008, reason="Authentication failed")
+        return
+    
+    print(f"[WebSocket] Authenticated user {user_id} connected")
     await websocket.accept()
     
     # Initialize conversation history
