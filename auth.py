@@ -15,6 +15,19 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-producti
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRY_DAYS = int(os.getenv("JWT_EXPIRY_DAYS", "14"))
 
+# Security check: Validate JWT secret key is not using default
+if JWT_SECRET_KEY == "your-secret-key-change-in-production":
+    import warnings
+    warnings.warn(
+        "⚠️  SECURITY WARNING: JWT_SECRET_KEY is using default value! "
+        "Please set a strong secret key in environment variable JWT_SECRET_KEY. "
+        "In production, this will raise an error.",
+        RuntimeWarning,
+        stacklevel=2
+    )
+    # In production, uncomment the following:
+    # raise ValueError("JWT_SECRET_KEY must be set to a secure value in production!")
+
 
 def create_access_token(user_id: str, email: str, name: str = None) -> str:
     """

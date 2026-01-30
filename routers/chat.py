@@ -4,6 +4,7 @@ import json
 import asyncio
 import traceback
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
@@ -108,11 +109,14 @@ async def update_session_title(session_id: int, request: UpdateTitleRequest, htt
 
 
 @router.post("/api/chat/sessions/create-with-message")
-async def create_session_with_first_message(request: FirstMessageRequest):
+async def create_session_with_first_message(request: FirstMessageRequest, http_request: Request):
     """
     Create a new session with the first message.
     The title is auto-generated from the message content.
     """
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(http_request, request.user_id)
+    
     try:
         result = chat_manager.create_session_with_first_message(
             user_id=request.user_id,
@@ -185,8 +189,17 @@ async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest
 
 
 @router.get("/api/chat/sessions/{session_id}/messages")
-async def get_session_messages(session_id: int, limit: int = 100):
+async def get_session_messages(session_id: int, user_id: str, request: Request, limit: int = 100):
     """Get all messages for a session"""
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(request, user_id)
+    
+    # Verify session belongs to user
+    user_sessions = chat_manager.get_user_sessions(user_id)
+    session_ids = [s.get("id") for s in user_sessions.get("sessions", [])]
+    if session_id not in session_ids:
+        raise HTTPException(status_code=403, detail="Access denied: Session does not belong to user")
+    
     try:
         print(f"[DEBUG] get_session_messages called with session_id={session_id}, limit={limit}")
         result = chat_manager.get_session_messages(session_id, limit)
