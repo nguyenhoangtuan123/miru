@@ -453,33 +453,17 @@
     <script src="/config.js?v=2"></script>
     <script>
         // Constants
+        // Constants
         const API_URL = window.APP_CONFIG.getApiUrl();
         const USER_ID = localStorage.getItem('user_id');
         let WS = null;
         let CURRENT_SESSION_ID = localStorage.getItem('current_session_id');
         let PENDING_IMAGES = [];
 
-        // Helper: Get token from cookie
-        function getAuthToken() {
-            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-            return match ? match[2] : null;
-        }
-
-        // Helper: Check if authenticated
-        function isAuthenticated() {
-            return !!getAuthToken();
-        }
-
-        // Initialization - Check auth first
-        if (!USER_ID || !isAuthenticated()) {
-            console.log('[Auth] Not authenticated, redirecting to login...');
-            window.location.href = '/app/auth';
-            throw new Error('Not authenticated');
-        }
-
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
-        let PROACTIVE_TIMEOUT = 5 * 60 * 1000; // 5 phút không hoạt động
+        let PROACTIVE_TIMEOUT = 1 * 60 * 1000; // 1 phút không hoạt động
+        let PROACTIVE_LAST_ACTIVITY = Date.now();
         let PROACTIVE_DISMISSED_TYPES = [];
 
         // Initialization
@@ -499,15 +483,18 @@
         function connectWebSocket() {
             if (WS) WS.close();
 
-            const token = getAuthToken();
-            console.log('[WS] Token exists:', !!token);
-            console.log('[WS] Cookie:', document.cookie);
+            // Get auth token from cookie
+            const getAuthToken = () => {
+                const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
+                return match ? match[2] : null;
+            };
             
+            const token = getAuthToken();
             const wsUrl = token 
                 ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}?token=${token}`
                 : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
             
-            console.log('[WS] Connecting to:', wsUrl);
+            console.log('[WS] Connecting with auth token:', !!token);
             WS = new WebSocket(wsUrl);
 
             WS.onopen = () => {
@@ -914,8 +901,8 @@
         // ==================== Proactive Message Functions ====================
 
         function initProactiveTimer() {
-            // Check mỗi 60 giây
-            PROACTIVE_TIMER = setInterval(checkProactiveMessage, 60000);
+            // Check mỗi 15 giây
+            PROACTIVE_TIMER = setInterval(checkProactiveMessage, 15000);
         }
 
         function resetProactiveTimer() {
@@ -941,7 +928,6 @@
                 console.log('[Proactive] Calling /api/proactive/check...');
                 const res = await fetch(`${API_URL}/api/proactive/check`, {
                     method: 'POST',
-                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: USER_ID,

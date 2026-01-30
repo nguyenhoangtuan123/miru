@@ -4,19 +4,6 @@ class ReflectionChat {
     constructor(userId) {
         this.ws = null;
         this.userId = userId || this.getUserId();
-        
-        // Check authentication
-        const getAuthToken = () => {
-            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-            return match ? match[2] : null;
-        };
-        
-        if (!this.userId || !getAuthToken()) {
-            console.log('[Auth] Not authenticated, redirecting...');
-            window.location.href = '/app/auth';
-            return;
-        }
-        
         this.chatContainer = document.getElementById('chatContainer');
         this.chatInput = document.getElementById('chatInput');
         this.sendButton = document.getElementById('sendButton');
@@ -283,18 +270,9 @@ class ReflectionChat {
     }
 
     connectWebSocket() {
-        // Get auth token from cookie
-        const getAuthToken = () => {
-            const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-            return match ? match[2] : null;
-        };
-        
-        const token = getAuthToken();
-        const wsUrl = token 
-            ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}?token=${token}`
-            : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}`;
+        // Use APP_CONFIG for WebSocket URL
+        const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${this.userId}`;
 
-        console.log('[WS] Connecting to:', wsUrl);
         this.statusText.textContent = 'Đang kết nối...';
 
         try {
