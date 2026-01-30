@@ -195,7 +195,8 @@
                         <p class="text-xs text-white/50">Free Plan</p>
                     </div>
                 </div>
-                <button id="logoutBtn" class="text-white/40 hover:text-red-400 transition-colors p-2">
+                <button id="logoutBtn" class="text-white/40 hover:text-red-400 transition-colors p-2"
+                    onclick="handleLogout()">
                     <span class="material-symbols-outlined text-[20px]">logout</span>
                 </button>
             </div>
@@ -222,7 +223,7 @@
                 </div>
                 <span class="font-bold text-lg">Miru</span>
             </div>
-            <button id="logoutBtnMobile" class="text-white/60">
+            <button id="logoutBtnMobile" class="text-white/60" onclick="handleLogout()">
                 <span class="material-symbols-outlined">logout</span>
             </button>
         </div>
@@ -523,7 +524,7 @@
                 const response = await fetch(`${window.APP_CONFIG.getApiUrl()}/api/journal/${userId}?limit=5`);
                 const data = await response.json();
                 if (data.success) renderEntries(data.entries);
-            } catch (err) console.error(err);
+            } catch (err) { console.error(err); }
         }
 
         function renderEntries(entries) {
@@ -620,7 +621,7 @@
                 const res = await fetch(window.APP_CONFIG.getApiUrl() + '/api/goals/' + userId);
                 const data = await res.json();
                 renderGoals(data.goals || []);
-            } catch (e) console.error(e);
+            } catch (e) { console.error(e); }
         }
 
         function renderGoals(goals) {
