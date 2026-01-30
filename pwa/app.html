@@ -680,45 +680,20 @@
 
         // --- Logout ---
         const handleLogout = async () => {
-            console.log('[Logout] Button clicked');
             if (confirm('Đăng xuất?')) {
-                console.log('[Logout] Confirmed, proceeding...');
                 try {
-                    const response = await fetch(window.APP_CONFIG.getApiUrl() + '/api/auth/logout', {
+                    await fetch(window.APP_CONFIG.getApiUrl() + '/auth/logout', {
                         method: 'POST',
                         credentials: 'include'
                     });
-                    console.log('[Logout] API response:', response.status);
-                } catch (e) { 
-                    console.log('[Logout] API error:', e);
-                }
-                
-                // Clear cookie manually
-                document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                console.log('[Logout] Cookie cleared');
-                
-                // Clear localStorage and redirect
+                } catch (e) { }
                 localStorage.clear();
-                console.log('[Logout] localStorage cleared, redirecting...');
-                window.location.href = '/app/auth';
+                window.location.href = '/';
             }
         };
 
-        // Add event listeners with debug
-        const logoutBtn = document.getElementById('logoutBtn');
-        const logoutBtnMobile = document.getElementById('logoutBtnMobile');
-        
-        console.log('[Logout] Buttons found:', { desktop: !!logoutBtn, mobile: !!logoutBtnMobile });
-        
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', handleLogout);
-            console.log('[Logout] Desktop button listener added');
-        }
-        
-        if (logoutBtnMobile) {
-            logoutBtnMobile.addEventListener('click', handleLogout);
-            console.log('[Logout] Mobile button listener added');
-        }
+        document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+        document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
 
     </script>
 </body>
