@@ -3,11 +3,12 @@
 API Routes cho Proactive AI
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Any
 from datetime import datetime, timezone
 from proactive_service import get_proactive_service
+from auth_middleware import require_auth_for_user
 
 
 router = APIRouter(prefix="/api/proactive", tags=["Proactive"])
@@ -26,11 +27,12 @@ class GoalCreate(BaseModel):
 
 
 @router.post("/check")
-async def get_proactive_notifications(request: CheckInRequest):
+async def get_proactive_notifications(check_in_request: CheckInRequest, request: Request):
     """
     Lấy proactive notifications cho user.
     Sử dụng Main Chat Agent để sinh nội dung có ngữ cảnh.
     """
+    await require_auth_for_user(request, check_in_request.user_id)
     try:
         from agent_graph import run_agent
         from proactive_service import get_proactive_service
@@ -40,7 +42,7 @@ async def get_proactive_notifications(request: CheckInRequest):
         
         # 1. Parse last_active
         last_active = None
-        if request.last_active:
+        if check_in_request.last_active:
             try:
                 last_active = datetime.fromisoformat(request.last_active.replace('Z', '+00:00'))
             except:
@@ -82,11 +84,11 @@ Generate a proactive, warm, and short check-in message for the user.
 """
                 
                 # Get session ID provided by frontend, or None
-                session_id = request.session_id
+                session_id = check_in_request.session_id
                 
                 # 4. Run Main Agent
                 agent_result = await run_agent(
-                    user_id=request.user_id,
+                    user_id=check_in_request.user_id,
                     user_message=trigger_prompt,
                     session_id=session_id, # Pass session_id so agent can update facts if needed
                     conversation_history=[] # No history for this specific trigger
@@ -98,7 +100,7 @@ Generate a proactive, warm, and short check-in message for the user.
                 if session_id:
                     try:
                         session_id_int = int(session_id)
-                        save_res = chat_manager.save_message(session_id_int, request.user_id, "ai", message)
+                        save_res = chat_manager.save_message(session_id_int, check_in_request.user_id, "ai", message)
                         print(f"[SUCCESS] [Proactive] Saved message to session {session_id_int}: {save_res}")
                     except Exception as e:
                         print(f"[WARN] [Proactive] Failed to save message: {e}")
@@ -127,8 +129,9 @@ Generate a proactive, warm, and short check-in message for the user.
 
 
 @router.get("/daily-message/{user_id}")
-async def get_daily_message(user_id: str):
+async def get_daily_message(user_id: str, request: Request):
     """Lấy daily check-in message"""
+    await require_auth_for_user(request, user_id)
     try:
         from memory_service import get_memory_service
         

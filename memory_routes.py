@@ -4,10 +4,11 @@ API Routes cho Memory Management UI
 Cho phép user xem, sửa, xóa ký ức của mình.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from memory_service import get_memory_service
+from auth_middleware import require_auth_for_user
 
 
 router = APIRouter(prefix="/api/memories", tags=["Memories"])
@@ -22,8 +23,9 @@ class UpdateMemory(BaseModel):
 # === ROUTES ===
 
 @router.get("/{user_id}")
-async def get_all_memories(user_id: str):
+async def get_all_memories(user_id: str, request: Request):
     """Lấy tất cả memories của user"""
+    await require_auth_for_user(request, user_id)
     try:
         service = get_memory_service()
         result = service.get_all_memories(user_id)
@@ -38,8 +40,9 @@ async def get_all_memories(user_id: str):
 
 
 @router.get("/{user_id}/search")
-async def search_memories(user_id: str, q: str, limit: int = 5):
+async def search_memories(user_id: str, q: str, limit: int = 5, request: Request = None):
     """Tìm kiếm memories"""
+    await require_auth_for_user(request, user_id)
     try:
         service = get_memory_service()
         memories = service.search_memories(user_id, q, limit)
@@ -50,8 +53,9 @@ async def search_memories(user_id: str, q: str, limit: int = 5):
 
 
 @router.get("/{user_id}/patterns")
-async def get_memory_patterns(user_id: str):
+async def get_memory_patterns(user_id: str, request: Request):
     """Phân tích patterns từ memories"""
+    await require_auth_for_user(request, user_id)
     try:
         from pattern_analyzer import get_pattern_analyzer
         
@@ -81,8 +85,9 @@ async def get_memory_patterns(user_id: str):
 
 
 @router.get("/{user_id}/graph")
-async def get_knowledge_graph(user_id: str):
+async def get_knowledge_graph(user_id: str, request: Request):
     """Lấy Knowledge Graph với entities và relationships"""
+    await require_auth_for_user(request, user_id)
     try:
         from knowledge_graph_service import get_knowledge_graph_service
         
@@ -108,8 +113,9 @@ async def get_knowledge_graph(user_id: str):
 
 
 @router.delete("/{user_id}/{memory_id}")
-async def delete_memory(user_id: str, memory_id: str):
+async def delete_memory(user_id: str, memory_id: str, request: Request):
     """Xóa một memory cụ thể"""
+    await require_auth_for_user(request, user_id)
     try:
         service = get_memory_service()
         result = service.delete_memory(memory_id)
@@ -120,8 +126,9 @@ async def delete_memory(user_id: str, memory_id: str):
 
 
 @router.delete("/{user_id}")
-async def delete_all_memories(user_id: str):
+async def delete_all_memories(user_id: str, request: Request):
     """Xóa tất cả memories của user"""
+    await require_auth_for_user(request, user_id)
     try:
         service = get_memory_service()
         result = service.delete_all_memories(user_id)
@@ -132,8 +139,9 @@ async def delete_all_memories(user_id: str):
 
 
 @router.put("/{user_id}/{memory_id}")
-async def update_memory(user_id: str, memory_id: str, data: UpdateMemory):
+async def update_memory(user_id: str, memory_id: str, data: UpdateMemory, request: Request):
     """Cập nhật nội dung một memory"""
+    await require_auth_for_user(request, user_id)
     try:
         service = get_memory_service()
         result = service.update_memory(memory_id, data.new_content)
