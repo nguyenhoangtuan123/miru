@@ -460,14 +460,22 @@
         let CURRENT_SESSION_ID = localStorage.getItem('current_session_id');
         let PENDING_IMAGES = [];
 
+        // Helper: Check if has auth cookie
+        function hasAuthCookie() {
+            return document.cookie.includes('access_token=');
+        }
+
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
         let PROACTIVE_TIMEOUT = 1 * 60 * 1000; // 1 phút không hoạt động
         let PROACTIVE_LAST_ACTIVITY = Date.now();
         let PROACTIVE_DISMISSED_TYPES = [];
 
-        // Initialization
-        if (!USER_ID) window.location.href = '/app/auth';
+        // Initialization - Check auth (user_id + cookie)
+        if (!USER_ID || !hasAuthCookie()) {
+            console.log('[Auth] Missing user_id or cookie, redirecting to login...');
+            window.location.href = '/app/auth';
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initSession();
@@ -483,18 +491,10 @@
         function connectWebSocket() {
             if (WS) WS.close();
 
-            // Get auth token from cookie
-            const getAuthToken = () => {
-                const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-                return match ? match[2] : null;
-            };
+            // WebSocket sẽ tự động gửi cookie trong handshake (httponly)
+            const wsUrl = `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
             
-            const token = getAuthToken();
-            const wsUrl = token 
-                ? `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}?token=${token}`
-                : `${window.APP_CONFIG.getWsUrl()}/ws/chat/${USER_ID}`;
-            
-            console.log('[WS] Connecting with auth token:', !!token);
+            console.log('[WS] Connecting to:', wsUrl);
             WS = new WebSocket(wsUrl);
 
             WS.onopen = () => {
