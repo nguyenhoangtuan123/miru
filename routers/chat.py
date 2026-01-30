@@ -4,8 +4,7 @@ import json
 import asyncio
 import traceback
 from datetime import datetime, timezone
-from typing import Optional
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
     chat_manager, memory_service, GROQ_API_KEY, groq_client,
@@ -13,8 +12,6 @@ from services import (
 )
 from config import TITLE_MODEL_NAME
 from agent_graph import run_agent
-from auth_middleware import require_auth_for_user
-from auth import verify_token
 
 router = APIRouter(tags=["Chat"])
 
@@ -23,11 +20,8 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 # ==================== Chat Sessions API ====================
 
 @router.get("/api/chat/sessions/{user_id}")
-async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
+async def get_chat_sessions(user_id: str, limit: int = 20):
     """Get list of chat sessions for user"""
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(request, user_id)
-    
     try:
         result = chat_manager.get_user_sessions(user_id, limit)
         sessions_list = result.get("sessions", [])
@@ -59,11 +53,8 @@ async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
 
 
 @router.post("/api/chat/sessions/{user_id}")
-async def create_chat_session(user_id: str, request: Request, title: str = "Cuộc trò chuyện mới"):
+async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện mới"):
     """Create a new chat session"""
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(request, user_id)
-    
     try:
         result = chat_manager.create_new_session(user_id, title)
         if result.get("success"):
@@ -81,11 +72,8 @@ async def create_chat_session(user_id: str, request: Request, title: str = "Cu�
 
 
 @router.delete("/api/chat/sessions/{session_id}")
-async def delete_chat_session(session_id: int, user_id: str, request: Request):
+async def delete_chat_session(session_id: int, user_id: str):
     """Delete a chat session"""
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(request, user_id)
-    
     try:
         result = chat_manager.delete_session(session_id, user_id)
         return {"success": result.get("success", False), "message": result.get("message", "")}
@@ -95,11 +83,8 @@ async def delete_chat_session(session_id: int, user_id: str, request: Request):
 
 
 @router.put("/api/chat/sessions/{session_id}/title")
-async def update_session_title(session_id: int, request: UpdateTitleRequest, http_request: Request):
+async def update_session_title(session_id: int, request: UpdateTitleRequest):
     """Update session title"""
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(http_request, request.user_id)
-    
     try:
         result = chat_manager.update_session_title(session_id, request.title, request.user_id)
         return {"success": result.get("success", False)}
@@ -109,14 +94,11 @@ async def update_session_title(session_id: int, request: UpdateTitleRequest, htt
 
 
 @router.post("/api/chat/sessions/create-with-message")
-async def create_session_with_first_message(request: FirstMessageRequest, http_request: Request):
+async def create_session_with_first_message(request: FirstMessageRequest):
     """
     Create a new session with the first message.
     The title is auto-generated from the message content.
     """
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(http_request, request.user_id)
-    
     try:
         result = chat_manager.create_session_with_first_message(
             user_id=request.user_id,
@@ -189,17 +171,8 @@ async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest
 
 
 @router.get("/api/chat/sessions/{session_id}/messages")
-async def get_session_messages(session_id: int, user_id: str, request: Request, limit: int = 100):
+async def get_session_messages(session_id: int, limit: int = 100):
     """Get all messages for a session"""
-    # Verify authenticated user matches requested user_id
-    await require_auth_for_user(request, user_id)
-    
-    # Verify session belongs to user
-    user_sessions = chat_manager.get_user_sessions(user_id)
-    session_ids = [s.get("id") for s in user_sessions.get("sessions", [])]
-    if session_id not in session_ids:
-        raise HTTPException(status_code=403, detail="Access denied: Session does not belong to user")
-    
     try:
         print(f"[DEBUG] get_session_messages called with session_id={session_id}, limit={limit}")
         result = chat_manager.get_session_messages(session_id, limit)
@@ -215,19 +188,8 @@ async def get_session_messages(session_id: int, user_id: str, request: Request, 
 # ==================== WebSocket Chat ====================
 
 @router.websocket("/ws/chat/{user_id}")
-async def websocket_chat(websocket: WebSocket, user_id: str, token: Optional[str] = None):
-    """Real-time chat WebSocket endpoint with JWT authentication"""
-    # Verify JWT token before accepting connection
-    if not token:
-        token = websocket.cookies.get("access_token")
-    
-    payload = verify_token(token) if token else None
-    if not payload or payload.get("sub") != user_id:
-        print(f"[WebSocket] Auth failed for user_id: {user_id}")
-        await websocket.close(code=1008, reason="Authentication failed")
-        return
-    
-    print(f"[WebSocket] Authenticated user {user_id} connected")
+async def websocket_chat(websocket: WebSocket, user_id: str):
+    """Real-time chat WebSocket endpoint"""
     await websocket.accept()
     
     # Initialize conversation history

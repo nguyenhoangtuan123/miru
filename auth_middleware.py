@@ -60,33 +60,6 @@ async def require_auth(request: Request) -> Dict:
     return user
 
 
-async def require_auth_for_user(request: Request, user_id: str) -> Dict:
-    """
-    Verify that the authenticated user matches the requested user_id.
-    This prevents IDOR vulnerabilities where User A could access User B's data.
-    
-    Args:
-        request: FastAPI request object
-        user_id: The user_id from the path/query parameter
-    
-    Returns:
-        User payload dict if authorized
-    
-    Raises:
-        HTTPException: 401 if not authenticated, 403 if user_id mismatch
-    """
-    user = await require_auth(request)
-    
-    # Verify the authenticated user matches the requested user_id
-    if user.get("sub") != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You can only access your own data"
-        )
-    
-    return user
-
-
 def create_auth_cookie(token: str) -> Dict:
     """
     Create cookie configuration for JWT token
@@ -104,7 +77,7 @@ def create_auth_cookie(token: str) -> Dict:
         "key": "access_token",
         "value": token,
         "httponly": True,  # Prevent XSS
-        "samesite": "strict" if is_production else "lax",  # CSRF protection
+        "samesite": "none" if is_production else "lax",  # Allow cross-origin for WebSocket
         "max_age": 14 * 24 * 60 * 60,  # 14 days in seconds
         "secure": is_production,  # HTTPS only in production
     }
