@@ -4,7 +4,7 @@ import json
 import asyncio
 import traceback
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
     chat_manager, memory_service, GROQ_API_KEY, groq_client,
@@ -12,6 +12,7 @@ from services import (
 )
 from config import TITLE_MODEL_NAME
 from agent_graph import run_agent
+from auth_middleware import require_auth_for_user
 
 router = APIRouter(tags=["Chat"])
 
@@ -20,8 +21,11 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 # ==================== Chat Sessions API ====================
 
 @router.get("/api/chat/sessions/{user_id}")
-async def get_chat_sessions(user_id: str, limit: int = 20):
+async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
     """Get list of chat sessions for user"""
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(request, user_id)
+    
     try:
         result = chat_manager.get_user_sessions(user_id, limit)
         sessions_list = result.get("sessions", [])

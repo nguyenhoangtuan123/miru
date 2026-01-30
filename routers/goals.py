@@ -1,15 +1,17 @@
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Optional
 from datetime import datetime, timezone
 from services import db_manager
 from schemas import GoalCreate, GoalUpdate
+from auth_middleware import require_auth_for_user
 
 router = APIRouter(prefix="/api/goals", tags=["Goals"])
 
 @router.post("")
-async def create_goal(goal: GoalCreate):
+async def create_goal(goal: GoalCreate, request: Request):
     """Create a new goal"""
+    await require_auth_for_user(request, goal.user_id)
     try:
         data = {
             "user_id": goal.user_id,
@@ -26,8 +28,9 @@ async def create_goal(goal: GoalCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}")
-async def get_goals(user_id: str, completed: Optional[bool] = None):
+async def get_goals(user_id: str, request: Request, completed: Optional[bool] = None):
     """Get all goals for a user"""
+    await require_auth_for_user(request, user_id)
     try:
         query = db_manager.supabase.table("goals").select("*").eq("user_id", user_id)
         if completed is not None:
@@ -39,8 +42,9 @@ async def get_goals(user_id: str, completed: Optional[bool] = None):
         return {"success": True, "goals": []}
 
 @router.put("/{goal_id}")
-async def update_goal(goal_id: int, update: GoalUpdate):
+async def update_goal(goal_id: int, update: GoalUpdate, request: Request):
     """Update a goal"""
+    await require_auth_for_user(request, update.user_id)
     try:
         data = {}
         if update.title is not None:
@@ -61,8 +65,9 @@ async def update_goal(goal_id: int, update: GoalUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{goal_id}")
-async def delete_goal(goal_id: int):
+async def delete_goal(goal_id: int, user_id: str, request: Request):
     """Delete a goal"""
+    await require_auth_for_user(request, user_id)
     try:
         db_manager.supabase.table("goals").delete().eq("id", goal_id).execute()
         return {"success": True}

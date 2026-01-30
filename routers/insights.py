@@ -3,11 +3,12 @@ import os
 import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from schemas import MomentCheckin, DailyMoodCheckin
 from services import db_manager, memory_service, groq_client
 from utils import LOCAL_TZ, call_mcp_tool
 from facts_parser import get_facts_parser
+from auth_middleware import require_auth_for_user
 
 router = APIRouter(tags=["Insights"])
 
@@ -43,8 +44,9 @@ async def get_facts_insights(session_id: str):
 
 
 @router.get("/api/insights/timeline/{user_id}")
-async def get_conversation_timeline(user_id: str, days: int = 30, limit: int = 10):
+async def get_conversation_timeline(user_id: str, request: Request, days: int = 30, limit: int = 10):
     """Get conversation timeline with AI-generated titles"""
+    await require_auth_for_user(request, user_id)
     try:
         user = db_manager.get_or_create_user(user_id)
         user_db_id = user['id']
@@ -116,8 +118,9 @@ async def get_conversation_timeline(user_id: str, days: int = 30, limit: int = 1
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/insights/emotions/{user_id}")
-async def get_emotion_timeline(user_id: str, days: int = 7):
+async def get_emotion_timeline(user_id: str, request: Request, days: int = 7):
     """Get emotion timeline from analyzed_sessions"""
+    await require_auth_for_user(request, user_id)
     try:
         data = db_manager.get_emotion_timeline(user_id, days)
         
@@ -137,8 +140,9 @@ async def get_emotion_timeline(user_id: str, days: int = 7):
         return {"success": False, "error": str(e), "data": []}
 
 @router.get("/api/insights/analysis/{user_id}")
-async def get_insights_analysis(user_id: str, days: int = 7):
+async def get_insights_analysis(user_id: str, request: Request, days: int = 7):
     """Get comprehensive insights analysis"""
+    await require_auth_for_user(request, user_id)
     try:
         # Get emotion data for the period
         emotion_data = db_manager.get_emotion_timeline(user_id, days)
@@ -294,8 +298,9 @@ async def delete_session(session_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/insights/seed/{user_id}")
-async def seed_sample_insights(user_id: str):
+async def seed_sample_insights(user_id: str, request: Request):
     """Seed sample emotion data for testing"""
+    await require_auth_for_user(request, user_id)
     try:
         import random
         sample_data = []
@@ -338,8 +343,9 @@ async def save_moment(moment: MomentCheckin):
 # ==================== Mood Check-in Daily Endpoints ====================
 
 @router.get("/api/moment/checkin-status/{user_id}")
-async def get_checkin_status(user_id: str):
+async def get_checkin_status(user_id: str, request: Request):
     """Lấy trạng thái check-in hôm nay của user"""
+    await require_auth_for_user(request, user_id)
     try:
         from database import DatabaseManager
         from datetime import datetime, timedelta
@@ -596,8 +602,9 @@ async def generate_proactive_checkin_message(user_id: str) -> str:
 
 
 @router.get("/api/moment/proactive-message/{user_id}")
-async def get_proactive_message(user_id: str):
+async def get_proactive_message(user_id: str, request: Request):
     """Lấy message chủ động hỏi han user"""
+    await require_auth_for_user(request, user_id)
     try:
         message = await generate_proactive_checkin_message(user_id)
         return {"success": True, "message": message}
@@ -606,8 +613,9 @@ async def get_proactive_message(user_id: str):
         return {"success": False, "error": str(e)}
 
 @router.get("/api/moments/{user_id}")
-async def get_moments(user_id: str, days: int = 7):
+async def get_moments(user_id: str, request: Request, days: int = 7):
     """Get moment check-ins history"""
+    await require_auth_for_user(request, user_id)
     try:
         timeline = await call_mcp_tool("get_session_timeline", user_id, {"days": days})
         timeline_data = json.loads(timeline) if timeline else []
@@ -616,8 +624,9 @@ async def get_moments(user_id: str, days: int = 7):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/memories/{user_id}")
-async def get_memories(user_id: str, query: str = ""):
+async def get_memories(user_id: str, request: Request, query: str = ""):
     """Get relevant memories for user"""
+    await require_auth_for_user(request, user_id)
     try:
         if query:
             memories = await call_mcp_tool("find_relevant_memories", user_id, {"query": query})
