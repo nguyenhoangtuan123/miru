@@ -57,8 +57,11 @@ async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
 
 
 @router.post("/api/chat/sessions/{user_id}")
-async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện mới"):
+async def create_chat_session(user_id: str, request: Request, title: str = "Cuộc trò chuyện mới"):
     """Create a new chat session"""
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(request, user_id)
+    
     try:
         result = chat_manager.create_new_session(user_id, title)
         if result.get("success"):
@@ -76,8 +79,11 @@ async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện m
 
 
 @router.delete("/api/chat/sessions/{session_id}")
-async def delete_chat_session(session_id: int, user_id: str):
+async def delete_chat_session(session_id: int, user_id: str, request: Request):
     """Delete a chat session"""
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(request, user_id)
+    
     try:
         result = chat_manager.delete_session(session_id, user_id)
         return {"success": result.get("success", False), "message": result.get("message", "")}
@@ -87,8 +93,11 @@ async def delete_chat_session(session_id: int, user_id: str):
 
 
 @router.put("/api/chat/sessions/{session_id}/title")
-async def update_session_title(session_id: int, request: UpdateTitleRequest):
+async def update_session_title(session_id: int, request: UpdateTitleRequest, http_request: Request):
     """Update session title"""
+    # Verify authenticated user matches requested user_id
+    await require_auth_for_user(http_request, request.user_id)
+    
     try:
         result = chat_manager.update_session_title(session_id, request.title, request.user_id)
         return {"success": result.get("success", False)}
