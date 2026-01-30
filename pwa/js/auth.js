@@ -35,14 +35,17 @@ async function logout() {
             method: 'POST',
             credentials: 'include'
         });
-
-        // Redirect to login page
-        window.location.href = '/login';
     } catch (error) {
         console.error('Logout failed:', error);
-        // Still redirect even if request fails
-        window.location.href = '/login';
     }
+
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('current_session_id');
+
+    // Redirect to login page
+    window.location.href = '/login';
 }
 
 /**

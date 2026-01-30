@@ -123,10 +123,14 @@ def clear_auth_cookie() -> Dict:
     Returns:
         Cookie configuration dict
     """
+    import os
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
+    
     return {
         "key": "access_token",
         "value": "",
         "httponly": True,
-        "samesite": "lax",
+        "samesite": "none" if is_production else "lax",
         "max_age": 0,  # Expire immediately
+        "secure": is_production,  # HTTPS only in production
     }
