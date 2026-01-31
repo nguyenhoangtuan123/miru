@@ -171,8 +171,8 @@ async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest
 
 
 @router.get("/api/chat/sessions/{session_id}/messages")
-async def get_session_messages(session_id: int, limit: int = 100):
-    """Get all messages for a session"""
+async def get_session_messages(session_id: int, limit: int = None):
+    """Get all messages for a session (no limit by default)"""
     try:
         print(f"[DEBUG] get_session_messages called with session_id={session_id}, limit={limit}")
         result = chat_manager.get_session_messages(session_id, limit)

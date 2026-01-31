@@ -566,15 +566,18 @@
 
         // Session Management
         async function initSession() {
-            // First, check if session_id is in URL (e.g., from shared link)
+            // First, check if session_id is in URL (e.g., from shared link or after refresh)
             const urlParams = new URLSearchParams(window.location.search);
             const urlSessionId = urlParams.get('session_id');
             
-            // Use URL session_id if available, otherwise use localStorage
-            if (urlSessionId && !CURRENT_SESSION_ID) {
-                CURRENT_SESSION_ID = urlSessionId;
-                localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
-                console.log('[initSession] Using session_id from URL:', CURRENT_SESSION_ID);
+            // URL session_id ALWAYS takes priority (important for refresh after New Chat)
+            if (urlSessionId) {
+                const urlSessionIdInt = parseInt(urlSessionId, 10);
+                if (!isNaN(urlSessionIdInt)) {
+                    CURRENT_SESSION_ID = urlSessionId;
+                    localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
+                    console.log('[initSession] Using session_id from URL:', CURRENT_SESSION_ID);
+                }
             }
             
             console.log('[initSession] Current session_id:', CURRENT_SESSION_ID);
@@ -588,14 +591,15 @@
                 if (isNaN(sessionIdInt)) {
                     console.warn('[initSession] Invalid session_id format, creating new session');
                     localStorage.removeItem('current_session_id');
+                    CURRENT_SESSION_ID = null;
                     await createNewSession(false);
                 } else {
                     console.log('[initSession] Loading messages for session', CURRENT_SESSION_ID);
                     
-                    // Update URL to reflect current session
+                    // Update URL to reflect current session (use replaceState to avoid history pollution)
                     const url = new URL(window.location);
                     url.searchParams.set('session_id', CURRENT_SESSION_ID);
-                    window.history.pushState({}, '', url);
+                    window.history.replaceState({}, '', url);
                     
                     await loadMessages(CURRENT_SESSION_ID);
                 }
@@ -613,27 +617,35 @@
                 console.log('[createNewSession] API response:', data);
 
                 if (data.success && data.session) {
+                    // CRITICAL: Update CURRENT_SESSION_ID first
                     CURRENT_SESSION_ID = String(data.session.id);
                     localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
                     console.log('[createNewSession] New session created:', CURRENT_SESSION_ID);
 
-                    // Update URL
+                    // Update URL immediately with replaceState (not pushState) to prevent history pollution
                     const url = new URL(window.location);
                     url.searchParams.set('session_id', CURRENT_SESSION_ID);
-                    window.history.pushState({}, '', url);
+                    window.history.replaceState({}, '', url);
+                    console.log('[createNewSession] URL updated to:', url.toString());
 
+                    // Clear UI for new session
                     document.getElementById('messagesList').innerHTML = '';
                     document.getElementById('welcomeState').classList.remove('hidden');
+                    document.getElementById('sessionTitle').textContent = data.session.title || 'Cuộc trò chuyện mới';
 
                     if (refresh) {
                         toggleSidebar(false);
                         loadSessionList();
                     }
+                    
+                    return true;
                 } else {
                     console.error('[createNewSession] Failed to create session:', data.error);
+                    return false;
                 }
             } catch (err) {
                 console.error('[createNewSession] Error creating session:', err);
+                return false;
             }
         }
 
@@ -673,10 +685,16 @@
             localStorage.setItem('current_session_id', CURRENT_SESSION_ID);
             console.log(`[switchSession] Switching to session ${CURRENT_SESSION_ID}`);
             
-            // Update URL without reloading
+            // Update URL without reloading (use replaceState if same session, pushState for new)
             const url = new URL(window.location);
-            url.searchParams.set('session_id', sessionId);
-            window.history.pushState({}, '', url);
+            const currentUrlSessionId = url.searchParams.get('session_id');
+            url.searchParams.set('session_id', CURRENT_SESSION_ID);
+            
+            if (currentUrlSessionId !== CURRENT_SESSION_ID) {
+                window.history.pushState({}, '', url);
+            } else {
+                window.history.replaceState({}, '', url);
+            }
             
             await loadMessages(CURRENT_SESSION_ID);
             toggleSidebar(false);
@@ -710,19 +728,15 @@
                 console.log('[loadMessages] API response:', data);
 
                 if (data.success && data.messages && data.messages.length > 0) {
-                    console.log('[loadMessages] Processing', data.messages.length, 'messages...');
                     // Update session title from first message if needed
                     data.messages.forEach((msg, index) => {
-                        console.log('[loadMessages] Appending message', index, msg.role);
                         try {
                             appendMessage(msg.role === 'user' ? 'user' : 'ai', msg.content, false);
-                            console.log('[loadMessages] Message', index, 'appended successfully');
                         } catch (e) {
                             console.error('[loadMessages] Error appending message', index, ':', e);
                         }
                     });
                     scrollToBottom();
-                    console.log('[loadMessages] All messages loaded');
                 } else if (data.success && (!data.messages || data.messages.length === 0)) {
                     // No messages yet - show welcome state
                     console.log('[loadMessages] Session exists but no messages');
@@ -744,8 +758,6 @@
             if (welcomeState) welcomeState.classList.add('hidden');
             
             const list = document.getElementById('messagesList');
-            console.log('[appendMessage] messagesList element:', list ? `found (${list.tagName}#${list.id})` : 'NOT FOUND');
-            console.log('[appendMessage] list.children.length before:', list ? list.children.length : 'N/A');
             
             if (!list) {
                 console.error('[appendMessage] ERROR: messagesList not found!');

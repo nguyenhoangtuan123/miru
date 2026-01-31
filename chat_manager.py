@@ -357,8 +357,8 @@ class ChatManager:
             traceback.print_exc()
             return {"success": False, "error": str(e)}
     
-    def get_session_messages(self, session_id: int, limit: int = 100):
-        """Lấy messages của một session"""
+    def get_session_messages(self, session_id: int, limit: int = None):
+        """Lấy tất cả messages của một session (không giới hạn)"""
         try:
             print(f"[CHAT_MANAGER] get_session_messages called: session_id={session_id}, limit={limit}")
             
@@ -370,12 +370,16 @@ class ChatManager:
                 return {"success": False, "error": f"Invalid session_id: {e}"}
             
             print(f"[CHAT_MANAGER] Querying chat_messages table for session_id={session_id_int}")
-            response = self.db_manager.supabase.table('chat_messages')\
+            query = self.db_manager.supabase.table('chat_messages')\
                 .select('id, role, content, created_at')\
                 .eq('session_id', session_id_int)\
-                .order('created_at', desc=False)\
-                .limit(limit)\
-                .execute()
+                .order('created_at', desc=False)
+            
+            # Only apply limit if specified
+            if limit:
+                query = query.limit(limit)
+            
+            response = query.execute()
             
             print(f"[CHAT_MANAGER] Query response: data={response.data is not None}, count={len(response.data) if response.data else 0}")
             
