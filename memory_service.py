@@ -313,19 +313,15 @@ class MemoryService:
         return ""
 
     def ensure_session_dir(self, session_id: Any) -> str:
-        """Đảm bảo thư mục lưu trữ cho session tồn tại"""
+        """Đảm bảo thư mục lưu trữ cho session tồn tại (legacy - kept for backward compatibility)"""
         base_dir = os.path.join(os.path.dirname(__file__), "memories")
         session_dir = os.path.join(base_dir, f"session_{session_id}")
         os.makedirs(session_dir, exist_ok=True)
         return session_dir
-
-    def get_session_facts(self, session_id: Any) -> str:
-        """Đọc nội dung file facts.txt của session"""
-        session_dir = self.ensure_session_dir(session_id)
-        facts_path = os.path.join(session_dir, "facts.txt")
-        
-        # New 4-part structure template
-        default_template = """[THE HOOK]
+    
+    def _get_default_facts_template(self) -> str:
+        """Template mặc định cho facts"""
+        return """[THE HOOK]
 - Chưa xác định nguyên nhân gốc rễ.
 
 [EMOTIONAL ARC]
@@ -337,29 +333,81 @@ class MemoryService:
 [UNSPOKEN CONTEXT]
 - Chưa có suy luận tâm lý.
 """
-        
-        if not os.path.exists(facts_path):
-            with open(facts_path, "w", encoding="utf-8") as f:
-                f.write(default_template)
-            return default_template
+
+    def _get_facts_from_db(self, session_id: Any) -> Optional[str]:
+        """Đọc facts từ database"""
+        try:
+            from database import DatabaseManager
+            db = DatabaseManager()
             
-        with open(facts_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            # If old format detected, backup and migrate (simple append for now)
-            if "[THE HOOK]" not in content and "[USER INFO]" in content:
-                # Backup old file
-                backup_path = os.path.join(session_dir, "facts_legacy_backup.txt")
-                with open(backup_path, "w", encoding="utf-8") as bf:
-                    bf.write(content)
-                print(f"[MIGRATE] Backed up legacy facts to {backup_path}")
+            response = db.supabase.table('analyzed_sessions')\
+                .select('facts_content')\
+                .eq('session_id', int(session_id))\
+                .execute()
+            
+            if response.data and response.data[0].get('facts_content'):
+                return response.data[0]['facts_content']
+            return None
+        except Exception as e:
+            print(f"[WARN] Failed to get facts from DB: {e}")
+            return None
+    
+    def _save_facts_to_db(self, session_id: Any, content: str, user_id: str = None) -> bool:
+        """Lưu facts vào database"""
+        try:
+            from database import DatabaseManager
+            db = DatabaseManager()
+            
+            data = {
+                'session_id': int(session_id),
+                'facts_content': content
+            }
+            
+            # Thêm user_id nếu có
+            if user_id:
+                user = db.get_or_create_user(user_id)
+                data['user_id'] = user['id']
+            
+            db.supabase.table('analyzed_sessions').upsert(
+                data, 
+                on_conflict='session_id'
+            ).execute()
+            
+            print(f"[OK] Facts saved to DB for session {session_id}")
+            return True
+        except Exception as e:
+            print(f"[ERROR] Failed to save facts to DB: {e}")
+            return False
+
+    def get_session_facts(self, session_id: Any) -> str:
+        """Đọc nội dung facts của session từ database"""
+        default_template = self._get_default_facts_template()
+        
+        # 1. Try to get from database first
+        db_content = self._get_facts_from_db(session_id)
+        if db_content:
+            return db_content
+        
+        # 2. Fallback: Check local file (for migration)
+        try:
+            session_dir = self.ensure_session_dir(session_id)
+            facts_path = os.path.join(session_dir, "facts.txt")
+            
+            if os.path.exists(facts_path):
+                with open(facts_path, "r", encoding="utf-8") as f:
+                    content = f.read()
                 
-                # Create new format but keep old content as reference in context
-                new_content = default_template + "\n\n[LEGACY NOTES]\n" + content
-                with open(facts_path, "w", encoding="utf-8") as f:
-                    f.write(new_content)
-                return new_content
-                
-            return content
+                # Migrate to DB
+                if content and content.strip():
+                    print(f"[MIGRATE] Migrating local facts.txt to DB for session {session_id}")
+                    self._save_facts_to_db(session_id, content)
+                    return content
+        except Exception as e:
+            print(f"[WARN] Failed to read local facts: {e}")
+        
+        # 3. Return default template and save to DB
+        self._save_facts_to_db(session_id, default_template)
+        return default_template
 
     def update_session_facts_background(self, session_id: Any, user_input: str, ai_response: str):
         """Cập nhật facts.txt trong luồng phụ (không block user)"""
@@ -435,14 +483,8 @@ Quy tắc:
             try:
                 data = json.loads(json_str)
                 
-                session_dir = self.ensure_session_dir(session_id)
-                facts_path = os.path.join(session_dir, "facts.txt")
-                
-                if os.path.exists(facts_path):
-                    with open(facts_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-                else:
-                    content = self.get_session_facts(session_id)
+                # Get current facts from DB
+                content = self.get_session_facts(session_id)
 
                 modified = False
 
@@ -503,24 +545,9 @@ Quy tắc:
                             modified = True
                 
                 if modified:
-                    with open(facts_path, "w", encoding="utf-8") as f:
-                        f.write(content)
-                    print(f"[OK] Facts updated for session {session_id} (Dedup-safe)")
-                    
-                    # Also save to database for remote access
-                    try:
-                        from database import DatabaseManager
-                        db = DatabaseManager()
-                        user = db.get_or_create_user(user_id)
-                        user_db_id = user['id']
-                        db.supabase.table('analyzed_sessions').upsert({
-                            'session_id': int(session_id),
-                            'user_id': user_db_id,
-                            'facts_content': content
-                        }, on_conflict='session_id').execute()
-                        print(f"[OK] Facts synced to database for session {session_id}")
-                    except Exception as db_err:
-                        print(f"[WARN] Failed to sync facts to database: {db_err}")
+                    # Save to database (primary storage)
+                    self._save_facts_to_db(session_id, content)
+                    print(f"[OK] Facts updated for session {session_id} (DB-saved)")
                 else:
                     print(f"[SKIP] No new facts to add for session {session_id}")
                     
@@ -539,14 +566,10 @@ Quy tắc:
         import asyncio
         from ai_service import get_summarizer_service
         
-        session_dir = self.ensure_session_dir(session_id)
-        facts_path = os.path.join(session_dir, "facts.txt")
-        
-        if not os.path.exists(facts_path):
+        # Get facts from database
+        content = self.get_session_facts(session_id)
+        if not content or content == self._get_default_facts_template():
             return False
-            
-        with open(facts_path, "r", encoding="utf-8") as f:
-            content = f.read()
         
         modified = False
         ai = get_summarizer_service()
@@ -641,31 +664,9 @@ OUTPUT FORMAT:
 
 
         if modified:
-            # Lưu bản backup
-            backup_path = os.path.join(session_dir, "facts_backup.txt")
-            with open(backup_path, "a", encoding="utf-8") as f:
-                f.write(f"\n\n=== BACKUP {session_id} ===\n{content}\n")
-            
-            with open(facts_path, "w", encoding="utf-8") as f:
-                f.write(content)
-                
+            # Save to database (primary storage)
+            self._save_facts_to_db(session_id, content, user_id)
             print(f"[OK] Memory consolidation complete for session {session_id}")
-            
-            # Also save to database for remote access
-            try:
-                from database import DatabaseManager
-                from datetime import datetime, timezone
-                db = DatabaseManager()
-                user = db.get_or_create_user(user_id)
-                user_db_id = user['id']
-                db.supabase.table('analyzed_sessions').upsert({
-                    'session_id': int(session_id),
-                    'user_id': user_db_id,
-                    'facts_content': content
-                }, on_conflict='session_id').execute()
-                print(f"[OK] Facts synced to database after consolidation for session {session_id}")
-            except Exception as db_err:
-                print(f"[WARN] Failed to sync facts to database: {db_err}")
             
             # Đẩy vào Mem0
             if self.memory:
