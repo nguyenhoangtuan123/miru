@@ -744,7 +744,8 @@
             if (welcomeState) welcomeState.classList.add('hidden');
             
             const list = document.getElementById('messagesList');
-            console.log('[appendMessage] messagesList element:', list);
+            console.log('[appendMessage] messagesList element:', list ? `found (${list.tagName}#${list.id})` : 'NOT FOUND');
+            console.log('[appendMessage] list.children.length before:', list ? list.children.length : 'N/A');
             
             if (!list) {
                 console.error('[appendMessage] ERROR: messagesList not found!');
