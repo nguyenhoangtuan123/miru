@@ -740,8 +740,17 @@
 
         // Messaging
         function appendMessage(role, text, animate = true) {
-            document.getElementById('welcomeState').classList.add('hidden');
+            const welcomeState = document.getElementById('welcomeState');
+            if (welcomeState) welcomeState.classList.add('hidden');
+            
             const list = document.getElementById('messagesList');
+            console.log('[appendMessage] messagesList element:', list);
+            
+            if (!list) {
+                console.error('[appendMessage] ERROR: messagesList not found!');
+                return;
+            }
+            
             const div = document.createElement('div');
 
             // Markdown parsing for AI
