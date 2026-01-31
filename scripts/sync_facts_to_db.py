@@ -57,12 +57,12 @@ def sync_facts_to_db():
             
             user_db_id = session_response.data[0]['user_id']
             
-                # Upsert to database (without updated_at to avoid schema cache issues)
-                db.supabase.table('analyzed_sessions').upsert({
-                    'session_id': int(session_id),
-                    'user_id': user_db_id,
-                    'facts_content': content
-                }, on_conflict='session_id').execute()
+            # Upsert to database
+            db.supabase.table('analyzed_sessions').upsert({
+                'session_id': int(session_id),
+                'user_id': user_db_id,
+                'facts_content': content
+            }, on_conflict='session_id').execute()
             
             synced_count += 1
             print(f"[OK] Synced session {session_id}")
