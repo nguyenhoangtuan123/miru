@@ -710,9 +710,19 @@
                 console.log('[loadMessages] API response:', data);
 
                 if (data.success && data.messages && data.messages.length > 0) {
+                    console.log('[loadMessages] Processing', data.messages.length, 'messages...');
                     // Update session title from first message if needed
-                    data.messages.forEach(msg => appendMessage(msg.role === 'user' ? 'user' : 'ai', msg.content, false));
+                    data.messages.forEach((msg, index) => {
+                        console.log('[loadMessages] Appending message', index, msg.role);
+                        try {
+                            appendMessage(msg.role === 'user' ? 'user' : 'ai', msg.content, false);
+                            console.log('[loadMessages] Message', index, 'appended successfully');
+                        } catch (e) {
+                            console.error('[loadMessages] Error appending message', index, ':', e);
+                        }
+                    });
                     scrollToBottom();
+                    console.log('[loadMessages] All messages loaded');
                 } else if (data.success && (!data.messages || data.messages.length === 0)) {
                     // No messages yet - show welcome state
                     console.log('[loadMessages] Session exists but no messages');
