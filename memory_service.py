@@ -506,6 +506,21 @@ Quy tắc:
                     with open(facts_path, "w", encoding="utf-8") as f:
                         f.write(content)
                     print(f"[OK] Facts updated for session {session_id} (Dedup-safe)")
+                    
+                    # Also save to database for remote access
+                    try:
+                        from database import DatabaseManager
+                        db = DatabaseManager()
+                        user = db.get_or_create_user(user_id)
+                        user_db_id = user['id']
+                        db.supabase.table('analyzed_sessions').upsert({
+                            'session_id': int(session_id),
+                            'user_id': user_db_id,
+                            'facts_content': content
+                        }, on_conflict='session_id').execute()
+                        print(f"[OK] Facts synced to database for session {session_id}")
+                    except Exception as db_err:
+                        print(f"[WARN] Failed to sync facts to database: {db_err}")
                 else:
                     print(f"[SKIP] No new facts to add for session {session_id}")
                     
@@ -635,6 +650,22 @@ OUTPUT FORMAT:
                 f.write(content)
                 
             print(f"[OK] Memory consolidation complete for session {session_id}")
+            
+            # Also save to database for remote access
+            try:
+                from database import DatabaseManager
+                from datetime import datetime, timezone
+                db = DatabaseManager()
+                user = db.get_or_create_user(user_id)
+                user_db_id = user['id']
+                db.supabase.table('analyzed_sessions').upsert({
+                    'session_id': int(session_id),
+                    'user_id': user_db_id,
+                    'facts_content': content
+                }, on_conflict='session_id').execute()
+                print(f"[OK] Facts synced to database after consolidation for session {session_id}")
+            except Exception as db_err:
+                print(f"[WARN] Failed to sync facts to database: {db_err}")
             
             # Đẩy vào Mem0
             if self.memory:

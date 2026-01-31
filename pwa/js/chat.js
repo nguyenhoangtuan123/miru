@@ -20,7 +20,7 @@ class ReflectionChat {
         this.INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
 
         this.sessionId = this.getSessionIdFromUrl();
-        this.msgLimit = 50;
+        this.msgLimit = 100;
 
         // Load chat history from Server (Source of Truth)
         if (this.sessionId) {

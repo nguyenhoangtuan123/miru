@@ -185,6 +185,81 @@ async def get_session_messages(session_id: int, limit: int = 100):
         traceback.print_exc()
         return {"success": False, "messages": [], "error": str(e)}
 
+
+# ==================== Facts/TXT Files API ====================
+
+@router.get("/api/chat/sessions/{session_id}/facts")
+async def get_session_facts(session_id: int, user_id: str):
+    """Get facts.txt content for a session from database"""
+    try:
+        from database import DatabaseManager
+        db = DatabaseManager()
+        
+        # Get user DB ID
+        user = db.get_or_create_user(user_id)
+        user_db_id = user['id']
+        
+        # Query analyzed_sessions for facts_content
+        response = db.supabase.table('analyzed_sessions') \
+            .select('facts_content, analyzed_at, ai_title, dominant_emotion, emotion_score') \
+            .eq('session_id', session_id) \
+            .eq('user_id', user_db_id) \
+            .execute()
+        
+        if response.data and response.data[0].get('facts_content'):
+            return {
+                "success": True,
+                "facts": response.data[0]['facts_content'],
+                "analyzed_at": response.data[0].get('analyzed_at'),
+                "title": response.data[0].get('ai_title'),
+                "emotion": response.data[0].get('dominant_emotion'),
+                "emotion_score": response.data[0].get('emotion_score')
+            }
+        
+        # Check if session exists at all
+        session_response = db.supabase.table('session_summaries') \
+            .select('id, created_at') \
+            .eq('id', session_id) \
+            .execute()
+        
+        if not session_response.data:
+            return {"success": False, "error": "Session not found"}
+        
+        return {"success": False, "error": "Facts not available for this session yet"}
+    except Exception as e:
+        print(f"[Get Facts] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/api/chat/sessions/{session_id}/facts")
+async def save_session_facts(session_id: int, request: dict):
+    """Save facts.txt content to database"""
+    try:
+        from database import DatabaseManager
+        
+        db = DatabaseManager()
+        facts_content = request.get('facts_content', '')
+        user_id = request.get('user_id', '')
+        
+        if not facts_content:
+            return {"success": False, "error": "facts_content is required"}
+        
+        # Get user DB ID
+        user = db.get_or_create_user(user_id)
+        user_db_id = user['id']
+        
+        # Upsert facts content
+        db.supabase.table('analyzed_sessions').upsert({
+            'session_id': session_id,
+            'user_id': user_db_id,
+            'facts_content': facts_content
+        }, on_conflict='session_id').execute()
+        
+        return {"success": True, "message": "Facts saved successfully"}
+    except Exception as e:
+        print(f"[Save Facts] Error: {e}")
+        return {"success": False, "error": str(e)}
+
 # ==================== WebSocket Chat ====================
 
 @router.websocket("/ws/chat/{user_id}")
