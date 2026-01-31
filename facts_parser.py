@@ -1,7 +1,7 @@
 # file: facts_parser.py
 """
 Facts Parser Service
-Parses facts.txt files into structured JSON for analytics dashboard
+Parses facts from database (or local files as fallback) into structured JSON for analytics dashboard
 """
 
 import os
@@ -11,20 +11,57 @@ from datetime import datetime
 
 
 class FactsParser:
-    """Parse facts.txt files into structured data"""
+    """Parse facts from database into structured data"""
     
     def __init__(self, memories_dir: str = "memories"):
         self.memories_dir = memories_dir
+        self._db = None
+    
+    def _get_db(self):
+        """Lazy load database connection"""
+        if self._db is None:
+            try:
+                from database import DatabaseManager
+                self._db = DatabaseManager()
+            except Exception as e:
+                print(f"[WARN] FactsParser: Failed to connect to DB: {e}")
+        return self._db
+    
+    def _get_facts_from_db(self, session_id: str) -> Optional[str]:
+        """Read facts from database"""
+        try:
+            db = self._get_db()
+            if not db:
+                return None
+            
+            response = db.supabase.table('analyzed_sessions')\
+                .select('facts_content')\
+                .eq('session_id', int(session_id))\
+                .execute()
+            
+            if response.data and response.data[0].get('facts_content'):
+                return response.data[0]['facts_content']
+            return None
+        except Exception as e:
+            print(f"[WARN] FactsParser: Failed to get facts from DB: {e}")
+            return None
     
     def parse_session(self, session_id: str) -> Dict:
-        """Parse a single session's facts.txt file"""
-        facts_path = os.path.join(self.memories_dir, f"session_{session_id}", "facts.txt")
+        """Parse a single session's facts - reads from DB first, then local file as fallback"""
+        content = None
         
-        if not os.path.exists(facts_path):
+        # 1. Try database first
+        content = self._get_facts_from_db(session_id)
+        
+        # 2. Fallback to local file
+        if not content:
+            facts_path = os.path.join(self.memories_dir, f"session_{session_id}", "facts.txt")
+            if os.path.exists(facts_path):
+                with open(facts_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+        
+        if not content:
             return {"error": f"Session {session_id} not found"}
-        
-        with open(facts_path, "r", encoding="utf-8") as f:
-            content = f.read()
         
         return self._parse_content(content, session_id)
     
@@ -196,16 +233,34 @@ class FactsParser:
         }
     
     def list_sessions(self) -> List[str]:
-        """List all available session IDs"""
-        sessions = []
+        """List all available session IDs - combines DB and local files"""
+        sessions = set()
+        
+        # 1. Get sessions from database
+        try:
+            db = self._get_db()
+            if db:
+                response = db.supabase.table('analyzed_sessions')\
+                    .select('session_id')\
+                    .not_.is_('facts_content', 'null')\
+                    .execute()
+                
+                if response.data:
+                    for row in response.data:
+                        sessions.add(str(row['session_id']))
+        except Exception as e:
+            print(f"[WARN] FactsParser: Failed to list sessions from DB: {e}")
+        
+        # 2. Also check local files (for backward compatibility)
         if os.path.exists(self.memories_dir):
             for folder in os.listdir(self.memories_dir):
                 if folder.startswith("session_"):
                     session_id = folder.replace("session_", "")
                     facts_path = os.path.join(self.memories_dir, folder, "facts.txt")
                     if os.path.exists(facts_path):
-                        sessions.append(session_id)
-        return sorted(sessions, key=lambda x: int(x) if x.isdigit() else 0)
+                        sessions.add(session_id)
+        
+        return sorted(list(sessions), key=lambda x: int(x) if x.isdigit() else 0)
 
 
 # Singleton instance

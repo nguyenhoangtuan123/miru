@@ -502,8 +502,8 @@
 
         // Proactive Message Variables
         let PROACTIVE_TIMER = null;
-        let PROACTIVE_TIMEOUT = 3 * 60 * 60 * 1000; // 3 giờ không hoạt động mới gửi proactive
-        let PROACTIVE_LAST_ACTIVITY = Date.now();
+        let PROACTIVE_TIMEOUT = 3 * 60 * 60 * 1000; // 3 giờ gửi proactive định kỳ
+        let PROACTIVE_LAST_SENT = Date.now(); // Thời điểm gửi proactive lần cuối
         let PROACTIVE_DISMISSED_TYPES = [];
 
         // Initialization
@@ -514,9 +514,7 @@
             setupAutoResize();
             setupKeyboard();
             initProactiveTimer();
-            // Track user activity
-            document.addEventListener('click', resetProactiveTimer);
-            document.addEventListener('keydown', resetProactiveTimer);
+            // Không cần track user activity nữa - proactive gửi định kỳ
         });
 
         // Setup WebSocket
@@ -870,8 +868,7 @@
             PENDING_IMAGES = [];
             renderImagePreviews();
 
-            // Reset proactive timer
-            resetProactiveTimer();
+            // Không reset proactive timer khi user gửi tin - proactive gửi định kỳ 3h
 
             // Send
             if (WS && WS.readyState === WebSocket.OPEN) {
@@ -994,17 +991,17 @@
         }
 
         function resetProactiveTimer() {
-            PROACTIVE_LAST_ACTIVITY = Date.now();
+            // Giờ chỉ reset khi đã gửi proactive thành công
+            PROACTIVE_LAST_SENT = Date.now();
         }
 
         async function checkProactiveMessage() {
-            const timeSinceActivity = Date.now() - PROACTIVE_LAST_ACTIVITY;
-            // Log đã tắt để tránh spam console
+            const timeSinceLastSent = Date.now() - PROACTIVE_LAST_SENT;
+            
+            // Chỉ gửi nếu đã đủ 3 giờ kể từ lần gửi cuối
+            if (timeSinceLastSent < PROACTIVE_TIMEOUT) return;
 
-            // Chỉ kiểm tra nếu đã đủ thời gian không hoạt động
-            if (timeSinceActivity < PROACTIVE_TIMEOUT) return;
-
-            console.log('[Proactive] Timeout reached, checking API...');
+            console.log('[Proactive] 3h interval reached, checking API...');
 
             // Không hiện nếu đang có tin nhắn đang gõ
             if (!document.getElementById('typingIndicator').classList.contains('hidden')) {
@@ -1020,7 +1017,7 @@
                     body: JSON.stringify({
                         user_id: USER_ID,
                         session_id: CURRENT_SESSION_ID,
-                        last_active: new Date(PROACTIVE_LAST_ACTIVITY).toISOString(),
+                        last_proactive_sent: new Date(PROACTIVE_LAST_SENT).toISOString(),
                         include_daily_message: true
                     })
                 });
@@ -1041,8 +1038,13 @@
 
                     console.log('[Proactive] Showing message:', notification.message);
                     showProactiveMessage(notification.message, notification.actions || [], type);
+                    
+                    // Reset timer sau khi gửi thành công
+                    resetProactiveTimer();
                 } else {
                     console.log('[Proactive] No notifications to show');
+                    // Vẫn reset timer để không spam API
+                    resetProactiveTimer();
                 }
             } catch (err) {
                 console.error('[Proactive] Error:', err);

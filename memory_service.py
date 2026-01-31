@@ -8,6 +8,7 @@ import os
 import json
 import logging
 import threading
+import time
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
@@ -15,6 +16,12 @@ from settings import settings
 import config
 
 load_dotenv()
+
+# === FACTS CACHE ===
+# Cache facts để tránh query DB liên tục
+# Format: {session_id: (content, timestamp)}
+_facts_cache: Dict[Any, tuple] = {}
+_facts_cache_ttl = 60  # Cache valid trong 60 giây
 
 # === SETUP FILE LOGGING ===
 mem0_logger = logging.getLogger("mem0_service")
@@ -353,7 +360,8 @@ class MemoryService:
             return None
     
     def _save_facts_to_db(self, session_id: Any, content: str, user_id: str = None) -> bool:
-        """Lưu facts vào database"""
+        """Lưu facts vào database và cập nhật cache"""
+        global _facts_cache
         try:
             from database import DatabaseManager
             db = DatabaseManager()
@@ -373,6 +381,9 @@ class MemoryService:
                 on_conflict='session_id'
             ).execute()
             
+            # Cập nhật cache sau khi ghi DB thành công
+            _facts_cache[session_id] = (content, time.time())
+            
             print(f"[OK] Facts saved to DB for session {session_id}")
             return True
         except Exception as e:
@@ -380,12 +391,26 @@ class MemoryService:
             return False
 
     def get_session_facts(self, session_id: Any) -> str:
-        """Đọc nội dung facts của session từ database"""
+        """Đọc nội dung facts của session - ưu tiên cache, sau đó DB"""
+        global _facts_cache, _facts_cache_ttl
         default_template = self._get_default_facts_template()
         
-        # 1. Try to get from database first
+        # 0. Check cache first (nhanh nhất)
+        if session_id in _facts_cache:
+            content, cached_time = _facts_cache[session_id]
+            if time.time() - cached_time < _facts_cache_ttl:
+                print(f"[CACHE HIT] Facts for session {session_id} (age: {int(time.time() - cached_time)}s)")
+                return content
+            else:
+                # Cache expired, xóa đi
+                del _facts_cache[session_id]
+        
+        # 1. Try to get from database
         db_content = self._get_facts_from_db(session_id)
         if db_content:
+            # Lưu vào cache
+            _facts_cache[session_id] = (db_content, time.time())
+            print(f"[CACHE MISS] Facts loaded from DB for session {session_id}")
             return db_content
         
         # 2. Fallback: Check local file (for migration)
@@ -428,12 +453,18 @@ class MemoryService:
         current_facts = self.get_session_facts(session_id)
         ai = get_summarizer_service()
         
-        # Đếm số dòng trong EMOTIONAL ARC để quyết định có cần nén không
-        arc_lines = len(re.findall(r'- \d{2}:\d{2}:', current_facts))
+        # Đếm TỔNG số dòng trong EMOTIONAL ARC (cả insights đã nén + dòng mới)
+        # Tìm section EMOTIONAL ARC
+        arc_match = re.search(r'\[EMOTIONAL ARC\](.*?)(?=\n\n\[KEY DECISIONS)', current_facts, re.DOTALL)
+        arc_lines = 0
+        if arc_match:
+            arc_content = arc_match.group(1)
+            # Đếm tất cả dòng bắt đầu bằng "- " (cả insights lẫn timestamp)
+            arc_lines = len([l for l in arc_content.split('\n') if l.strip().startswith('- ')])
         
         # Đếm số dòng trong KEY DECISIONS (tìm section này và đếm số dòng bắt đầu bằng -)
         decisions_count = 0
-        decisions_match = re.search(r'\[KEY DECISIONS & INSIGHTS\](.*?)(?=\n\n\[UNSPOKEN CONTEXT\])', current_facts, re.DOTALL)
+        decisions_match = re.search(r'\[KEY DECISIONS \& INSIGHTS\](.*?)(?=\n\n\[UNSPOKEN CONTEXT\])', current_facts, re.DOTALL)
         if decisions_match:
              decisions_text = decisions_match.group(1)
              decisions_count = len([l for l in decisions_text.split('\n') if l.strip().startswith('- ')])
@@ -442,6 +473,7 @@ class MemoryService:
         
         if needs_consolidation:
             # Chạy nén trí nhớ nếu vượt ngưỡng
+            print(f"[CONSOLIDATE] Triggering: arc_lines={arc_lines}, decisions_count={decisions_count}")
             self.consolidate_memory_cycle(session_id, "user_default") # Thay bằng ID user thực tế nếu có
 
         # Prompt đã tối ưu: chỉ yêu cầu Delta (thông tin mới), không yêu cầu viết lại
@@ -578,10 +610,11 @@ Quy tắc:
         arc_match = re.search(r'\[EMOTIONAL ARC\](.*?)(?=\n\n\[KEY DECISIONS)', content, re.DOTALL)
         if arc_match:
             arc_content = arc_match.group(1)
-            arc_lines = [l.strip() for l in arc_content.split('\n') if l.strip().startswith('- ') and not l.strip().startswith('- [Insight')]
+            # Đếm TẤT CẢ dòng bắt đầu bằng "- " (cả insights lẫn dòng mới)
+            all_arc_lines = [l.strip() for l in arc_content.split('\n') if l.strip().startswith('- ')]
             
-            if len(arc_lines) > 15:
-                print(f"[CONSOLIDATE] Compressing EMOTIONAL ARC ({len(arc_lines)} lines -> 5 insights)")
+            if len(all_arc_lines) > 15:
+                print(f"[CONSOLIDATE] Compressing EMOTIONAL ARC ({len(all_arc_lines)} lines -> 5 insights)")
                 
                 arc_prompt = f"""
 BẠN LÀ CHUYÊN GIA TÂM LÝ. Nén toàn bộ nhật ký cảm xúc thành 5 dòng "Insight cốt lõi".
@@ -603,7 +636,7 @@ CHỈ TRẢ VỀ 5 DÒNG, KHÔNG GIẢI THÍCH.
                     compressed_arc = loop.run_until_complete(ai.generate_response(arc_prompt))
                     loop.close()
                     
-                    new_arc = f"[EMOTIONAL ARC]\n[CONSOLIDATED - {len(arc_lines)} events compressed]\n{compressed_arc.strip()}\n"
+                    new_arc = f"[EMOTIONAL ARC]\n[CONSOLIDATED - {len(all_arc_lines)} events compressed]\n{compressed_arc.strip()}\n"
                     content = re.sub(r'\[EMOTIONAL ARC\](.*?)(?=\n\n\[KEY DECISIONS)', new_arc + '\n', content, flags=re.DOTALL)
                     modified = True
                 except Exception as e:
