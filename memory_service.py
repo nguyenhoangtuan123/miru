@@ -89,7 +89,8 @@ def get_mem0_config() -> dict:
             "config": {
                 "model": config.MEM0_MODEL_NAME,
                 "api_key": GEMINI_API_KEY,
-                "temperature": config.MEM0_TEMPERATURE
+                "temperature": config.MEM0_TEMPERATURE,
+                "max_tokens": 8192  # Tăng output limit để tránh JSON bị cắt
             }
         },
         "embedder": {
@@ -170,6 +171,13 @@ class MemoryService:
         else:
             mem0_logger.info("MemoryService initialized successfully")
     
+    def _truncate_message(self, message: str, max_chars: int = 2000) -> str:
+        """Truncate message to max_chars while keeping meaningful content"""
+        if len(message) <= max_chars:
+            return message
+        # Keep first part and add truncation notice
+        return message[:max_chars] + "... [truncated]"
+    
     def add_conversation(
         self, 
         user_id: str, 
@@ -192,31 +200,82 @@ class MemoryService:
             mem0_logger.error("self.memory is None! Cannot save.")
             return {"results": [], "warning": "Memory service not available"}
         
+        # Truncate long messages to prevent JSON parsing issues
+        # With max_tokens=8192, we can handle longer messages
+        max_msg_len = 2500
+        original_user_len = len(user_message)
+        original_ai_len = len(ai_message)
+        
+        truncated_user = self._truncate_message(user_message, max_msg_len)
+        truncated_ai = self._truncate_message(ai_message, max_msg_len)
+        
+        if original_user_len > max_msg_len or original_ai_len > max_msg_len:
+            mem0_logger.info(f"[TRUNCATE] Messages truncated: user {original_user_len}->{len(truncated_user)}, ai {original_ai_len}->{len(truncated_ai)}")
+        
         messages = [
-            {"role": "user", "content": user_message},
-            {"role": "assistant", "content": ai_message}
+            {"role": "user", "content": truncated_user},
+            {"role": "assistant", "content": truncated_ai}
         ]
         
-        try:
-            mem0_logger.debug("Calling self.memory.add()...")
-            result = self.memory.add(
-                messages, 
-                user_id=user_id,
-                metadata=metadata or {}
-            )
-            
-            # Log kết quả
-            num_items = len(result.get('results', []))
-            mem0_logger.info(f"[SUCCESS] Saved {num_items} facts for user {user_id}")
-            mem0_logger.debug(f"Full result: {result}")
-            
-            return result
-        except Exception as e:
-            mem0_logger.error(f"Mem0 add failed: {e}")
-            import traceback
-            mem0_logger.error(traceback.format_exc())
-            traceback.print_exc()
-            return {"results": [], "error": str(e)}
+        # Try with retry logic - mem0 doesn't throw exception on JSON error,
+        # it just returns empty results. So we check num_items == 0 to retry.
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                mem0_logger.debug(f"Calling self.memory.add() (attempt {attempt + 1}/{max_retries}, max_len={max_msg_len})...")
+                result = self.memory.add(
+                    messages, 
+                    user_id=user_id,
+                    metadata=metadata or {}
+                )
+                
+                # Log kết quả
+                num_items = len(result.get('results', []))
+                
+                # If no results and message was long, retry with shorter truncation
+                # Mem0 returns empty results on JSON parse error (doesn't throw)
+                if num_items == 0 and (original_user_len > 500 or original_ai_len > 500) and attempt < max_retries - 1:
+                    max_msg_len = max_msg_len // 2
+                    if max_msg_len < 300:
+                        max_msg_len = 300  # Minimum
+                    truncated_user = self._truncate_message(user_message, max_msg_len)
+                    truncated_ai = self._truncate_message(ai_message, max_msg_len)
+                    messages = [
+                        {"role": "user", "content": truncated_user},
+                        {"role": "assistant", "content": truncated_ai}
+                    ]
+                    mem0_logger.warning(f"[RETRY] Got 0 results, retrying with shorter truncation: {max_msg_len} chars")
+                    continue
+                
+                mem0_logger.info(f"[SUCCESS] Saved {num_items} facts for user {user_id}")
+                mem0_logger.debug(f"Full result: {result}")
+                return result
+                
+            except Exception as e:
+                error_msg = str(e)
+                mem0_logger.error(f"Mem0 add failed (attempt {attempt + 1}): {error_msg}")
+                
+                # If JSON error and not last attempt, truncate more aggressively
+                if "JSON" in error_msg and attempt < max_retries - 1:
+                    max_msg_len = max_msg_len // 2
+                    if max_msg_len < 300:
+                        max_msg_len = 300
+                    truncated_user = self._truncate_message(user_message, max_msg_len)
+                    truncated_ai = self._truncate_message(ai_message, max_msg_len)
+                    messages = [
+                        {"role": "user", "content": truncated_user},
+                        {"role": "assistant", "content": truncated_ai}
+                    ]
+                    mem0_logger.info(f"[RETRY] Truncating more aggressively to {max_msg_len} chars")
+                    continue
+                
+                import traceback
+                mem0_logger.error(traceback.format_exc())
+                return {"results": [], "error": str(e)}
+        
+        # If all retries exhausted without returning, return empty
+        mem0_logger.warning(f"[WARN] Max retries exhausted for user {user_id}")
+        return {"results": [], "error": "Max retries exhausted"}
     
     def search_memories(
         self, 

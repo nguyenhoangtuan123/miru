@@ -294,24 +294,32 @@ async def save_session_facts(session_id: int, request: dict, req: Request):
 @router.websocket("/ws/chat/{user_id}")
 async def websocket_chat(websocket: WebSocket, user_id: str):
     """Real-time chat WebSocket endpoint"""
+    import os
+    DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+    
     # === AUTHENTICATION BEFORE ACCEPT ===
-    token = websocket.cookies.get("access_token")
-    if not token:
-        await websocket.close(code=1008, reason="No authentication token")
-        return
-    
-    payload = verify_token(token)
-    if not payload:
-        await websocket.close(code=1008, reason="Invalid token")
-        return
-    
-    token_user_id = payload.get("sub") or payload.get("user_id")
-    if token_user_id != user_id:
-        await websocket.close(code=1008, reason="User ID mismatch")
-        return
-    
-    # Only accept connection after authentication passes
-    await websocket.accept()
+    # In DEV_MODE, skip auth - trust user_id from URL
+    if DEV_MODE:
+        print(f"[DEV_MODE] WebSocket: Skipping auth for user {user_id}")
+        await websocket.accept()
+    else:
+        token = websocket.cookies.get("access_token")
+        if not token:
+            await websocket.close(code=1008, reason="No authentication token")
+            return
+        
+        payload = verify_token(token)
+        if not payload:
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+        
+        token_user_id = payload.get("sub") or payload.get("user_id")
+        if token_user_id != user_id:
+            await websocket.close(code=1008, reason="User ID mismatch")
+            return
+        
+        # Only accept connection after authentication passes
+        await websocket.accept()
     
     # Initialize conversation history
     conversation_history = []

@@ -493,7 +493,6 @@
     <script src="/config.js?v=2"></script>
     <script>
         // Constants
-        // Constants
         const API_URL = window.APP_CONFIG.getApiUrl();
         const USER_ID = localStorage.getItem('user_id');
         let WS = null;
@@ -505,6 +504,13 @@
         let PROACTIVE_TIMEOUT = 3 * 60 * 60 * 1000; // 3 giờ gửi proactive định kỳ
         let PROACTIVE_LAST_SENT = Date.now(); // Thời điểm gửi proactive lần cuối
         let PROACTIVE_DISMISSED_TYPES = [];
+
+        // Auth helper - adds X-User-Id header for dev mode
+        async function authFetch(url, options = {}) {
+            const headers = options.headers || {};
+            headers['X-User-Id'] = USER_ID;
+            return fetch(url, { ...options, headers, credentials: 'include' });
+        }
 
         // Initialization
         if (!USER_ID) window.location.href = '/app/auth';
@@ -609,7 +615,7 @@
         async function createNewSession(refresh = true) {
             try {
                 console.log('[createNewSession] Creating new session for user:', USER_ID);
-                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`, { method: 'POST' });
+                const res = await authFetch(`${API_URL}/api/chat/sessions/${USER_ID}`, { method: 'POST' });
                 const data = await res.json();
 
                 console.log('[createNewSession] API response:', data);
@@ -649,7 +655,7 @@
 
         async function loadSessionList() {
             try {
-                const res = await fetch(`${API_URL}/api/chat/sessions/${USER_ID}`);
+                const res = await authFetch(`${API_URL}/api/chat/sessions/${USER_ID}`);
                 const data = await res.json();
                 const list = document.getElementById('sessionList');
 
@@ -720,7 +726,7 @@
 
             try {
                 console.log(`[loadMessages] Fetching messages for session ${sessionIdInt}...`);
-                const res = await fetch(`${API_URL}/api/chat/sessions/${sessionIdInt}/messages`);
+                const res = await authFetch(`${API_URL}/api/chat/sessions/${sessionIdInt}/messages`);
                 const data = await res.json();
 
                 console.log('[loadMessages] API response:', data);
@@ -1011,7 +1017,7 @@
 
             try {
                 console.log('[Proactive] Calling /api/proactive/check...');
-                const res = await fetch(`${API_URL}/api/proactive/check`, {
+                const res = await authFetch(`${API_URL}/api/proactive/check`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1153,7 +1159,7 @@
             }
 
             try {
-                const res = await fetch(`${API_URL}/api/chat/sessions/${CURRENT_SESSION_ID}/title`, {
+                const res = await authFetch(`${API_URL}/api/chat/sessions/${CURRENT_SESSION_ID}/title`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: newTitle, user_id: USER_ID })
@@ -1215,7 +1221,7 @@
             
             // Load facts from API
             try {
-                const res = await fetch(`${API_URL}/api/chat/sessions/${CURRENT_SESSION_ID}/facts?user_id=${USER_ID}`);
+                const res = await authFetch(`${API_URL}/api/chat/sessions/${CURRENT_SESSION_ID}/facts?user_id=${USER_ID}`);
                 const result = await res.json();
                 
                 loading.classList.add('hidden');
