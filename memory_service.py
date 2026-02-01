@@ -89,8 +89,7 @@ def get_mem0_config() -> dict:
             "config": {
                 "model": config.MEM0_MODEL_NAME,
                 "api_key": GEMINI_API_KEY,
-                "temperature": config.MEM0_TEMPERATURE,
-                "max_output_tokens": 8192  # Tăng để tránh bị cắt response
+                "temperature": config.MEM0_TEMPERATURE
             }
         },
         "embedder": {
