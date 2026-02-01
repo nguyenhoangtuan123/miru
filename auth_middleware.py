@@ -128,6 +128,7 @@ def create_auth_cookie(token: str) -> Dict:
         "samesite": "none" if is_production else "lax",  # Allow cross-origin for WebSocket
         "max_age": 14 * 24 * 60 * 60,  # 14 days in seconds
         "secure": is_production,  # HTTPS only in production
+        "path": "/",  # Cookie available for all paths
     }
 
 
@@ -148,6 +149,7 @@ def clear_auth_cookie() -> Dict:
         "samesite": "none" if is_production else "lax",
         "max_age": 0,  # Expire immediately
         "secure": is_production,  # HTTPS only in production
+        "path": "/",  # Cookie available for all paths
     }
 
 
