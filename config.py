@@ -21,8 +21,8 @@ SUMMARIZER_TEMPERATURE = 0.3
 SUMMARIZER_MAX_TOKENS = 1024
 
 # ==================== MEMORY / EMBEDDING ====================
-# Model cho memory storage - nhanh, rẻ
-MEM0_MODEL_NAME = "gemini-flash-lite-latest"
+# Model cho memory storage - cần JSON output chính xác
+MEM0_MODEL_NAME = "gemini-2.0-flash"
 MEM0_TEMPERATURE = 0.1
 MEM0_MAX_TOKENS = 8192
 
