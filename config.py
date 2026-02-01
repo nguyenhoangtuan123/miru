@@ -22,10 +22,10 @@ SUMMARIZER_MAX_TOKENS = 1024
 
 # ==================== MEMORY / EMBEDDING ====================
 # Model cho memory storage - cần JSON output chính xác
-MEM0_MODEL_NAME = "gemini-3-flash-preview"
-MEM0_TEMPERATURE = 1.0
+# Dùng gemini-2.0-flash vì ổn định hơn với JSON output
+MEM0_MODEL_NAME = "gemini-2.0-flash"
+MEM0_TEMPERATURE = 0.1
 MEM0_MAX_TOKENS = 8192
-MEM0_THINKING = "minimal"  # minimal thinking cho memory extraction
 
 # ==================== REMINDER / PROACTIVE ====================
 # Model cho tin nhắn nhắc nhở chủ động - ấm áp, ngắn gọn
