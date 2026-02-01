@@ -76,10 +76,15 @@ async def callback(request: Request, code: str, state: str):
     Exchange authorization code for user info and create session
     """
     try:
+        print("[AUTH] Callback started")
+        
         # Verify state for CSRF protection
         stored_state = request.cookies.get("oauth_state")
         if not stored_state or stored_state != state:
+            print(f"[AUTH] State mismatch: stored={stored_state}, received={state}")
             raise HTTPException(status_code=400, detail="Invalid state parameter")
+        
+        print("[AUTH] State verified OK")
         
         # Exchange code for tokens
         flow = Flow.from_client_config(
@@ -99,6 +104,7 @@ async def callback(request: Request, code: str, state: str):
         
         flow.fetch_token(code=code)
         credentials = flow.credentials
+        print("[AUTH] Token fetched OK")
         
         # Verify and decode ID token
         idinfo = id_token.verify_oauth2_token(
@@ -106,6 +112,7 @@ async def callback(request: Request, code: str, state: str):
             google_requests.Request(),
             GOOGLE_CLIENT_ID
         )
+        print(f"[AUTH] ID token verified, user: {idinfo.get('email')}")
         
         # Extract user info
         user_data = {
@@ -117,6 +124,7 @@ async def callback(request: Request, code: str, state: str):
         
         # Create or update user in database
         auth_db.create_or_update_user(user_data)
+        print("[AUTH] User saved to DB")
         
         # Generate JWT token
         token = create_access_token(
@@ -124,14 +132,16 @@ async def callback(request: Request, code: str, state: str):
             email=user_data["email"],
             name=user_data.get("name")
         )
+        print(f"[AUTH] JWT created, length: {len(token)}")
         
         # Set cookie and redirect to app
-        # TODO: Implement role selection later
         redirect_url = "/app/chat"
         
         response = RedirectResponse(url=redirect_url, status_code=302)
         cookie_config = create_auth_cookie(token)
+        print(f"[AUTH] Cookie config: {cookie_config}")
         response.set_cookie(**cookie_config)
+        print(f"[AUTH] Cookie set, redirecting to {redirect_url}")
         
         # Clear OAuth state cookie
         response.delete_cookie("oauth_state")
