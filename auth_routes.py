@@ -125,22 +125,9 @@ async def callback(request: Request, code: str, state: str):
             name=user_data.get("name")
         )
         
-        # Set cookie and redirect to role selection (first time) or app (returning user)
-        # Check if user has a role already
-        redirect_url = "/role-selection"
-        try:
-            from database import DatabaseManager
-            db = DatabaseManager()
-            profile_res = db.supabase.table('user_profiles') \
-                .select('role') \
-                .eq('user_id', user_data["id"]) \
-                .execute()
-            if profile_res.data and profile_res.data[0].get('role'):
-                role = profile_res.data[0]['role']
-                redirect_url = "/therapist" if role == "therapist" else "/app/chat"
-        except Exception as e:
-            print(f"[Auth] Error checking role: {e}")
-            # Continue to role selection
+        # Set cookie and redirect to app
+        # TODO: Implement role selection later
+        redirect_url = "/app/chat"
         
         response = RedirectResponse(url=redirect_url, status_code=302)
         cookie_config = create_auth_cookie(token)
