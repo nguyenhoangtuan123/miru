@@ -134,8 +134,16 @@ async def callback(request: Request, code: str, state: str):
         )
         print(f"[AUTH] JWT created, length: {len(token)}")
         
-        # Set cookie and redirect to app
-        redirect_url = "/app/chat"
+        # Set cookie and redirect to auth-success page (will set localStorage)
+        # Pass user info via query params (encoded)
+        import urllib.parse
+        user_params = urllib.parse.urlencode({
+            'user_id': user_data["id"],
+            'user_name': user_data.get("name", ""),
+            'user_email': user_data["email"],
+            'user_picture': user_data.get("picture", "")
+        })
+        redirect_url = f"/auth-success?{user_params}"
         
         response = RedirectResponse(url=redirect_url, status_code=302)
         cookie_config = create_auth_cookie(token)

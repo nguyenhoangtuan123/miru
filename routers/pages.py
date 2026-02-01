@@ -20,6 +20,11 @@ async def serve_auth():
     """Serve Auth Page"""
     return FileResponse("pwa/auth.html")
 
+@router.get("/auth-success")
+async def serve_auth_success():
+    """Serve Auth Success Page (sets localStorage after OAuth)"""
+    return FileResponse("pwa/auth-success.html")
+
 @router.get("/app")
 async def serve_app_home():
     """Serve App Dashboard (Journal)"""

@@ -116,7 +116,6 @@
 </div>
 
     <script src="/config.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         // Helper: Get token from cookie
         function getAuthToken() {
@@ -136,33 +135,9 @@
             localStorage.clear();
         }
 
-    // Google OAuth Handler
-    document.querySelector('button:has(svg)').onclick = async function() {
-        try {
-            const client = google.accounts.oauth2.initTokenClient({
-                client_id: '729581060162-elbo9t03gceb6q6keur3nup43qer1ba0.apps.googleusercontent.com',
-                scope: 'openid profile email',
-                callback: async (response) => {
-                    if (response.access_token) {
-                        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                            headers: { 'Authorization': 'Bearer ' + response.access_token }
-                        }).then(r => r.json());
-                        
-                        localStorage.setItem('user_id', userInfo.sub);
-                        localStorage.setItem('user_name', userInfo.name);
-                        localStorage.setItem('user_email', userInfo.email);
-                        localStorage.setItem('user_picture', userInfo.picture);
-                        
-                        // Redirect to Living Orb (not dashboard!)
-                        window.location.href = '/app/orb';
-                    }
-                }
-            });
-            client.requestAccessToken();
-        } catch(e) {
-            console.error('Google login error:', e);
-            alert('Đăng nhập thất bại');
-        }
+    // Google OAuth Handler - redirect to server-side OAuth
+    document.querySelector('button:has(svg)').onclick = function() {
+        window.location.href = '/auth/login';
     };
 </script>
 </body></html>
