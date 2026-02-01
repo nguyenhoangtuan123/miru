@@ -225,6 +225,110 @@
             padding: 40px;
             opacity: 0.5;
         }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 12px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: #e4e4e4;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Messages */
+        .message-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .message-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .message-item.unread {
+            border-left: 3px solid #667eea;
+        }
+
+        .message-sent {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .message-received {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Appointments */
+        .appointment-card {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .appointment-card.scheduled {
+            border-left-color: #667eea;
+        }
+
+        .appointment-card.completed {
+            border-left-color: #22c55e;
+        }
+
+        .appointment-card.cancelled {
+            border-left-color: #ef4444;
+        }
+
+        /* Groups */
+        .group-card {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .group-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .group-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
     </style>
 </head>
 
@@ -246,19 +350,97 @@
             </div>
         </div>
 
-        <div class="grid">
-            <!-- Clients -->
-            <div class="card">
-                <h2>👥 Thân chủ của tôi</h2>
-                <button class="btn btn-primary" onclick="openPairModal()" style="margin-bottom: 16px;">
-                    + Thêm thân chủ
-                </button>
-                <div class="client-list" id="client-list">
-                    <div class="empty-state">Chưa có thân chủ nào</div>
+        <!-- Tabs Navigation -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('clients')">👥 Thân chủ</button>
+            <button class="tab" onclick="switchTab('appointments')">📅 Lịch hẹn</button>
+            <button class="tab" onclick="switchTab('messages')">💬 Tin nhắn</button>
+            <button class="tab" onclick="switchTab('groups')">📁 Nhóm</button>
+            <button class="tab" onclick="switchTab('assignments')">📝 Bài tập</button>
+        </div>
+
+        <!-- Tab: Clients -->
+        <div id="tab-clients" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <h2>👥 Thân chủ của tôi</h2>
+                    <button class="btn btn-primary" onclick="openPairModal()" style="margin-bottom: 16px;">
+                        + Thêm thân chủ
+                    </button>
+                    <div class="client-list" id="client-list">
+                        <div class="empty-state">Chưa có thân chủ nào</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📊 Tổng quan thân chủ</h2>
+                    <div id="client-stats">
+                        <div class="assignment-item">
+                            <div class="title">Tổng số thân chủ</div>
+                            <div class="meta" id="total-clients">0</div>
+                        </div>
+                        <div class="assignment-item">
+                            <div class="title">Hoạt động gần đây</div>
+                            <div class="meta" id="active-clients">0</div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Assignments -->
+        <!-- Tab: Appointments -->
+        <div id="tab-appointments" class="tab-content">
+            <div class="card">
+                <h2>📅 Lịch hẹn sắp tới</h2>
+                <button class="btn btn-primary" onclick="openAppointmentModal()" style="margin-bottom: 16px;">
+                    + Tạo lịch hẹn mới
+                </button>
+                <div id="appointment-list">
+                    <div class="empty-state">Chưa có lịch hẹn nào</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Messages -->
+        <div id="tab-messages" class="tab-content">
+            <div class="card">
+                <h2>💬 Tin nhắn gần đây</h2>
+                <div id="message-list">
+                    <div class="empty-state">Chưa có tin nhắn nào</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Groups -->
+        <div id="tab-groups" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h2>📁 Nhóm thân chủ</h2>
+                    <button class="btn btn-primary" onclick="openGroupModal()" style="margin-bottom: 16px;">
+                        + Tạo nhóm mới
+                    </button>
+                    <div id="group-list">
+                        <div class="empty-state">Chưa có nhóm nào</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>➕ Thêm thân chủ vào nhóm</h2>
+                    <select id="group-add-client"
+                        style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                        <option value="">-- Chọn thân chủ --</option>
+                    </select>
+                    <select id="group-select"
+                        style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                        <option value="">-- Chọn nhóm --</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addClientToGroup()">Thêm vào nhóm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Assignments -->
+        <div id="tab-assignments" class="tab-content">
             <div class="card">
                 <h2>📝 Bài tập đã giao</h2>
                 <button class="btn btn-primary" onclick="openAssignModal()" style="margin-bottom: 16px;">
@@ -301,16 +483,103 @@
         </div>
     </div>
 
+    <!-- Modal: Tạo lịch hẹn -->
+    <div class="modal" id="appointment-modal">
+        <div class="modal-content">
+            <h3>Tạo lịch hẹn mới</h3>
+            <select id="appointment-client"
+                style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                <option value="">-- Chọn thân chủ --</option>
+            </select>
+            <input type="datetime-local" id="appointment-date"
+                style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+            <select id="appointment-duration"
+                style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                <option value="30">30 phút</option>
+                <option value="45">45 phút</option>
+                <option value="60" selected>60 phút</option>
+                <option value="90">90 phút</option>
+            </select>
+            <select id="appointment-type"
+                style="width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                <option value="online" selected>Online (Video call)</option>
+                <option value="phone">Phone call</option>
+                <option value="offline">Offline (Gặp mặt)</option>
+            </select>
+            <input type="text" id="appointment-link" placeholder="Link meeting (nếu có)">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="createAppointment()">Tạo lịch</button>
+                <button class="btn" onclick="closeAppointmentModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Tạo nhóm -->
+    <div class="modal" id="group-modal">
+        <div class="modal-content">
+            <h3>Tạo nhóm mới</h3>
+            <input type="text" id="group-name" placeholder="Tên nhóm">
+            <textarea id="group-desc" placeholder="Mô tả nhóm..."></textarea>
+            <input type="color" id="group-color" value="#667eea"
+                style="width: 100%; height: 40px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="createGroup()">Tạo nhóm</button>
+                <button class="btn" onclick="closeGroupModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/config.js"></script>
     <script>
-        // TODO: Replace with actual therapist ID from auth
-        const THERAPIST_ID = localStorage.getItem('therapist_id') || 'demo-therapist';
+        // Get therapist ID from auth, not localStorage
+        let THERAPIST_ID = null;
         const API_BASE = window.APP_CONFIG?.getApiUrl?.() || '';
+
+        // Initialize therapist dashboard
+        async function initAuth() {
+            try {
+                const res = await fetch(`${API_BASE}/api/user/me`, {
+                    credentials: 'include'
+                });
+                
+                if (!res.ok) {
+                    // Not logged in, redirect to login
+                    window.location.href = '/auth/login';
+                    return false;
+                }
+                
+                const data = await res.json();
+                
+                if (!data.user) {
+                    window.location.href = '/auth/login';
+                    return false;
+                }
+                
+                // Check if user is therapist
+                if (data.user.role !== 'therapist') {
+                    alert('Bạn cần đăng ký với vai trò Nhà trị liệu để truy cập trang này');
+                    window.location.href = '/role-selection';
+                    return false;
+                }
+                
+                THERAPIST_ID = data.user.id;
+                document.getElementById('therapist-name').textContent = data.user.name || data.user.email;
+                
+                return true;
+            } catch (e) {
+                console.error('Auth error:', e);
+                window.location.href = '/auth/login';
+                return false;
+            }
+        }
 
         // === DATA LOADING ===
         async function loadClients() {
+            if (!THERAPIST_ID) return;
             try {
-                const res = await fetch(`${API_BASE}/api/therapist/clients/${THERAPIST_ID}`);
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${THERAPIST_ID}`, {
+                    credentials: 'include'
+                });
                 const data = await res.json();
                 renderClients(data.clients || []);
             } catch (e) {
@@ -319,8 +588,11 @@
         }
 
         async function loadAssignments() {
+            if (!THERAPIST_ID) return;
             try {
-                const res = await fetch(`${API_BASE}/api/therapist/assignments/${THERAPIST_ID}`);
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${THERAPIST_ID}`, {
+                    credentials: 'include'
+                });
                 const data = await res.json();
                 renderAssignments(data.assignments || []);
             } catch (e) {
@@ -329,8 +601,11 @@
         }
 
         async function loadCrises() {
+            if (!THERAPIST_ID) return;
             try {
-                const res = await fetch(`${API_BASE}/api/therapist/crises/${THERAPIST_ID}`);
+                const res = await fetch(`${API_BASE}/api/therapist/crises/${THERAPIST_ID}`, {
+                    credentials: 'include'
+                });
                 const data = await res.json();
                 renderCrises(data.crises || []);
             } catch (e) {
@@ -354,10 +629,17 @@
                 </div>
             `).join('');
 
-            // Update select dropdown
-            const select = document.getElementById('assign-client');
-            select.innerHTML = '<option value="">-- Chọn thân chủ --</option>' +
+            // Update select dropdowns
+            const assignSelect = document.getElementById('assign-client');
+            assignSelect.innerHTML = '<option value="">-- Chọn thân chủ --</option>' +
                 clients.map(c => `<option value="${c.client_id}">${c.users?.name || c.client_id}</option>`).join('');
+
+            const groupAddSelect = document.getElementById('group-add-client');
+            groupAddSelect.innerHTML = '<option value="">-- Chọn thân chủ --</option>' +
+                clients.map(c => `<option value="${c.client_id}">${c.users?.name || c.client_id}</option>`).join('');
+
+            // Update stats
+            document.getElementById('total-clients').textContent = clients.length;
         }
 
         function renderAssignments(assignments) {
@@ -415,6 +697,7 @@
                 const res = await fetch(`${API_BASE}/api/therapist/clients/${THERAPIST_ID}/pair`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ client_id: clientId })
                 });
                 if (res.ok) {
@@ -441,6 +724,7 @@
                 const res = await fetch(`${API_BASE}/api/therapist/assignments/${THERAPIST_ID}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ client_id: clientId, title, description: desc, due_date: due || null })
                 });
                 if (res.ok) {
@@ -460,6 +744,7 @@
                 const res = await fetch(`${API_BASE}/api/therapist/crises/${crisisId}/acknowledge`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({})
                 });
                 if (res.ok) {
@@ -480,6 +765,252 @@
         function closePairModal() { document.getElementById('pair-modal').classList.remove('open'); }
         function openAssignModal() { document.getElementById('assign-modal').classList.add('open'); }
         function closeAssignModal() { document.getElementById('assign-modal').classList.remove('open'); }
+        function openAppointmentModal() { document.getElementById('appointment-modal').classList.add('open'); }
+        function closeAppointmentModal() { document.getElementById('appointment-modal').classList.remove('open'); }
+        function openGroupModal() { document.getElementById('group-modal').classList.add('open'); }
+        function closeGroupModal() { document.getElementById('group-modal').classList.remove('open'); }
+
+        // === TABS ===
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // === DATA LOADING: Appointments ===
+        async function loadAppointments() {
+            if (!THERAPIST_ID) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/appointments/${THERAPIST_ID}/upcoming?days=30`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                renderAppointments(data.appointments || []);
+            } catch (e) {
+                console.error('Error loading appointments:', e);
+            }
+        }
+
+        async function loadTodayAppointments() {
+            if (!THERAPIST_ID) return [];
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/appointments/${THERAPIST_ID}/today`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                return data.appointments || [];
+            } catch (e) {
+                console.error('Error loading today appointments:', e);
+                return [];
+            }
+        }
+
+        function renderAppointments(appointments) {
+            const el = document.getElementById('appointment-list');
+            if (!appointments.length) {
+                el.innerHTML = '<div class="empty-state">Chưa có lịch hẹn nào</div>';
+                return;
+            }
+            el.innerHTML = appointments.map(a => `
+                <div class="appointment-card ${a.status}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="title">${a.users?.name || 'Unknown'}</div>
+                            <div class="meta">
+                                ${new Date(a.appointment_date).toLocaleString('vi-VN')} · 
+                                ${a.duration_minutes} phút · ${a.type}
+                            </div>
+                        </div>
+                        <span class="status-badge status-${a.status}">${a.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === DATA LOADING: Messages ===
+        async function loadMessages() {
+            if (!THERAPIST_ID) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/${THERAPIST_ID}/conversations`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                renderMessages(data.conversations || []);
+            } catch (e) {
+                console.error('Error loading messages:', e);
+            }
+        }
+
+        function renderMessages(conversations) {
+            const el = document.getElementById('message-list');
+            if (!conversations.length) {
+                el.innerHTML = '<div class="empty-state">Chưa có tin nhắn nào</div>';
+                return;
+            }
+            el.innerHTML = conversations.map(c => `
+                <div class="message-item ${c.unread_count > 0 ? 'unread' : ''}" onclick="viewConversation('${c.client.id}')">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div>
+                            <div class="name">${c.client?.name || 'Unknown'}</div>
+                            <div class="meta">${c.last_message || ''}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; opacity: 0.7;">
+                                ${new Date(c.last_time).toLocaleDateString('vi-VN')}
+                            </div>
+                            ${c.unread_count > 0 ? `<span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px;">${c.unread_count}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === DATA LOADING: Groups ===
+        async function loadGroups() {
+            if (!THERAPIST_ID) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/client-groups/${THERAPIST_ID}`, {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                renderGroups(data.groups || []);
+            } catch (e) {
+                console.error('Error loading groups:', e);
+            }
+        }
+
+        function renderGroups(groups) {
+            const el = document.getElementById('group-list');
+            if (!groups.length) {
+                el.innerHTML = '<div class="empty-state">Chưa có nhóm nào</div>';
+                return;
+            }
+            el.innerHTML = groups.map(g => `
+                <div class="group-card" onclick="viewGroup('${g.id}')">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="group-color" style="background: ${g.color || '#667eea'}"></span>
+                        <div>
+                            <div class="name">${g.name}</div>
+                            <div class="meta">${g.members?.[0]?.count || 0} thành viên</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Update group select dropdown
+            const select = document.getElementById('group-select');
+            select.innerHTML = '<option value="">-- Chọn nhóm --</option>' +
+                groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+        }
+
+        // === ACTIONS: Appointments ===
+        async function createAppointment() {
+            const clientId = document.getElementById('appointment-client').value;
+            const date = document.getElementById('appointment-date').value;
+            const duration = document.getElementById('appointment-duration').value;
+            const type = document.getElementById('appointment-type').value;
+            const link = document.getElementById('appointment-link').value;
+
+            if (!clientId || !date) return alert('Vui lòng chọn thân chủ và ngày hẹn');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/appointments/${THERAPIST_ID}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        appointment_date: date,
+                        duration_minutes: parseInt(duration) || 60,
+                        type: type || 'online',
+                        meeting_link: link || null
+                    })
+                });
+                if (res.ok) {
+                    closeAppointmentModal();
+                    loadAppointments();
+                } else {
+                    alert('Không thể tạo lịch hẹn');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi kết nối');
+            }
+        }
+
+        // === ACTIONS: Groups ===
+        async function createGroup() {
+            const name = document.getElementById('group-name').value;
+            const desc = document.getElementById('group-desc').value;
+            const color = document.getElementById('group-color').value;
+
+            if (!name) return alert('Vui lòng nhập tên nhóm');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/client-groups/${THERAPIST_ID}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, description: desc, color })
+                });
+                if (res.ok) {
+                    closeGroupModal();
+                    loadGroups();
+                } else {
+                    alert('Không thể tạo nhóm');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi kết nối');
+            }
+        }
+
+        async function addClientToGroup() {
+            const clientId = document.getElementById('group-add-client').value;
+            const groupId = document.getElementById('group-select').value;
+
+            if (!clientId || !groupId) return alert('Vui lòng chọn thân chủ và nhóm');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/client-groups/${THERAPIST_ID}/${groupId}/members`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ client_id: clientId })
+                });
+                if (res.ok) {
+                    alert('Đã thêm thân chủ vào nhóm');
+                    loadGroups();
+                } else {
+                    alert('Không thể thêm thân chủ vào nhóm');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Lỗi kết nối');
+            }
+        }
+
+        // === NAVIGATION ===
+        function viewClient(clientId) {
+            alert(`Xem chi tiết thân chủ: ${clientId}`);
+        }
+
+        function viewConversation(clientId) {
+            alert(`Mở chat với thân chủ: ${clientId}`);
+        }
+
+        function viewGroup(groupId) {
+            alert(`Xem nhóm: ${groupId}`);
+        }
 
         function logout() {
             localStorage.removeItem('therapist_id');
@@ -487,9 +1018,23 @@
         }
 
         // === INIT ===
-        loadClients();
-        loadAssignments();
-        loadCrises();
+        async function initDashboard() {
+            // First authenticate and get therapist ID
+            const authenticated = await initAuth();
+            if (!authenticated) return;
+            
+            // Then load all data
+            await Promise.all([
+                loadClients(),
+                loadAssignments(),
+                loadCrises(),
+                loadAppointments(),
+                loadMessages(),
+                loadGroups()
+            ]);
+        }
+
+        initDashboard();
     </script>
 </body>
 

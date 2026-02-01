@@ -6,6 +6,10 @@ from fastapi import Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from typing import Optional, Dict
 from auth import verify_token
+import os
+
+# Development mode - skip auth if DEV_MODE=true
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 
 async def get_current_user(request: Request) -> Optional[Dict]:
@@ -18,9 +22,20 @@ async def get_current_user(request: Request) -> Optional[Dict]:
     Returns:
         User payload dict if authenticated, None otherwise
     """
+    # DEV MODE: Check X-User-Id header first
+    if DEV_MODE:
+        user_id = request.headers.get("X-User-Id")
+        if user_id:
+            return {"sub": user_id, "user_id": user_id, "dev_mode": True}
+    
     token = request.cookies.get("access_token")
     
     if not token:
+        # DEV MODE: Allow X-User-Id header as fallback
+        if DEV_MODE:
+            user_id = request.headers.get("X-User-Id")
+            if user_id:
+                return {"sub": user_id, "user_id": user_id, "dev_mode": True}
         return None
     
     payload = verify_token(token)
@@ -134,3 +149,53 @@ def clear_auth_cookie() -> Dict:
         "max_age": 0,  # Expire immediately
         "secure": is_production,  # HTTPS only in production
     }
+
+
+async def require_auth_for_therapist(request: Request, therapist_id: str) -> Dict:
+    """
+    Middleware to require authentication and verify therapist ownership.
+    Checks that the authenticated user owns the therapist record.
+    
+    Args:
+        request: FastAPI request object
+        therapist_id: Therapist UUID to verify ownership
+    
+    Returns:
+        User payload dict with therapist info
+    
+    Raises:
+        HTTPException: 401 if not authenticated, 403 if not the therapist owner
+    """
+    user = await get_current_user(request)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    
+    user_id = user.get("sub") or user.get("user_id")
+    
+    # Lookup therapist and verify ownership
+    from therapist_service import get_therapist_service
+    service = get_therapist_service()
+    
+    therapist = service.get_therapist(therapist_id)
+    if not therapist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Therapist not found"
+        )
+    
+    # Check if the user owns this therapist record
+    if therapist.get("user_id") != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied - not your therapist account"
+        )
+    
+    # Add therapist info to user payload
+    user["therapist_id"] = therapist_id
+    user["therapist"] = therapist
+    
+    return user

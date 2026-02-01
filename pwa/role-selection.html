@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chọn vai trò - Miru</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/utilities.css">
+
+    <style>
+        .role-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .role-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .role-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-lg);
+            background: linear-gradient(135deg, var(--accent-mint), var(--primary-light));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-logo .material-symbols-outlined {
+            font-size: 40px;
+            color: white;
+        }
+
+        .role-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary);
+        }
+
+        .role-subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .role-cards {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .role-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .role-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary-light);
+        }
+
+        .role-card.selected {
+            border-color: var(--accent-mint);
+            background: rgba(111, 207, 151, 0.1);
+        }
+
+        .role-card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .role-card-icon.client {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .role-card-icon.therapist {
+            background: linear-gradient(135deg, var(--accent-mint), #38a169);
+        }
+
+        .role-card-icon .material-symbols-outlined {
+            font-size: 28px;
+            color: white;
+        }
+
+        .role-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+
+        .role-card-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .role-card-features {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .role-card-feature {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .role-card-feature .material-symbols-outlined {
+            font-size: 16px;
+            color: var(--accent-mint);
+        }
+
+        .continue-btn {
+            margin-top: var(--spacing-xl);
+            width: 100%;
+            max-width: 400px;
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: linear-gradient(135deg, var(--accent-mint), var(--primary-light));
+            border: none;
+            border-radius: var(--radius-lg);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .continue-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .continue-btn.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(111, 207, 151, 0.4);
+        }
+
+        .user-info {
+            position: fixed;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--glass-border);
+            border-top-color: var(--accent-mint);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .role-cards {
+                flex-direction: row;
+                max-width: 700px;
+            }
+
+            .role-card {
+                flex: 1;
+            }
+
+            .continue-btn {
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- User Info -->
+    <div class="user-info" id="user-info" style="display: none;">
+        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span id="user-name"></span>
+    </div>
+
+    <div class="role-container">
+        <div class="role-header">
+            <div class="role-logo">
+                <span class="material-symbols-outlined">psychology</span>
+            </div>
+            <h1 class="role-title">Chào mừng đến Miru</h1>
+            <p class="role-subtitle">Bạn muốn sử dụng Miru với vai trò nào?</p>
+        </div>
+
+        <div class="role-cards">
+            <!-- Client Card -->
+            <div class="role-card" id="client-card" onclick="selectRole('client')">
+                <div class="role-card-icon client">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <div class="role-card-title">Thân chủ</div>
+                <div class="role-card-desc">
+                    Tôi muốn trò chuyện với AI để chăm sóc sức khỏe tinh thần của mình
+                </div>
+                <div class="role-card-features">
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Chat với AI đồng hành
+                    </div>
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Nhật ký cảm xúc
+                    </div>
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Kết nối với nhà trị liệu
+                    </div>
+                </div>
+            </div>
+
+            <!-- Therapist Card -->
+            <div class="role-card" id="therapist-card" onclick="selectRole('therapist')">
+                <div class="role-card-icon therapist">
+                    <span class="material-symbols-outlined">medical_services</span>
+                </div>
+                <div class="role-card-title">Nhà trị liệu</div>
+                <div class="role-card-desc">
+                    Tôi là chuyên gia tâm lý và muốn hỗ trợ thân chủ của mình
+                </div>
+                <div class="role-card-features">
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Quản lý thân chủ
+                    </div>
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Giao bài tập & theo dõi
+                    </div>
+                    <div class="role-card-feature">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Nhận cảnh báo khủng hoảng
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="continue-btn" id="continue-btn" onclick="continueWithRole()">
+            Tiếp tục
+        </button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        let selectedRole = null;
+        const API_BASE = window.APP_CONFIG?.getApiUrl?.() || '';
+
+        // Check if user already has a role
+        async function checkExistingRole() {
+            try {
+                const res = await fetch(`${API_BASE}/api/user/me`, {
+                    credentials: 'include'
+                });
+
+                if (!res.ok) {
+                    // Not logged in, redirect to login
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await res.json();
+
+                // Show user info
+                if (data.user) {
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('user-name').textContent = data.user.name || data.user.email;
+                    if (data.user.picture) {
+                        document.getElementById('user-avatar').src = data.user.picture;
+                    }
+                }
+
+                // If user already has a role, redirect them
+                if (data.user?.role) {
+                    redirectToRolePage(data.user.role);
+                    return;
+                }
+            } catch (e) {
+                console.error('Error checking role:', e);
+                // Continue showing role selection
+            }
+        }
+
+        function selectRole(role) {
+            selectedRole = role;
+
+            // Update UI
+            document.getElementById('client-card').classList.remove('selected');
+            document.getElementById('therapist-card').classList.remove('selected');
+            document.getElementById(role + '-card').classList.add('selected');
+
+            // Enable continue button
+            document.getElementById('continue-btn').classList.add('active');
+        }
+
+        async function continueWithRole() {
+            if (!selectedRole) return;
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+
+            try {
+                // Save role to backend
+                const res = await fetch(`${API_BASE}/api/user/role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ role: selectedRole })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to save role');
+                }
+
+                // Also save to localStorage for quick access
+                localStorage.setItem('user_role', selectedRole);
+
+                // Redirect based on role
+                redirectToRolePage(selectedRole);
+
+            } catch (e) {
+                console.error('Error saving role:', e);
+                document.getElementById('loading').classList.remove('show');
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        }
+
+        function redirectToRolePage(role) {
+            if (role === 'therapist') {
+                window.location.href = '/therapist';
+            } else {
+                window.location.href = '/app/chat';
+            }
+        }
+
+        // Init
+        checkExistingRole();
+    </script>
+</body>
+
+</html>

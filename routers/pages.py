@@ -94,6 +94,11 @@ async def therapist_dashboard():
     """Serve therapist dashboard page"""
     return FileResponse("pwa/therapist-dashboard.html")
 
+@router.get("/role-selection")
+async def role_selection():
+    """Serve role selection page"""
+    return FileResponse("pwa/role-selection.html")
+
 @router.get("/home")
 async def home_page():
     """Serve minimal chat UI"""

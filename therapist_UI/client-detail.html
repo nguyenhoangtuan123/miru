@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiet than chu - Miru Therapist</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="/pwa/images/favicon.svg">
+    <style>
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .section-card { margin-bottom: var(--space-6); }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+        .info-item { }
+        .info-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin-bottom: var(--space-1); }
+        .info-value { font-weight: 500; color: var(--color-text); }
+        .timeline { position: relative; padding-left: var(--space-6); }
+        .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--color-border); }
+        .timeline-item { position: relative; padding-bottom: var(--space-5); }
+        .timeline-item::before { content: ''; position: absolute; left: calc(-1 * var(--space-6) + 4px); top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); border: 2px solid var(--color-bg-card); }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .note-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-3); }
+        .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+        .note-date { font-size: 0.8125rem; color: var(--color-text-muted); }
+        .note-actions { display: flex; gap: var(--space-2); }
+        .metric-card { background: var(--color-bg); border-radius: var(--radius-md); padding: var(--space-4); text-align: center; }
+        .metric-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
+        .metric-label { font-size: 0.8125rem; color: var(--color-text-muted); }
+        .metric-trend { font-size: 0.75rem; margin-top: var(--space-1); }
+        .metric-trend.up { color: var(--color-success); }
+        .metric-trend.down { color: var(--color-danger); }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    Miru
+                    <span>Therapist Portal</span>
+                </div>
+            </div>
+
+            <nav class="nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Tong quan</div>
+                    <a href="dashboard.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="clients.html" class="nav-item active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                        </svg>
+                        Than chu
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Quan ly</div>
+                    <a href="appointments.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Lich hen
+                    </a>
+                    <a href="messages.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Tin nhan
+                    </a>
+                </div>
+            </nav>
+
+            <div class="user-profile">
+                <div class="user-avatar" id="user-avatar">T</div>
+                <div class="user-info">
+                    <div class="user-name" id="user-name">Loading...</div>
+                    <div class="user-role">Nha tri lieu</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="logout()" title="Dang xuat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button & Header -->
+            <div class="flex items-center gap-4 mb-6">
+                <a href="clients.html" class="btn btn-ghost btn-sm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Quay lai
+                </a>
+            </div>
+
+            <!-- Client Header -->
+            <div class="card mb-6" id="client-header">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabs">
+                <button class="tab active" data-tab="overview">Tong quan</button>
+                <button class="tab" data-tab="medical">Ho so y te</button>
+                <button class="tab" data-tab="notes">Ghi chu phien</button>
+                <button class="tab" data-tab="assignments">Bai tap</button>
+                <button class="tab" data-tab="progress">Tien do</button>
+                <button class="tab" data-tab="messages">Tin nhan</button>
+            </div>
+
+            <!-- Tab Panels -->
+            <div id="tab-content">
+                <!-- Overview -->
+                <div class="tab-panel active" id="panel-overview">
+                    <div class="grid-2">
+                        <div class="card section-card">
+                            <h3 class="card-title mb-4">Thong tin lien he</h3>
+                            <div class="info-grid" id="contact-info">
+                                <div class="loading"><div class="spinner"></div></div>
+                            </div>
+                        </div>
+                        <div class="card section-card">
+                            <h3 class="card-title mb-4">Thong ke nhanh</h3>
+                            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);" id="quick-stats">
+                                <div class="loading"><div class="spinner"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Lich hen sap toi</h3>
+                            <a href="#" class="btn btn-ghost btn-sm" onclick="switchTab('appointments')">Xem tat ca</a>
+                        </div>
+                        <div id="upcoming-appointments">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Hoat dong gan day</h3>
+                        </div>
+                        <div class="timeline" id="recent-activity">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Profile -->
+                <div class="tab-panel" id="panel-medical">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Ho so y te</h3>
+                            <button class="btn btn-primary btn-sm" onclick="editMedicalProfile()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Chinh sua
+                            </button>
+                        </div>
+                        <div id="medical-profile-content">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Notes -->
+                <div class="tab-panel" id="panel-notes">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Ghi chu phien</h3>
+                            <button class="btn btn-primary btn-sm" onclick="openNoteModal()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Them ghi chu
+                            </button>
+                        </div>
+                        <div id="session-notes-list">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignments -->
+                <div class="tab-panel" id="panel-assignments">
+                    <div class="card section-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Bai tap</h3>
+                            <button class="btn btn-primary btn-sm" onclick="openAssignmentModal()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Giao bai tap
+                            </button>
+                        </div>
+                        <div id="assignments-list">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="tab-panel" id="panel-progress">
+                    <div class="card section-card">
+                        <h3 class="card-title mb-4">Chi so tien do</h3>
+                        <div class="grid-3" id="progress-metrics">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card section-card">
+                        <h3 class="card-title mb-4">Ket qua dieu tri</h3>
+                        <div id="treatment-outcome">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="tab-panel" id="panel-messages">
+                    <div class="card section-card" style="height: 600px; display: flex; flex-direction: column;">
+                        <div class="card-header" style="flex-shrink: 0;">
+                            <h3 class="card-title">Tin nhan</h3>
+                        </div>
+                        <div id="messages-container" style="flex: 1; overflow-y: auto; padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                        <div style="flex-shrink: 0; padding-top: var(--space-4); border-top: 1px solid var(--color-border); margin-top: var(--space-4);">
+                            <form id="message-form" class="flex gap-3">
+                                <input type="text" class="form-input" id="message-input" placeholder="Nhap tin nhan..." style="flex: 1;">
+                                <button type="submit" class="btn btn-primary">Gui</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Session Note Modal -->
+    <div class="modal-overlay" id="note-modal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="note-modal-title">Them ghi chu phien</h3>
+                <button class="modal-close" onclick="closeNoteModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="note-form">
+                    <input type="hidden" id="note-id">
+                    <div class="form-group">
+                        <label class="form-label">Ngay phien</label>
+                        <input type="date" class="form-input" id="note-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Loai phien</label>
+                        <select class="form-select" id="note-type">
+                            <option value="individual">Ca nhan</option>
+                            <option value="group">Nhom</option>
+                            <option value="crisis">Khung hoang</option>
+                            <option value="follow_up">Theo doi</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Noi dung phien</label>
+                        <textarea class="form-textarea" id="note-content" rows="4" placeholder="Ghi chep noi dung phien..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Danh gia tam trang (1-10)</label>
+                        <input type="number" class="form-input" id="note-mood" min="1" max="10" placeholder="1-10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ke hoach tiep theo</label>
+                        <textarea class="form-textarea" id="note-plan" rows="2" placeholder="Ke hoach cho phien tiep theo..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeNoteModal()">Huy</button>
+                <button class="btn btn-primary" onclick="saveNote()">Luu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Modal -->
+    <div class="modal-overlay" id="assignment-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Giao bai tap</h3>
+                <button class="modal-close" onclick="closeAssignmentModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="assignment-form">
+                    <div class="form-group">
+                        <label class="form-label">Tieu de</label>
+                        <input type="text" class="form-input" id="assignment-title" placeholder="Ten bai tap" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mo ta</label>
+                        <textarea class="form-textarea" id="assignment-description" rows="3" placeholder="Huong dan chi tiet..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Loai</label>
+                        <select class="form-select" id="assignment-type">
+                            <option value="journal">Nhat ky</option>
+                            <option value="meditation">Thien dinh</option>
+                            <option value="exercise">Bai tap the chat</option>
+                            <option value="reading">Doc sach</option>
+                            <option value="social">Hoat dong xa hoi</option>
+                            <option value="other">Khac</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Han hoan thanh</label>
+                        <input type="date" class="form-input" id="assignment-due">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAssignmentModal()">Huy</button>
+                <button class="btn btn-primary" onclick="createAssignment()">Giao bai</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical Profile Modal -->
+    <div class="modal-overlay" id="medical-modal">
+        <div class="modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">Chinh sua ho so y te</h3>
+                <button class="modal-close" onclick="closeMedicalModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="medical-form">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Chan doan chinh</label>
+                            <input type="text" class="form-input" id="med-diagnosis" placeholder="VD: GAD, MDD...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Chan doan phu</label>
+                            <input type="text" class="form-input" id="med-secondary" placeholder="Neu co">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Thuoc dang su dung</label>
+                        <textarea class="form-textarea" id="med-medications" rows="2" placeholder="Liet ke thuoc, lieu luong..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Di ung</label>
+                        <input type="text" class="form-input" id="med-allergies" placeholder="Neu co">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tien su benh</label>
+                        <textarea class="form-textarea" id="med-history" rows="3" placeholder="Tien su suc khoe tam than va the chat..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Lien he khan cap</label>
+                        <input type="text" class="form-input" id="med-emergency" placeholder="Ten va so dien thoai">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ghi chu them</label>
+                        <textarea class="form-textarea" id="med-notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeMedicalModal()">Huy</button>
+                <button class="btn btn-primary" onclick="saveMedicalProfile()">Luu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        const API_BASE = window.CONFIG?.API_BASE || '';
+        const therapistId = localStorage.getItem('user_id');
+        let clientId = null;
+        let clientData = null;
+
+        // Check login
+        if (!therapistId) {
+            window.location.href = '/app/auth';
+        }
+
+        // Get client ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        clientId = urlParams.get('id');
+        if (!clientId) {
+            window.location.href = 'clients.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserProfile();
+            loadClientData();
+            setupTabs();
+            setupMessageForm();
+        });
+
+        // Tab setup
+        function setupTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            
+            document.querySelector(`.tab[data-tab="${tabId}"]`)?.classList.add('active');
+            document.getElementById(`panel-${tabId}`)?.classList.add('active');
+
+            // Load tab content
+            switch (tabId) {
+                case 'medical': loadMedicalProfile(); break;
+                case 'notes': loadSessionNotes(); break;
+                case 'assignments': loadAssignments(); break;
+                case 'progress': loadProgress(); break;
+                case 'messages': loadMessages(); break;
+            }
+        }
+
+        // Load user profile
+        async function loadUserProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/api/users/${therapistId}/profile`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const profile = data.profile || {};
+                    document.getElementById('user-name').textContent = profile.display_name || 'Therapist';
+                    document.getElementById('user-avatar').textContent = (profile.display_name || 'T')[0].toUpperCase();
+                }
+            } catch (err) {
+                console.error('Failed to load profile:', err);
+                document.getElementById('user-name').textContent = 'Therapist';
+            }
+        }
+
+        // Load client data
+        async function loadClientData() {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/summary`);
+                if (res.ok) {
+                    clientData = await res.json();
+                    renderClientHeader();
+                    renderOverview();
+                } else {
+                    showError('Khong the tai thong tin than chu');
+                }
+            } catch (err) {
+                console.error('Failed to load client:', err);
+                showError('Loi ket noi');
+            }
+        }
+
+        // Render client header
+        function renderClientHeader() {
+            const container = document.getElementById('client-header');
+            container.innerHTML = `
+                <div class="flex items-center gap-6">
+                    <div class="client-avatar" style="width: 80px; height: 80px; font-size: 2rem;">
+                        ${(clientData.display_name || 'U')[0].toUpperCase()}
+                    </div>
+                    <div style="flex: 1;">
+                        <h1 style="margin-bottom: var(--space-1);">${clientData.display_name || 'Khong co ten'}</h1>
+                        <p class="text-muted">${clientData.email || 'Khong co email'}</p>
+                        <div class="flex gap-3 mt-3">
+                            <span class="badge ${clientData.is_active ? 'badge-success' : 'badge-warning'}">
+                                ${clientData.is_active ? 'Dang hoat dong' : 'Khong hoat dong'}
+                            </span>
+                            <span class="text-sm text-muted">Ghep noi: ${formatDate(clientData.paired_at)}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn btn-secondary" onclick="switchTab('messages')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            Nhan tin
+                        </button>
+                        <button class="btn btn-primary" onclick="openAppointmentPage()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                            </svg>
+                            Dat lich
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render overview
+        function renderOverview() {
+            // Contact info
+            document.getElementById('contact-info').innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">${clientData.email || 'Chua cap nhat'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Dien thoai</div>
+                    <div class="info-value">${clientData.phone || 'Chua cap nhat'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Ngay sinh</div>
+                    <div class="info-value">${clientData.date_of_birth ? formatDate(clientData.date_of_birth) : 'Chua cap nhat'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Dia chi</div>
+                    <div class="info-value">${clientData.address || 'Chua cap nhat'}</div>
+                </div>
+            `;
+
+            // Quick stats
+            document.getElementById('quick-stats').innerHTML = `
+                <div class="stat-card" style="padding: var(--space-4);">
+                    <div class="stat-content">
+                        <div class="stat-value" style="font-size: 1.5rem;">${clientData.total_sessions || 0}</div>
+                        <div class="stat-label">Tong phien</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="padding: var(--space-4);">
+                    <div class="stat-content">
+                        <div class="stat-value" style="font-size: 1.5rem;">${clientData.pending_assignments || 0}</div>
+                        <div class="stat-label">Bai tap cho</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="padding: var(--space-4);">
+                    <div class="stat-content">
+                        <div class="stat-value" style="font-size: 1.5rem;">${clientData.mood_average?.toFixed(1) || '-'}</div>
+                        <div class="stat-label">Tam trang TB</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="padding: var(--space-4);">
+                    <div class="stat-content">
+                        <div class="stat-value" style="font-size: 1.5rem;">${clientData.crisis_count || 0}</div>
+                        <div class="stat-label">Khung hoang</div>
+                    </div>
+                </div>
+            `;
+
+            // Upcoming appointments
+            loadUpcomingAppointments();
+
+            // Recent activity
+            renderRecentActivity();
+        }
+
+        // Load upcoming appointments
+        async function loadUpcomingAppointments() {
+            const container = document.getElementById('upcoming-appointments');
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/appointments/${therapistId}/upcoming?client_id=${clientId}&limit=3`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.appointments?.length > 0) {
+                        container.innerHTML = data.appointments.map(apt => `
+                            <div class="appointment-card">
+                                <div class="appointment-time">
+                                    <div class="appointment-hour">${formatTime(apt.scheduled_at)}</div>
+                                    <div class="appointment-minutes">${formatDate(apt.scheduled_at)}</div>
+                                </div>
+                                <div class="appointment-details">
+                                    <div class="appointment-type">${apt.type || 'Phien tu van'}</div>
+                                </div>
+                                <span class="badge badge-info">${apt.status}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<p class="text-muted">Khong co lich hen sap toi</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai lich hen</p>';
+            }
+        }
+
+        // Render recent activity
+        function renderRecentActivity() {
+            const container = document.getElementById('recent-activity');
+            if (clientData.recent_activities?.length > 0) {
+                container.innerHTML = clientData.recent_activities.slice(0, 5).map(activity => `
+                    <div class="timeline-item">
+                        <div class="font-medium">${activity.type}</div>
+                        <div class="text-sm text-muted">${formatDateTime(activity.created_at)}</div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted">Chua co hoat dong</p>';
+            }
+        }
+
+        // Load medical profile
+        async function loadMedicalProfile() {
+            const container = document.getElementById('medical-profile-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/medical-profile`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.profile) {
+                        const p = data.profile;
+                        container.innerHTML = `
+                            <div class="info-grid" style="grid-template-columns: repeat(2, 1fr); gap: var(--space-5);">
+                                <div class="info-item">
+                                    <div class="info-label">Chan doan chinh</div>
+                                    <div class="info-value">${p.primary_diagnosis || 'Chua cap nhat'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Chan doan phu</div>
+                                    <div class="info-value">${p.secondary_diagnosis || 'Khong co'}</div>
+                                </div>
+                                <div class="info-item" style="grid-column: span 2;">
+                                    <div class="info-label">Thuoc dang dung</div>
+                                    <div class="info-value">${p.current_medications || 'Khong co'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Di ung</div>
+                                    <div class="info-value">${p.allergies || 'Khong co'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Lien he khan cap</div>
+                                    <div class="info-value">${p.emergency_contact || 'Chua cap nhat'}</div>
+                                </div>
+                                <div class="info-item" style="grid-column: span 2;">
+                                    <div class="info-label">Tien su benh</div>
+                                    <div class="info-value">${p.medical_history || 'Chua cap nhat'}</div>
+                                </div>
+                                <div class="info-item" style="grid-column: span 2;">
+                                    <div class="info-label">Ghi chu</div>
+                                    <div class="info-value">${p.notes || 'Khong co'}</div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<p class="text-muted">Chua co ho so y te. Bam "Chinh sua" de them.</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai ho so y te</p>';
+            }
+        }
+
+        // Load session notes
+        async function loadSessionNotes() {
+            const container = document.getElementById('session-notes-list');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/session-notes`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.notes?.length > 0) {
+                        container.innerHTML = data.notes.map(note => `
+                            <div class="note-card">
+                                <div class="note-header">
+                                    <div>
+                                        <span class="font-bold">${formatDate(note.session_date)}</span>
+                                        <span class="badge badge-info" style="margin-left: var(--space-2);">${note.session_type || 'individual'}</span>
+                                    </div>
+                                    <div class="note-actions">
+                                        <button class="btn btn-ghost btn-sm" onclick="editNote('${note.id}')">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm" onclick="deleteNote('${note.id}')">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p style="white-space: pre-wrap;">${note.content}</p>
+                                ${note.mood_rating ? `<div class="text-sm text-muted mt-2">Tam trang: ${note.mood_rating}/10</div>` : ''}
+                                ${note.next_steps ? `<div class="text-sm mt-2"><strong>Ke hoach:</strong> ${note.next_steps}</div>` : ''}
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<p class="text-muted">Chua co ghi chu phien. Bam "Them ghi chu" de tao moi.</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai ghi chu</p>';
+            }
+        }
+
+        // Load assignments
+        async function loadAssignments() {
+            const container = document.getElementById('assignments-list');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${therapistId}?client_id=${clientId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.assignments?.length > 0) {
+                        container.innerHTML = `
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tieu de</th>
+                                            <th>Loai</th>
+                                            <th>Han</th>
+                                            <th>Trang thai</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.assignments.map(a => `
+                                            <tr>
+                                                <td>
+                                                    <div class="font-medium">${a.title}</div>
+                                                    ${a.description ? `<div class="text-sm text-muted">${truncate(a.description, 50)}</div>` : ''}
+                                                </td>
+                                                <td><span class="badge badge-info">${a.type || 'other'}</span></td>
+                                                <td class="text-sm">${a.due_date ? formatDate(a.due_date) : 'Khong co'}</td>
+                                                <td>
+                                                    <span class="badge ${a.status === 'completed' ? 'badge-success' : a.status === 'overdue' ? 'badge-danger' : 'badge-warning'}">
+                                                        ${a.status === 'completed' ? 'Hoan thanh' : a.status === 'overdue' ? 'Qua han' : 'Dang cho'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    ${a.status !== 'completed' ? `
+                                                        <button class="btn btn-ghost btn-sm" onclick="completeAssignment('${a.id}')">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                                <polyline points="20 6 9 17 4 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    ` : ''}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<p class="text-muted">Chua co bai tap. Bam "Giao bai tap" de tao moi.</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai bai tap</p>';
+            }
+        }
+
+        // Load progress
+        async function loadProgress() {
+            loadProgressMetrics();
+            loadTreatmentOutcome();
+        }
+
+        async function loadProgressMetrics() {
+            const container = document.getElementById('progress-metrics');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/progress-metrics?limit=4`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.metrics?.length > 0) {
+                        const latest = data.metrics[0];
+                        const prev = data.metrics[1];
+                        
+                        const calcTrend = (curr, old) => {
+                            if (!old) return null;
+                            return curr - old;
+                        };
+
+                        container.innerHTML = `
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.mood_score?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Tam trang</div>
+                                ${prev?.mood_score ? `<div class="metric-trend ${latest.mood_score > prev.mood_score ? 'up' : 'down'}">${latest.mood_score > prev.mood_score ? '+' : ''}${(latest.mood_score - prev.mood_score).toFixed(1)}</div>` : ''}
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.anxiety_level?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Lo au</div>
+                                ${prev?.anxiety_level ? `<div class="metric-trend ${latest.anxiety_level < prev.anxiety_level ? 'up' : 'down'}">${latest.anxiety_level < prev.anxiety_level ? '' : '+'}${(latest.anxiety_level - prev.anxiety_level).toFixed(1)}</div>` : ''}
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.sleep_quality?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Chat luong giac ngu</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.social_engagement?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Hoat dong xa hoi</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.energy_level?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Nang luong</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${latest.self_care_score?.toFixed(1) || '-'}</div>
+                                <div class="metric-label">Tu cham soc</div>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<p class="text-muted" style="grid-column: span 3; text-align: center;">Chua co du lieu tien do</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted" style="grid-column: span 3;">Khong the tai du lieu</p>';
+            }
+        }
+
+        async function loadTreatmentOutcome() {
+            const container = document.getElementById('treatment-outcome');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/treatment-outcome`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.outcome) {
+                        const o = data.outcome;
+                        container.innerHTML = `
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">Trang thai</div>
+                                    <div class="info-value">${o.status || 'ongoing'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Muc tieu dat duoc</div>
+                                    <div class="info-value">${o.goals_achieved ? 'Co' : 'Chua'}</div>
+                                </div>
+                                <div class="info-item" style="grid-column: span 2;">
+                                    <div class="info-label">Danh gia</div>
+                                    <div class="info-value">${o.final_assessment || 'Chua co danh gia'}</div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = '<p class="text-muted">Chua co ket qua dieu tri</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai du lieu</p>';
+            }
+        }
+
+        // Load messages
+        async function loadMessages() {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/messages?limit=50`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.messages?.length > 0) {
+                        container.innerHTML = data.messages.reverse().map(msg => `
+                            <div style="display: flex; flex-direction: column; align-items: ${msg.sender_id === therapistId ? 'flex-end' : 'flex-start'}; margin-bottom: var(--space-3);">
+                                <div style="max-width: 70%; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: ${msg.sender_id === therapistId ? 'var(--color-primary)' : 'var(--color-bg-card)'}; color: ${msg.sender_id === therapistId ? 'white' : 'var(--color-text)'}; ${msg.sender_id !== therapistId ? 'border: 1px solid var(--color-border);' : ''}">
+                                    <p style="margin: 0;">${msg.content}</p>
+                                </div>
+                                <span class="text-xs text-muted" style="margin-top: 4px;">${formatTime(msg.created_at)}</span>
+                            </div>
+                        `).join('');
+                        container.scrollTop = container.scrollHeight;
+                    } else {
+                        container.innerHTML = '<p class="text-muted text-center" style="padding: var(--space-6);">Chua co tin nhan</p>';
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<p class="text-muted">Khong the tai tin nhan</p>';
+            }
+        }
+
+        // Message form
+        function setupMessageForm() {
+            document.getElementById('message-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const input = document.getElementById('message-input');
+                const content = input.value.trim();
+                if (!content) return;
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/messages`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content })
+                    });
+                    if (res.ok) {
+                        input.value = '';
+                        loadMessages();
+                    }
+                } catch (err) {
+                    console.error('Failed to send message:', err);
+                }
+            });
+        }
+
+        // Note modal functions
+        function openNoteModal() {
+            document.getElementById('note-modal-title').textContent = 'Them ghi chu phien';
+            document.getElementById('note-form').reset();
+            document.getElementById('note-id').value = '';
+            document.getElementById('note-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('note-modal').classList.add('open');
+        }
+
+        function closeNoteModal() {
+            document.getElementById('note-modal').classList.remove('open');
+        }
+
+        async function saveNote() {
+            const noteId = document.getElementById('note-id').value;
+            const data = {
+                session_date: document.getElementById('note-date').value,
+                session_type: document.getElementById('note-type').value,
+                content: document.getElementById('note-content').value,
+                mood_rating: document.getElementById('note-mood').value ? parseInt(document.getElementById('note-mood').value) : null,
+                next_steps: document.getElementById('note-plan').value
+            };
+
+            try {
+                const url = noteId 
+                    ? `${API_BASE}/api/therapist/session-notes/${therapistId}/${noteId}`
+                    : `${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/session-notes`;
+                const res = await fetch(url, {
+                    method: noteId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    closeNoteModal();
+                    loadSessionNotes();
+                }
+            } catch (err) {
+                console.error('Failed to save note:', err);
+            }
+        }
+
+        async function editNote(noteId) {
+            // TODO: Fetch note and populate form
+            alert('Tinh nang dang phat trien');
+        }
+
+        async function deleteNote(noteId) {
+            if (!confirm('Ban co chac muon xoa ghi chu nay?')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/session-notes/${therapistId}/${noteId}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    loadSessionNotes();
+                }
+            } catch (err) {
+                console.error('Failed to delete note:', err);
+            }
+        }
+
+        // Assignment modal functions
+        function openAssignmentModal() {
+            document.getElementById('assignment-form').reset();
+            document.getElementById('assignment-modal').classList.add('open');
+        }
+
+        function closeAssignmentModal() {
+            document.getElementById('assignment-modal').classList.remove('open');
+        }
+
+        async function createAssignment() {
+            const data = {
+                client_id: clientId,
+                title: document.getElementById('assignment-title').value,
+                description: document.getElementById('assignment-description').value,
+                type: document.getElementById('assignment-type').value,
+                due_date: document.getElementById('assignment-due').value || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${therapistId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    closeAssignmentModal();
+                    loadAssignments();
+                }
+            } catch (err) {
+                console.error('Failed to create assignment:', err);
+            }
+        }
+
+        async function completeAssignment(assignmentId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/assignments/${assignmentId}/complete`, {
+                    method: 'POST'
+                });
+                if (res.ok) {
+                    loadAssignments();
+                }
+            } catch (err) {
+                console.error('Failed to complete assignment:', err);
+            }
+        }
+
+        // Medical profile modal
+        function editMedicalProfile() {
+            // TODO: Fetch and populate
+            document.getElementById('medical-modal').classList.add('open');
+        }
+
+        function closeMedicalModal() {
+            document.getElementById('medical-modal').classList.remove('open');
+        }
+
+        async function saveMedicalProfile() {
+            const data = {
+                primary_diagnosis: document.getElementById('med-diagnosis').value,
+                secondary_diagnosis: document.getElementById('med-secondary').value,
+                current_medications: document.getElementById('med-medications').value,
+                allergies: document.getElementById('med-allergies').value,
+                medical_history: document.getElementById('med-history').value,
+                emergency_contact: document.getElementById('med-emergency').value,
+                notes: document.getElementById('med-notes').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${clientId}/medical-profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    closeMedicalModal();
+                    loadMedicalProfile();
+                }
+            } catch (err) {
+                console.error('Failed to save medical profile:', err);
+            }
+        }
+
+        // Navigation
+        function openAppointmentPage() {
+            window.location.href = `appointments.html?new=1&client=${clientId}`;
+        }
+
+        // Helpers
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            return new Date(dateStr).toLocaleDateString('vi-VN');
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleString('vi-VN');
+        }
+
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        function showError(msg) {
+            console.error('[ERROR]', msg);
+        }
+
+        function logout() {
+            localStorage.removeItem('user_id');
+            window.location.href = '/app/auth';
+        }
+    </script>
+</body>
+</html>

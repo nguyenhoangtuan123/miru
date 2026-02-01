@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tin nhan - Miru Therapist</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="/pwa/images/favicon.svg">
+    <style>
+        .messages-layout { display: grid; grid-template-columns: 320px 1fr; gap: 0; height: calc(100vh - 64px); }
+        .conversations-list { background: var(--color-bg-card); border-right: 1px solid var(--color-border); overflow-y: auto; }
+        .conversations-header { padding: var(--space-4); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; background: var(--color-bg-card); z-index: 10; }
+        .conversation-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); cursor: pointer; transition: background var(--transition-fast); border-bottom: 1px solid var(--color-border-light); }
+        .conversation-item:hover { background: var(--color-border-light); }
+        .conversation-item.active { background: rgba(127, 13, 242, 0.08); border-left: 3px solid var(--color-primary); }
+        .conversation-item.unread { background: rgba(127, 13, 242, 0.05); }
+        .conversation-item.unread .conversation-name { font-weight: 700; }
+        .conversation-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--color-primary-light); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--color-primary-dark); flex-shrink: 0; }
+        .conversation-content { flex: 1; min-width: 0; }
+        .conversation-name { font-weight: 600; margin-bottom: 2px; }
+        .conversation-preview { font-size: 0.875rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .conversation-meta { text-align: right; }
+        .conversation-time { font-size: 0.75rem; color: var(--color-text-muted); }
+        .conversation-unread { background: var(--color-primary); color: white; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 4px; display: inline-block; }
+
+        .chat-container { display: flex; flex-direction: column; height: 100%; }
+        .chat-header { padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: var(--space-4); background: var(--color-bg-card); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: var(--space-6); background: var(--color-bg); }
+        .chat-input-container { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); background: var(--color-bg-card); }
+        
+        .message { display: flex; flex-direction: column; margin-bottom: var(--space-4); max-width: 70%; }
+        .message.sent { align-self: flex-end; align-items: flex-end; }
+        .message.received { align-self: flex-start; align-items: flex-start; }
+        .message-bubble { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); max-width: 100%; word-wrap: break-word; }
+        .message.sent .message-bubble { background: var(--color-primary); color: white; border-bottom-right-radius: 4px; }
+        .message.received .message-bubble { background: var(--color-bg-card); border: 1px solid var(--color-border); border-bottom-left-radius: 4px; }
+        .message-time { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px; }
+        .message-date-divider { text-align: center; margin: var(--space-6) 0; }
+        .message-date-divider span { background: var(--color-bg); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--color-text-muted); }
+
+        .empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted); }
+        .empty-chat svg { width: 64px; height: 64px; margin-bottom: var(--space-4); opacity: 0.5; }
+
+        .chat-input-form { display: flex; gap: var(--space-3); align-items: center; }
+        .chat-input-form input { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    Miru
+                    <span>Therapist Portal</span>
+                </div>
+            </div>
+
+            <nav class="nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Tong quan</div>
+                    <a href="dashboard.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="clients.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                        </svg>
+                        Than chu
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Quan ly</div>
+                    <a href="appointments.html" class="nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Lich hen
+                    </a>
+                    <a href="messages.html" class="nav-item active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Tin nhan
+                        <span class="badge" id="total-unread" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="user-profile">
+                <div class="user-avatar" id="user-avatar">T</div>
+                <div class="user-info">
+                    <div class="user-name" id="user-name">Loading...</div>
+                    <div class="user-role">Nha tri lieu</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="logout()" title="Dang xuat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" style="padding: 0; overflow: hidden;">
+            <div class="messages-layout">
+                <!-- Conversations List -->
+                <div class="conversations-list">
+                    <div class="conversations-header">
+                        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-3);">Tin nhan</h2>
+                        <div style="position: relative;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted);">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" class="form-input" id="search-conversations" placeholder="Tim kiem..." style="padding-left: 36px; font-size: 0.875rem;">
+                        </div>
+                    </div>
+                    <div id="conversations-container">
+                        <div class="loading" style="padding: var(--space-6);"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <div class="chat-container" id="chat-container">
+                    <div class="empty-chat" id="empty-chat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <h3>Chon cuoc tro chuyen</h3>
+                        <p>Chon mot than chu tu danh sach ben trai de bat dau nhan tin</p>
+                    </div>
+
+                    <!-- Chat Header (hidden by default) -->
+                    <div class="chat-header" id="chat-header" style="display: none;">
+                        <div class="conversation-avatar" id="chat-avatar">U</div>
+                        <div>
+                            <div class="font-bold" id="chat-name">Than chu</div>
+                            <div class="text-sm text-muted" id="chat-status">Hoat dong</div>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <a href="#" class="btn btn-ghost btn-sm" id="view-profile-btn">Xem ho so</a>
+                        </div>
+                    </div>
+
+                    <!-- Messages (hidden by default) -->
+                    <div class="chat-messages" id="chat-messages" style="display: none;">
+                    </div>
+
+                    <!-- Input (hidden by default) -->
+                    <div class="chat-input-container" id="chat-input-container" style="display: none;">
+                        <form class="chat-input-form" id="message-form">
+                            <input type="text" class="form-input" id="message-input" placeholder="Nhap tin nhan...">
+                            <button type="submit" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        const API_BASE = window.CONFIG?.API_BASE || '';
+        const therapistId = localStorage.getItem('user_id');
+        let conversations = [];
+        let currentClientId = null;
+        let currentMessages = [];
+        let pollingInterval = null;
+
+        if (!therapistId) {
+            window.location.href = '/app/auth';
+        }
+
+        // Check URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const preSelectedClient = urlParams.get('client');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUserProfile();
+            await loadConversations();
+            setupEventListeners();
+
+            if (preSelectedClient) {
+                selectConversation(preSelectedClient);
+            }
+
+            // Start polling for new messages
+            startPolling();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('search-conversations').addEventListener('input', filterConversations);
+            document.getElementById('message-form').addEventListener('submit', sendMessage);
+        }
+
+        async function loadUserProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/api/users/${therapistId}/profile`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const profile = data.profile || {};
+                    document.getElementById('user-name').textContent = profile.display_name || 'Therapist';
+                    document.getElementById('user-avatar').textContent = (profile.display_name || 'T')[0].toUpperCase();
+                }
+            } catch (err) {
+                console.error('Failed to load profile:', err);
+                document.getElementById('user-name').textContent = 'Therapist';
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/${therapistId}/conversations`);
+                if (res.ok) {
+                    const data = await res.json();
+                    conversations = data.conversations || [];
+                    renderConversations();
+                    updateTotalUnread();
+                }
+            } catch (err) {
+                console.error('Failed to load conversations:', err);
+            }
+        }
+
+        function renderConversations(filtered = null) {
+            const container = document.getElementById('conversations-container');
+            const list = filtered || conversations;
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: var(--space-6); text-align: center; color: var(--color-text-muted);">
+                        <p>Chua co cuoc tro chuyen nao</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.map(conv => `
+                <div class="conversation-item ${conv.client_id === currentClientId ? 'active' : ''} ${conv.unread_count > 0 ? 'unread' : ''}" 
+                     onclick="selectConversation('${conv.client_id}')">
+                    <div class="conversation-avatar">${(conv.display_name || 'U')[0].toUpperCase()}</div>
+                    <div class="conversation-content">
+                        <div class="conversation-name">${conv.display_name || 'Khong ten'}</div>
+                        <div class="conversation-preview">${conv.last_message || 'Chua co tin nhan'}</div>
+                    </div>
+                    <div class="conversation-meta">
+                        <div class="conversation-time">${formatRelativeTime(conv.last_message_at)}</div>
+                        ${conv.unread_count > 0 ? `<div class="conversation-unread">${conv.unread_count}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterConversations() {
+            const search = document.getElementById('search-conversations').value.toLowerCase();
+            if (!search) {
+                renderConversations();
+                return;
+            }
+
+            const filtered = conversations.filter(conv => 
+                (conv.display_name || '').toLowerCase().includes(search)
+            );
+            renderConversations(filtered);
+        }
+
+        async function selectConversation(clientId) {
+            currentClientId = clientId;
+            const conv = conversations.find(c => c.client_id === clientId);
+
+            // Update UI
+            document.getElementById('empty-chat').style.display = 'none';
+            document.getElementById('chat-header').style.display = 'flex';
+            document.getElementById('chat-messages').style.display = 'block';
+            document.getElementById('chat-input-container').style.display = 'block';
+
+            // Update header
+            document.getElementById('chat-avatar').textContent = (conv?.display_name || 'U')[0].toUpperCase();
+            document.getElementById('chat-name').textContent = conv?.display_name || 'Than chu';
+            document.getElementById('chat-status').textContent = conv?.is_active ? 'Hoat dong' : 'Khong hoat dong';
+            document.getElementById('view-profile-btn').href = `client-detail.html?id=${clientId}`;
+
+            // Mark as active in list
+            renderConversations();
+
+            // Load messages
+            await loadMessages();
+        }
+
+        async function loadMessages() {
+            if (!currentClientId) return;
+
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${currentClientId}/messages?limit=100`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentMessages = data.messages || [];
+                    renderMessages();
+                    
+                    // Mark as read
+                    markAsRead();
+                }
+            } catch (err) {
+                console.error('Failed to load messages:', err);
+                container.innerHTML = '<p class="text-muted" style="text-align: center; padding: var(--space-6);">Khong the tai tin nhan</p>';
+            }
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            
+            if (currentMessages.length === 0) {
+                container.innerHTML = '<p class="text-muted" style="text-align: center; padding: var(--space-6);">Chua co tin nhan. Hay gui tin nhan dau tien!</p>';
+                return;
+            }
+
+            // Group by date
+            const grouped = {};
+            currentMessages.forEach(msg => {
+                const date = new Date(msg.created_at).toLocaleDateString('vi-VN');
+                if (!grouped[date]) grouped[date] = [];
+                grouped[date].push(msg);
+            });
+
+            let html = '';
+            Object.keys(grouped).forEach(date => {
+                html += `<div class="message-date-divider"><span>${date}</span></div>`;
+                grouped[date].forEach(msg => {
+                    const isSent = msg.sender_id === therapistId;
+                    html += `
+                        <div class="message ${isSent ? 'sent' : 'received'}">
+                            <div class="message-bubble">${escapeHtml(msg.content)}</div>
+                            <div class="message-time">${formatTime(msg.created_at)}</div>
+                        </div>
+                    `;
+                });
+            });
+
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage(e) {
+            e.preventDefault();
+            
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content || !currentClientId) return;
+
+            // Optimistic update
+            const tempMsg = {
+                id: 'temp-' + Date.now(),
+                content,
+                sender_id: therapistId,
+                created_at: new Date().toISOString()
+            };
+            currentMessages.push(tempMsg);
+            renderMessages();
+            input.value = '';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${currentClientId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+
+                if (!res.ok) {
+                    // Revert on error
+                    currentMessages = currentMessages.filter(m => m.id !== tempMsg.id);
+                    renderMessages();
+                    alert('Khong the gui tin nhan');
+                } else {
+                    // Refresh to get real message
+                    await loadMessages();
+                }
+            } catch (err) {
+                console.error('Failed to send message:', err);
+                currentMessages = currentMessages.filter(m => m.id !== tempMsg.id);
+                renderMessages();
+            }
+        }
+
+        async function markAsRead() {
+            // Update local state
+            const conv = conversations.find(c => c.client_id === currentClientId);
+            if (conv) {
+                conv.unread_count = 0;
+                updateTotalUnread();
+                renderConversations();
+            }
+
+            // TODO: Call API to mark messages as read
+            // await fetch(`${API_BASE}/api/therapist/clients/${therapistId}/${currentClientId}/messages/read`, { method: 'POST' });
+        }
+
+        function updateTotalUnread() {
+            const total = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+            const badge = document.getElementById('total-unread');
+            if (total > 0) {
+                badge.textContent = total;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Polling for new messages
+        function startPolling() {
+            pollingInterval = setInterval(async () => {
+                await loadConversations();
+                if (currentClientId) {
+                    await loadMessages();
+                }
+            }, 30000); // Every 30 seconds
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        }
+
+        // Helpers
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatRelativeTime(dateStr) {
+            if (!dateStr) return '';
+            
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (minutes < 1) return 'Vua xong';
+            if (minutes < 60) return `${minutes} phut`;
+            if (hours < 24) return `${hours} gio`;
+            if (days < 7) return `${days} ngay`;
+            return date.toLocaleDateString('vi-VN');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            stopPolling();
+            localStorage.removeItem('user_id');
+            window.location.href = '/app/auth';
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopPolling);
+    </script>
+</body>
+</html>

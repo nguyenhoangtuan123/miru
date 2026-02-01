@@ -24,7 +24,7 @@ SUMMARIZER_MAX_TOKENS = 1024
 # Model cho memory storage - nhanh, rẻ
 MEM0_MODEL_NAME = "gemini-flash-lite-latest"
 MEM0_TEMPERATURE = 0.1
-MEM0_MAX_TOKENS = 512
+MEM0_MAX_TOKENS = 8192
 
 # ==================== REMINDER / PROACTIVE ====================
 # Model cho tin nhắn nhắc nhở chủ động - ấm áp, ngắn gọn

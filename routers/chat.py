@@ -4,7 +4,9 @@ import json
 import asyncio
 import traceback
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
+from auth_middleware import require_auth, require_auth_for_user
+from auth import verify_token
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
     chat_manager, memory_service, GROQ_API_KEY, groq_client,
@@ -20,8 +22,9 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 # ==================== Chat Sessions API ====================
 
 @router.get("/api/chat/sessions/{user_id}")
-async def get_chat_sessions(user_id: str, limit: int = 20):
+async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
     """Get list of chat sessions for user"""
+    await require_auth_for_user(request, user_id)
     try:
         result = chat_manager.get_user_sessions(user_id, limit)
         sessions_list = result.get("sessions", [])
@@ -53,8 +56,9 @@ async def get_chat_sessions(user_id: str, limit: int = 20):
 
 
 @router.post("/api/chat/sessions/{user_id}")
-async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện mới"):
+async def create_chat_session(user_id: str, request: Request, title: str = "Cuộc trò chuyện mới"):
     """Create a new chat session"""
+    await require_auth_for_user(request, user_id)
     try:
         result = chat_manager.create_new_session(user_id, title)
         if result.get("success"):
@@ -72,8 +76,9 @@ async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện m
 
 
 @router.delete("/api/chat/sessions/{session_id}")
-async def delete_chat_session(session_id: int, user_id: str):
+async def delete_chat_session(session_id: int, user_id: str, request: Request):
     """Delete a chat session"""
+    await require_auth_for_user(request, user_id)
     try:
         result = chat_manager.delete_session(session_id, user_id)
         return {"success": result.get("success", False), "message": result.get("message", "")}
@@ -83,8 +88,9 @@ async def delete_chat_session(session_id: int, user_id: str):
 
 
 @router.put("/api/chat/sessions/{session_id}/title")
-async def update_session_title(session_id: int, request: UpdateTitleRequest):
+async def update_session_title(session_id: int, request: UpdateTitleRequest, req: Request):
     """Update session title"""
+    await require_auth_for_user(req, request.user_id)
     try:
         result = chat_manager.update_session_title(session_id, request.title, request.user_id)
         return {"success": result.get("success", False)}
@@ -94,11 +100,12 @@ async def update_session_title(session_id: int, request: UpdateTitleRequest):
 
 
 @router.post("/api/chat/sessions/create-with-message")
-async def create_session_with_first_message(request: FirstMessageRequest):
+async def create_session_with_first_message(request: FirstMessageRequest, req: Request):
     """
     Create a new session with the first message.
     The title is auto-generated from the message content.
     """
+    await require_auth_for_user(req, request.user_id)
     try:
         result = chat_manager.create_session_with_first_message(
             user_id=request.user_id,
@@ -159,8 +166,9 @@ Chỉ trả về tiêu đề, không giải thích."""
         return "Cuộc trò chuyện"
 
 @router.post("/api/chat/sessions/{session_id}/generate-title")
-async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest):
+async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest, req: Request):
     """Generate and save AI title for session"""
+    await require_auth(req)
     try:
         title = await generate_session_title(request.messages)
         chat_manager.update_session_title(session_id, title)
@@ -171,9 +179,28 @@ async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest
 
 
 @router.get("/api/chat/sessions/{session_id}/messages")
-async def get_session_messages(session_id: int, limit: int = None):
+async def get_session_messages(session_id: int, request: Request, limit: int = None):
     """Get all messages for a session (no limit by default)"""
+    user = await require_auth(request)
     try:
+        # Verify session ownership
+        from database import DatabaseManager
+        db = DatabaseManager()
+        token_user_id = user.get("sub") or user.get("user_id")
+        user_record = db.get_or_create_user(token_user_id)
+        
+        # Check if session belongs to this user
+        session_check = db.supabase.table('session_summaries') \
+            .select('user_id') \
+            .eq('id', session_id) \
+            .execute()
+        
+        if not session_check.data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        if session_check.data[0]['user_id'] != user_record['id']:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
         print(f"[DEBUG] get_session_messages called with session_id={session_id}, limit={limit}")
         result = chat_manager.get_session_messages(session_id, limit)
         print(f"[DEBUG] chat_manager.get_session_messages returned: {result}")
@@ -189,8 +216,9 @@ async def get_session_messages(session_id: int, limit: int = None):
 # ==================== Facts/TXT Files API ====================
 
 @router.get("/api/chat/sessions/{session_id}/facts")
-async def get_session_facts(session_id: int, user_id: str):
+async def get_session_facts(session_id: int, user_id: str, request: Request):
     """Get facts.txt content for a session from database"""
+    await require_auth_for_user(request, user_id)
     try:
         from database import DatabaseManager
         db = DatabaseManager()
@@ -232,14 +260,15 @@ async def get_session_facts(session_id: int, user_id: str):
 
 
 @router.post("/api/chat/sessions/{session_id}/facts")
-async def save_session_facts(session_id: int, request: dict):
+async def save_session_facts(session_id: int, request: dict, req: Request):
     """Save facts.txt content to database"""
+    user_id = request.get('user_id', '')
+    await require_auth_for_user(req, user_id)
     try:
         from database import DatabaseManager
         
         db = DatabaseManager()
         facts_content = request.get('facts_content', '')
-        user_id = request.get('user_id', '')
         
         if not facts_content:
             return {"success": False, "error": "facts_content is required"}
@@ -265,6 +294,23 @@ async def save_session_facts(session_id: int, request: dict):
 @router.websocket("/ws/chat/{user_id}")
 async def websocket_chat(websocket: WebSocket, user_id: str):
     """Real-time chat WebSocket endpoint"""
+    # === AUTHENTICATION BEFORE ACCEPT ===
+    token = websocket.cookies.get("access_token")
+    if not token:
+        await websocket.close(code=1008, reason="No authentication token")
+        return
+    
+    payload = verify_token(token)
+    if not payload:
+        await websocket.close(code=1008, reason="Invalid token")
+        return
+    
+    token_user_id = payload.get("sub") or payload.get("user_id")
+    if token_user_id != user_id:
+        await websocket.close(code=1008, reason="User ID mismatch")
+        return
+    
+    # Only accept connection after authentication passes
     await websocket.accept()
     
     # Initialize conversation history
