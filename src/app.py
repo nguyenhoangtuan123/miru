@@ -30,10 +30,6 @@ from proactive_push_service import proactive_push_scheduler
 # Load env
 load_dotenv()
 
-# MCP Server connection
-MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://127.0.0.1:8020")
-
-
 def _is_schema_error(exc: Exception, fragment: str) -> bool:
     return fragment.lower() in str(exc).lower()
 
@@ -181,7 +177,6 @@ async def health():
         "timestamp": datetime.now(LOCAL_TZ).isoformat(),
         "database": "connected" if db_connected else "unreachable",
         "database_error": db_error,
-        "mcp_server": MCP_SERVER_URL
     }
 
 @app.get("/api/user-id")

@@ -7,23 +7,23 @@ Hệ thống AI Chatbot với bộ nhớ dài hạn (Long-term Memory) sử dụ
 Bạn cần mở **2 terminal** riêng biệt để chạy hệ thống:
 
 ### Terminal 1: Chạy Server
-Server chịu trách nhiệm xử lý bộ nhớ và kết nối Database.
+Server chịu trách nhiệm xử lý API, chat, memory và kết nối Database.
 ```powershell
 .venv\Scripts\activate
-python mcp_server.py
+uvicorn app:app --app-dir src --host 0.0.0.0 --port 8008
 ```
-_Chờ đến khi thấy thông báo server đang chạy tại `http://127.0.0.1:8020`._
+_Chờ đến khi thấy backend chạy tại `http://127.0.0.1:8008`._
 
 ### Terminal 2: Chạy Client
 Client là giao diện chat để bạn tương tác với AI.
 ```powershell
-.venv\Scripts\activate
-python client_time.py
+cd UI_new\miru_ggstudio-main
+npm run dev
 ```
 
 ## 📂 Cấu trúc dự án
-- `mcp_server.py`: Server chính (FastAPI + MCP).
-- `client_time.py`: Client chat (Gemini + MCP Client).
+- `src/app.py`: Server chính (FastAPI).
+- `UI_new/miru_ggstudio-main/`: Frontend Vite + React.
 - `database.py`: Quản lý kết nối Supabase và Vector Search.
 - `.env`: Cấu hình API Key và Database URL.
 "# reflection_project" 

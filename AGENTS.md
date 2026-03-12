@@ -6,7 +6,6 @@ Miru is a split frontend/backend application:
 
 - Backend: FastAPI app under `src/`
 - Frontend: Vite + React + TypeScript under `UI_new/miru_ggstudio-main/`
-- Optional sidecar: `src/mcp_server.py` for memory and insight helpers
 
 This repo is not Next.js. Treat the frontend as a Vite SPA.
 
@@ -14,7 +13,6 @@ This repo is not Next.js. Treat the frontend as a Vite SPA.
 
 - Backend app: `src/app.py`
 - Backend shim: `pwa_server.py`
-- MCP server: `src/mcp_server.py`
 - Frontend app: `UI_new/miru_ggstudio-main/src/App.tsx`
 - Chat WebSocket route: `src/routers/chat.py`
 - Push/Web Push routes: `src/push_routes.py`
@@ -26,12 +24,6 @@ This repo is not Next.js. Treat the frontend as a Vite SPA.
 
 ```powershell
 uvicorn app:app --app-dir src --host 0.0.0.0 --port 8008
-```
-
-### MCP Server
-
-```powershell
-uvicorn mcp_server:app --app-dir src --host 0.0.0.0 --port 8020
 ```
 
 ### Frontend
@@ -70,7 +62,8 @@ Important files:
 - Active therapist routes live in `src/therapist_routes.py`
 - Active therapist service lives in `src/therapist_service.py`
 - AI crisis logging is wired from `src/agent_graph.py`
-- Memory features are split across backend routes and the MCP sidecar
+- Memory features run directly inside the main backend and no longer require a sidecar
+- Memory and insight helpers now run directly inside the main backend
 - Web Push sending logic lives in `src/push_service.py`
 - Push subscription APIs live in `src/push_routes.py`
 - Proactive 12-hour push logic lives in `src/proactive_push_service.py`

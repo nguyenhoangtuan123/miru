@@ -55,10 +55,6 @@ if GROQ_API_KEY:
     except Exception as e:
         print(f"[WARN] Groq initialization failed: {e}")
 
-# MCP Server URL
-MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://127.0.0.1:8020/sse")
-
-
 # ==================== MODEL HELPER FUNCTIONS ====================
 
 def get_chat_model_config():

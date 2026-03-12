@@ -7,7 +7,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException
 from schemas import MomentCheckin, DailyMoodCheckin
 from services import db_manager, memory_service, groq_client
-from utils import LOCAL_TZ, call_mcp_tool
+from utils import LOCAL_TZ
 from facts_parser import get_facts_parser
 
 router = APIRouter(tags=["Insights"])
@@ -399,7 +399,7 @@ async def save_moment(moment: MomentCheckin):
         note_str = f" - {moment.note}" if moment.note else ""
         summary = f"Cảm xúc: {moment.emotion_score}/10. Ngữ cảnh: {tags_str}{note_str}"
         
-        result = await call_mcp_tool("add_session_summary", moment.user_id, {"summary": summary})
+        result = db_manager.add_session_summary(moment.user_id, summary)
         return {"success": True, "message": "Đã lưu khoảnh khắc của bạn", "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -641,12 +641,7 @@ async def save_daily_mood_checkin(checkin: DailyMoodCheckin):
         note_str = f" - {checkin.note}" if checkin.note else ""
         summary = f"Mood Check-in: {checkin.emotion_score}/10. Ngữ cảnh: {tags_str}{note_str}"
         
-        result = await call_mcp_tool("add_session_summary", checkin.user_id, {
-            "summary": summary,
-            "emotion_score": checkin.emotion_score,
-            "tags": checkin.context_tags,
-            "type": "daily_mood_checkin"
-        })
+        result = db_manager.add_session_summary(checkin.user_id, summary)
         
         # Tính streak
         streak = await calculate_mood_streak(checkin.user_id, db)
@@ -854,10 +849,6 @@ async def get_moments(user_id: str, days: int = 7):
         ]
 
         return {"success": True, "moments": moments, "count": len(moments)}
-
-        timeline = await call_mcp_tool("get_session_timeline", user_id, {"days": days})
-        timeline_data = json.loads(timeline) if timeline else []
-        return {"success": True, "moments": timeline_data, "count": len(timeline_data)}
     except Exception as e:
         print(f"[Moments] Error: {e}")
         return {"success": False, "moments": [], "count": 0, "error": str(e)}
@@ -867,9 +858,9 @@ async def get_memories(user_id: str, query: str = ""):
     """Get relevant memories for user"""
     try:
         if query:
-            memories = await call_mcp_tool("find_relevant_memories", user_id, {"query": query})
+            memories = db_manager.find_relevant_summaries(user_id, query)
         else:
-            memories = await call_mcp_tool("get_latest_session_summary", user_id)
+            memories = db_manager.get_latest_session_summary(user_id)
         return {"success": True, "memories": memories}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -878,7 +869,7 @@ async def get_memories(user_id: str, query: str = ""):
 async def save_memory(user_id: str, summary: str):
     """Save a session summary"""
     try:
-        result = await call_mcp_tool("add_session_summary", user_id, {"summary": summary})
+        result = db_manager.add_session_summary(user_id, summary)
         return {"success": True, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

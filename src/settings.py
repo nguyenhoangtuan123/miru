@@ -15,7 +15,6 @@ class Settings:
     SUPABASE_DB_URL = os.environ.get("SUPABASE_DB_URL")
     
     # MCP Config
-    MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL")
     
     # User Context
     USER_ID = os.environ.get("USER_ID", "user_alex")
