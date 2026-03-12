@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --color-miru-primary: #7f0df2;
+  --color-miru-bg: var(--bg-color);
+  --color-miru-card: var(--card-bg);
+  --color-miru-border: var(--border-color);
+  --color-white: var(--theme-white);
+  --color-black: var(--theme-black);
+}
+
+@layer base {
+  :root {
+    --bg-color: #050A1F;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --theme-white: #ffffff;
+    --theme-black: #000000;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.3);
+  }
+
+  .light {
+    --bg-color: #f0f4f8;
+    --card-bg: rgba(0, 0, 0, 0.05);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --theme-white: #111827; /* Dark gray instead of pure black for better text readability */
+    --theme-black: #ffffff;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.05);
+  }
+
+  body {
+    @apply bg-miru-bg text-white font-sans transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px 0 var(--glass-shadow);
+  }
+  
+  .glass-button {
+    @apply bg-miru-primary/80 hover:bg-miru-primary text-[#ffffff] backdrop-blur-md transition-all duration-300 rounded-2xl;
+  }
+}

@@ -15,3 +15,18 @@ memories/
 .env
 client_secret*.json
 
+# Local tooling / editor state
+.claude/
+.codex/
+.cursor/
+.gemini/
+.kiro/
+.roo/
+
+# Local runtime artifacts
+*.log
+server.log
+pairing_codes.json
+proactive_push_state.json
+temp_facts_*.txt
+nul

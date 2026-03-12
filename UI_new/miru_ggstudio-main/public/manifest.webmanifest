@@ -1,0 +1,26 @@
+{
+  "name": "Miru",
+  "short_name": "Miru",
+  "description": "Dong hanh cung suc khoe tam than, ket noi than chu va nha tri lieu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050A1F",
+  "theme_color": "#7f0df2",
+  "lang": "vi",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/miru-icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/miru-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
