@@ -80,7 +80,11 @@ export const MemoryItemSchema = z
     memory: z.string().optional(),
     content: z.string().optional(),
     created_at: z.string().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z
+      .record(z.unknown())
+      .nullable()
+      .optional()
+      .transform((value) => value ?? {}),
   })
   .passthrough();
 

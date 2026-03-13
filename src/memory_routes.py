@@ -19,6 +19,13 @@ class UpdateMemory(BaseModel):
     new_content: str
 
 
+def _normalize_memory_item(memory: dict) -> dict:
+    normalized = dict(memory or {})
+    metadata = normalized.get("metadata")
+    normalized["metadata"] = metadata if isinstance(metadata, dict) else {}
+    return normalized
+
+
 # === ROUTES ===
 
 @router.get("/{user_id}")
@@ -27,9 +34,13 @@ async def get_all_memories(user_id: str):
     try:
         service = get_memory_service()
         result = service.get_all_memories(user_id)
+        memories = [
+            _normalize_memory_item(memory)
+            for memory in result.get("results", [])
+        ]
         return {
             "success": True,
-            "memories": result.get("results", []),
+            "memories": memories,
             "relations": result.get("relations", [])
         }
     except Exception as e:
@@ -42,7 +53,10 @@ async def search_memories(user_id: str, q: str, limit: int = 5):
     """Tìm kiếm memories"""
     try:
         service = get_memory_service()
-        memories = service.search_memories(user_id, q, limit)
+        memories = [
+            _normalize_memory_item(memory)
+            for memory in service.search_memories(user_id, q, limit)
+        ]
         return {"success": True, "memories": memories}
     except Exception as e:
         print(f"[Memory API] Error searching: {e}")
