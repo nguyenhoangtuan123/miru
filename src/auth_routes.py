@@ -40,7 +40,7 @@ SCOPES = [
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 auth_db = AuthDatabase()
-OAUTH_STATE_MAX_AGE_SECONDS = 600
+OAUTH_STATE_MAX_AGE_SECONDS = int(os.getenv("OAUTH_STATE_MAX_AGE_SECONDS", "1800"))
 
 
 def serialize_user_response(user_claims: dict, user_data: Optional[dict] = None) -> dict:
@@ -231,7 +231,8 @@ async def callback(request: Request, code: str, state: str):
         response.set_cookie(**cookie_config)
 
         return response
-        
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"OAuth callback error: {e}")
         raise HTTPException(status_code=500, detail="Authentication failed")
