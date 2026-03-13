@@ -4,9 +4,10 @@ API Routes cho Memory Management UI
 Cho phép user xem, sửa, xóa ký ức của mình.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
+from auth_middleware import require_auth_for_user
 from memory_service import get_memory_service
 
 
@@ -29,9 +30,10 @@ def _normalize_memory_item(memory: dict) -> dict:
 # === ROUTES ===
 
 @router.get("/{user_id}")
-async def get_all_memories(user_id: str):
+async def get_all_memories(user_id: str, request: Request):
     """Lấy tất cả memories của user"""
     try:
+        await require_auth_for_user(request, user_id)
         service = get_memory_service()
         result = service.get_all_memories(user_id)
         memories = [
@@ -43,30 +45,36 @@ async def get_all_memories(user_id: str):
             "memories": memories,
             "relations": result.get("relations", [])
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error getting memories: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{user_id}/search")
-async def search_memories(user_id: str, q: str, limit: int = 5):
+async def search_memories(user_id: str, request: Request, q: str, limit: int = 5):
     """Tìm kiếm memories"""
     try:
+        await require_auth_for_user(request, user_id)
         service = get_memory_service()
         memories = [
             _normalize_memory_item(memory)
             for memory in service.search_memories(user_id, q, limit)
         ]
         return {"success": True, "memories": memories}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error searching: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{user_id}/patterns")
-async def get_memory_patterns(user_id: str):
+async def get_memory_patterns(user_id: str, request: Request):
     """Phân tích patterns từ memories"""
     try:
+        await require_auth_for_user(request, user_id)
         from pattern_analyzer import get_pattern_analyzer
         
         memory_service = get_memory_service()
@@ -87,6 +95,8 @@ async def get_memory_patterns(user_id: str):
             "success": True,
             "patterns": patterns
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error analyzing patterns: {e}")
         import traceback
@@ -95,9 +105,10 @@ async def get_memory_patterns(user_id: str):
 
 
 @router.get("/{user_id}/graph")
-async def get_knowledge_graph(user_id: str):
+async def get_knowledge_graph(user_id: str, request: Request):
     """Lấy Knowledge Graph với entities và relationships"""
     try:
+        await require_auth_for_user(request, user_id)
         from knowledge_graph_service import get_knowledge_graph_service
         
         memory_service = get_memory_service()
@@ -114,6 +125,8 @@ async def get_knowledge_graph(user_id: str):
             "success": True,
             "graph": graph
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error getting knowledge graph: {e}")
         import traceback
@@ -122,36 +135,45 @@ async def get_knowledge_graph(user_id: str):
 
 
 @router.delete("/{user_id}/{memory_id}")
-async def delete_memory(user_id: str, memory_id: str):
+async def delete_memory(user_id: str, memory_id: str, request: Request):
     """Xóa một memory cụ thể"""
     try:
+        await require_auth_for_user(request, user_id)
         service = get_memory_service()
         result = service.delete_memory(memory_id, user_id=user_id)
         return {"success": result}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error deleting: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/{user_id}")
-async def delete_all_memories(user_id: str):
+async def delete_all_memories(user_id: str, request: Request):
     """Xóa tất cả memories của user"""
     try:
+        await require_auth_for_user(request, user_id)
         service = get_memory_service()
         result = service.delete_all_memories(user_id)
         return {"success": result}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error deleting all: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/{user_id}/{memory_id}")
-async def update_memory(user_id: str, memory_id: str, data: UpdateMemory):
+async def update_memory(user_id: str, memory_id: str, data: UpdateMemory, request: Request):
     """Cập nhật nội dung một memory"""
     try:
+        await require_auth_for_user(request, user_id)
         service = get_memory_service()
         result = service.update_memory(memory_id, data.new_content, user_id=user_id)
         return {"success": result}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Memory API] Error updating: {e}")
         raise HTTPException(status_code=500, detail=str(e))

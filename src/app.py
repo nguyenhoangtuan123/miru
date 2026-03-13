@@ -7,6 +7,7 @@ Provides REST API and WebSocket endpoints for the Progressive Web App
 import os
 import socket
 from urllib.parse import urlparse
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,7 @@ from routers.goals import router as goals_router
 from routers.chat import router as chat_router
 from routers.insights import router as insights_router
 from proactive_push_service import proactive_push_scheduler
+from consent_routes import router as consent_router
 
 # Load env
 load_dotenv()
@@ -109,6 +111,85 @@ def _get_user_role(db, user_id: str) -> str | None:
 
     return "client"
 
+
+APP_CONSENT_VERSION = os.getenv("APP_CONSENT_VERSION", "v1")
+APP_CONSENT_TYPES = {
+    "terms": "app_terms",
+    "privacy": "app_privacy",
+    "ai_support": "app_ai_support_disclaimer",
+}
+
+
+def _empty_app_consent() -> dict:
+    return {
+        "accepted": False,
+        "version": APP_CONSENT_VERSION,
+        "accepted_at": None,
+        "items": {
+            "terms": False,
+            "privacy": False,
+            "ai_support": False,
+        },
+    }
+
+
+def _read_app_consent(db, user_id: str) -> dict:
+    consent = _empty_app_consent()
+    try:
+        response = (
+            db.supabase.table("privacy_consent_log")
+            .select("consent_type, consent_given, consent_date")
+            .eq("user_id", user_id)
+            .order("consent_date", desc=True)
+            .limit(50)
+            .execute()
+        )
+        latest: dict[str, tuple[bool, str | None]] = {}
+        for row in response.data or []:
+            consent_type = row.get("consent_type")
+            if consent_type not in APP_CONSENT_TYPES.values() or consent_type in latest:
+                continue
+            latest[consent_type] = (
+                bool(row.get("consent_given")),
+                row.get("consent_date"),
+            )
+
+        accepted_dates: list[str] = []
+        for key, consent_type in APP_CONSENT_TYPES.items():
+            given, consent_date = latest.get(consent_type, (False, None))
+            consent["items"][key] = given
+            if given and consent_date:
+                accepted_dates.append(str(consent_date))
+
+        consent["accepted"] = all(consent["items"].values())
+        consent["accepted_at"] = max(accepted_dates) if accepted_dates else None
+    except Exception as exc:
+        print(f"[Consent] Failed to read app consent: {exc}")
+    return consent
+
+
+def _write_app_consent(db, user_id: str, request: Request, accepted: dict[str, bool]) -> dict:
+    rows = []
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", "")[:500]
+    consent_date = datetime.now(timezone.utc).isoformat()
+
+    for key, consent_type in APP_CONSENT_TYPES.items():
+        rows.append(
+            {
+                "user_id": user_id,
+                "therapist_id": None,
+                "consent_type": consent_type,
+                "consent_given": bool(accepted.get(key)),
+                "consent_date": consent_date,
+                "ip_address": ip_address,
+                "user_agent": user_agent,
+            }
+        )
+
+    db.supabase.table("privacy_consent_log").insert(rows).execute()
+    return _read_app_consent(db, user_id)
+
 # ==================== App Initialization ====================
 
 app = FastAPI(
@@ -142,6 +223,7 @@ app.include_router(therapist_router)
 app.include_router(memory_router)
 app.include_router(proactive_router)
 app.include_router(push_router)
+app.include_router(consent_router)
 
 # Register new modular routes
 app.include_router(journal_router)
@@ -180,9 +262,15 @@ async def health():
     }
 
 @app.get("/api/user-id")
-async def get_user_id():
-    """Get user ID from environment"""
-    user_id = os.getenv("USER_ID", "user_alex")
+async def get_user_id(request: Request):
+    """Get the authenticated user's ID."""
+    from auth_middleware import get_current_user as get_user
+
+    user = await get_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+
+    user_id = user.get("sub") or user.get("user_id")
     return {"user_id": user_id}
 
 
@@ -190,6 +278,12 @@ async def get_user_id():
 
 class RoleUpdate(BaseModel):
     role: str  # 'client' or 'therapist'
+
+
+class AppConsentUpdate(BaseModel):
+    terms: bool
+    privacy: bool
+    ai_support: bool
 
 
 @app.get("/api/user/me")
@@ -227,6 +321,50 @@ async def get_current_user(request: Request):
     if warning:
         response["warning"] = warning
     return response
+
+
+@app.get("/api/user/consent")
+async def get_user_consent(request: Request):
+    from auth_middleware import get_current_user as get_user
+    from database import DatabaseManager
+
+    user = await get_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+
+    user_id = user.get("sub") or user.get("user_id")
+    db = DatabaseManager()
+    return {"success": True, "consent": _read_app_consent(db, user_id)}
+
+
+@app.post("/api/user/consent")
+async def accept_user_consent(data: AppConsentUpdate, request: Request):
+    from auth_middleware import get_current_user as get_user
+    from database import DatabaseManager
+
+    user = await get_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+
+    if not (data.terms and data.privacy and data.ai_support):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "All consent items must be accepted to continue."},
+        )
+
+    user_id = user.get("sub") or user.get("user_id")
+    db = DatabaseManager()
+    consent = _write_app_consent(
+        db,
+        user_id,
+        request,
+        {
+            "terms": data.terms,
+            "privacy": data.privacy,
+            "ai_support": data.ai_support,
+        },
+    )
+    return {"success": True, "consent": consent}
 
 
 @app.post("/api/user/role")

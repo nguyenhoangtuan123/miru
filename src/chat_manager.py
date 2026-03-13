@@ -202,6 +202,25 @@ class ChatManager:
         except Exception as e:
             print(f"[ERROR] Error getting sessions: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def session_belongs_to_user(self, session_id: int, user_id: str) -> bool:
+        """Check whether a chat session belongs to the given user."""
+        try:
+            user = self.db_manager.get_or_create_user(user_id)
+            user_db_id = user["id"]
+            response = (
+                self.db_manager.supabase.table("session_summaries")
+                .select("user_id")
+                .eq("id", int(session_id))
+                .limit(1)
+                .execute()
+            )
+            if not response.data:
+                return False
+            return response.data[0].get("user_id") == user_db_id
+        except Exception as e:
+            print(f"[ERROR] Error checking session ownership: {str(e)}")
+            return False
     
     def update_session_title(self, session_id: int, new_title: str, user_id: str = None):
         """Cập nhật title của session"""

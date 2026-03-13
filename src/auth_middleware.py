@@ -70,6 +70,63 @@ async def require_auth(request: Request) -> Dict:
     return user
 
 
+def get_user_id_from_claims(user: Dict) -> Optional[str]:
+    user_id = user.get("sub") or user.get("user_id")
+    return str(user_id) if user_id is not None else None
+
+
+async def require_auth_for_user(request: Request, user_id: str) -> Dict:
+    user = await require_auth(request)
+    current_user_id = get_user_id_from_claims(user)
+
+    if not current_user_id or current_user_id != str(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+
+    return user
+
+
+async def require_user_id(request: Request) -> str:
+    user = await require_auth(request)
+    user_id = get_user_id_from_claims(user)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    return user_id
+
+
+async def require_user_id(request: Request) -> str:
+    """Require an authenticated user and return its stable text id."""
+    user = await require_auth(request)
+    user_id = user.get("sub") or user.get("user_id")
+
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user"
+        )
+
+    return user_id
+
+
+async def require_auth_for_user(request: Request, user_id: str) -> Dict:
+    """Require authentication and ensure the token belongs to the requested user."""
+    current_user = await require_auth(request)
+    current_user_id = current_user.get("sub") or current_user.get("user_id")
+
+    if current_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    return current_user
+
+
 def create_auth_cookie(token: str) -> Dict:
     """
     Create cookie configuration for JWT token

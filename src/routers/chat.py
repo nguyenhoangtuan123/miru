@@ -4,7 +4,7 @@ import json
 import asyncio
 import traceback
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
     chat_manager, memory_service, GROQ_API_KEY, groq_client,
@@ -13,6 +13,8 @@ from services import (
 from config import TITLE_MODEL_NAME
 from agent_graph import run_agent
 from push_service import get_push_service
+from auth_middleware import get_current_user
+from auth import verify_token
 
 router = APIRouter(tags=["Chat"])
 
@@ -28,12 +30,50 @@ def _stream_chunks(message: str, chunk_size: int = STREAM_CHUNK_SIZE) -> list[st
         return [""]
     return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
+
+async def _require_user_access(request: Request, user_id: str) -> str:
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    current_user_id = user.get("sub") or user.get("user_id")
+    if current_user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return user_id
+
+
+async def _require_session_access(request: Request, session_id: int) -> str:
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    current_user_id = user.get("sub") or user.get("user_id")
+    if not isinstance(current_user_id, str) or not chat_manager.session_belongs_to_user(session_id, current_user_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return current_user_id
+
+
+def _get_websocket_user_id(websocket: WebSocket) -> str | None:
+    token = websocket.query_params.get("token") or websocket.cookies.get("access_token")
+    if not token:
+        return None
+
+    payload = verify_token(token)
+    if not payload:
+        return None
+
+    user_id = payload.get("sub") or payload.get("user_id")
+    return user_id if isinstance(user_id, str) else None
+
 # ==================== Chat Sessions API ====================
 
 @router.get("/api/chat/sessions/{user_id}")
-async def get_chat_sessions(user_id: str, limit: int = 20):
+async def get_chat_sessions(user_id: str, request: Request, limit: int = 20):
     """Get list of chat sessions for user"""
     try:
+        await _require_user_access(request, user_id)
         result = chat_manager.get_user_sessions(user_id, limit)
         sessions_list = result.get("sessions", [])
         
@@ -58,15 +98,18 @@ async def get_chat_sessions(user_id: str, limit: int = 20):
             })
         
         return {"success": True, "sessions": formatted, "count": len(formatted)}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Chat Sessions] Error: {e}")
         return {"success": False, "sessions": [], "error": str(e)}
 
 
 @router.post("/api/chat/sessions/{user_id}")
-async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện mới"):
+async def create_chat_session(user_id: str, request: Request, title: str = "Cuộc trò chuyện mới"):
     """Create a new chat session"""
     try:
+        await _require_user_access(request, user_id)
         result = chat_manager.create_new_session(user_id, title)
         if result.get("success"):
             return {
@@ -77,40 +120,49 @@ async def create_chat_session(user_id: str, title: str = "Cuộc trò chuyện m
                 }
             }
         return {"success": False, "error": result.get("error")}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Create Session] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/api/chat/sessions/{session_id}")
-async def delete_chat_session(session_id: int, user_id: str):
+async def delete_chat_session(session_id: int, user_id: str, request: Request):
     """Delete a chat session"""
     try:
+        await _require_user_access(request, user_id)
         result = chat_manager.delete_session(session_id, user_id)
         return {"success": result.get("success", False), "message": result.get("message", "")}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Delete Session] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/api/chat/sessions/{session_id}/title")
-async def update_session_title(session_id: int, request: UpdateTitleRequest):
+async def update_session_title(session_id: int, request: UpdateTitleRequest, http_request: Request):
     """Update session title"""
     try:
+        await _require_user_access(http_request, request.user_id)
         result = chat_manager.update_session_title(session_id, request.title, request.user_id)
         return {"success": result.get("success", False)}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Update Title] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/api/chat/sessions/create-with-message")
-async def create_session_with_first_message(request: FirstMessageRequest):
+async def create_session_with_first_message(request: FirstMessageRequest, http_request: Request):
     """
     Create a new session with the first message.
     The title is auto-generated from the message content.
     """
     try:
+        await _require_user_access(http_request, request.user_id)
         result = chat_manager.create_session_with_first_message(
             user_id=request.user_id,
             first_message=request.message
@@ -125,6 +177,8 @@ async def create_session_with_first_message(request: FirstMessageRequest):
                 }
             }
         return {"success": False, "error": result.get("error")}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Create Session with Message] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -170,27 +224,33 @@ Chỉ trả về tiêu đề, không giải thích."""
         return "Cuộc trò chuyện"
 
 @router.post("/api/chat/sessions/{session_id}/generate-title")
-async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest):
+async def generate_title_endpoint(session_id: int, request: GenerateTitleRequest, http_request: Request):
     """Generate and save AI title for session"""
     try:
+        current_user_id = await _require_session_access(http_request, session_id)
         title = await generate_session_title(request.messages)
-        chat_manager.update_session_title(session_id, title)
+        chat_manager.update_session_title(session_id, title, current_user_id)
         return {"success": True, "title": title}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Generate Title API] Error: {e}")
         return {"success": False, "title": "Cuộc trò chuyện"}
 
 
 @router.get("/api/chat/sessions/{session_id}/messages")
-async def get_session_messages(session_id: int, limit: int = 100):
+async def get_session_messages(session_id: int, request: Request, limit: int = 100):
     """Get all messages for a session"""
     try:
+        await _require_session_access(request, session_id)
         print(f"[DEBUG] get_session_messages called with session_id={session_id}, limit={limit}")
         result = chat_manager.get_session_messages(session_id, limit)
         print(f"[DEBUG] chat_manager.get_session_messages returned: {result}")
         if result.get("success"):
             return {"success": True, "messages": result.get("messages", [])}
         return {"success": False, "messages": [], "error": result.get("error")}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Get Messages] Error: {e}")
         traceback.print_exc()
@@ -201,6 +261,11 @@ async def get_session_messages(session_id: int, limit: int = 100):
 @router.websocket("/ws/chat/{user_id}")
 async def websocket_chat(websocket: WebSocket, user_id: str):
     """Real-time chat WebSocket endpoint"""
+    current_user_id = _get_websocket_user_id(websocket)
+    if current_user_id != user_id:
+        await websocket.close(code=4403)
+        return
+
     await websocket.accept()
     
     # Initialize conversation history
@@ -215,6 +280,9 @@ async def websocket_chat(websocket: WebSocket, user_id: str):
             user_message = message_data.get("message", "")
             session_id = message_data.get("session_id")
             if session_id:
+                if not chat_manager.session_belongs_to_user(session_id, current_user_id):
+                    await websocket.send_json({"type": "error", "message": "Access denied"})
+                    continue
                 current_session_id = session_id
                 
                 # Load history if empty (first message of connection)

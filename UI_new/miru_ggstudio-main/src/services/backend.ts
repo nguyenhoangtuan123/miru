@@ -1,10 +1,12 @@
 import {
+  AppConsentResponseSchema,
   AppointmentMutationResponseSchema,
   AppointmentsResponseSchema,
   ChatMessagesResponseSchema,
   ChatSessionsResponseSchema,
   ChatTitleResponseSchema,
   CheckinStatusResponseSchema,
+  ConsentStatusResponseSchema,
   CreatedSessionResponseSchema,
   CreateSessionWithMessageSchema,
   CurrentUserResponseSchema,
@@ -129,6 +131,33 @@ export async function getCurrentUser() {
   return parseApi(api.get('/api/user/me'), CurrentUserResponseSchema);
 }
 
+export async function getConsentStatus() {
+  return parseApi(api.get('/api/consent/me'), ConsentStatusResponseSchema);
+}
+
+export async function acceptConsent(payload: {
+  processing_consent: boolean;
+  crisis_notice_acknowledged: boolean;
+  allow_proactive_support: boolean;
+}) {
+  return parseApi(api.post('/api/consent/accept', payload), ConsentStatusResponseSchema);
+}
+
+export async function getUserConsent() {
+  return parseApi(api.get('/api/user/consent'), AppConsentResponseSchema);
+}
+
+export async function acceptUserConsent() {
+  return parseApi(
+    api.post('/api/user/consent', {
+      terms: true,
+      privacy: true,
+      ai_support: true,
+    }),
+    AppConsentResponseSchema
+  );
+}
+
 export async function logout() {
   return parseApi(api.post('/auth/logout'), LogoutResponseSchema);
 }
@@ -196,7 +225,11 @@ export function connectChatSocket(
   userId: string,
   onEvent: (event: WsServerEvent) => void
 ) {
-  const socket = new WebSocket(buildWsUrl(`/ws/chat/${userId}`));
+  const token = localStorage.getItem('access_token');
+  const socketPath = token
+    ? `/ws/chat/${userId}?token=${encodeURIComponent(token)}`
+    : `/ws/chat/${userId}`;
+  const socket = new WebSocket(buildWsUrl(socketPath));
 
   socket.onmessage = (event) => {
     const parsed = WsServerEventSchema.parse(JSON.parse(event.data));

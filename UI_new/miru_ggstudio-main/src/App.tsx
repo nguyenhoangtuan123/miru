@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ConsentProvider } from './contexts/ConsentContext';
 import { PwaProvider } from './contexts/PwaContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationRuntime } from './components/NotificationRuntime';
@@ -10,6 +11,7 @@ import { TherapistLayout } from './components/TherapistLayout';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { AuthCallback } from './pages/AuthCallback';
+import { Consent } from './pages/Consent';
 import { Chat } from './pages/Chat';
 import { Memories } from './pages/Memories';
 import { Settings } from './pages/Settings';
@@ -29,12 +31,18 @@ export default function App() {
       <ThemeProvider>
         <PwaProvider>
           <AuthProvider>
-            <NotificationRuntime />
-            <Routes>
+            <ConsentProvider>
+              <NotificationRuntime />
+              <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/auth/login" element={<Layout><Login /></Layout>} />
             <Route path="/auth/callback" element={<Layout><AuthCallback /></Layout>} />
+            <Route path="/consent" element={
+              <ProtectedRoute>
+                <Layout><Consent /></Layout>
+              </ProtectedRoute>
+            } />
             
             {/* Client Routes */}
             <Route path="/chat" element={
@@ -71,7 +79,8 @@ export default function App() {
               <Route path="messages" element={<TherapistMessages />} />
               <Route path="settings" element={<TherapistSettings />} />
             </Route>
-            </Routes>
+              </Routes>
+            </ConsentProvider>
           </AuthProvider>
         </PwaProvider>
       </ThemeProvider>

@@ -25,6 +25,22 @@ export const SetRoleResponseSchema = z.object({
   role: z.enum(['client', 'therapist']),
 });
 
+export const AppConsentSchema = z.object({
+  accepted: z.boolean(),
+  version: z.string(),
+  accepted_at: z.string().nullable().optional(),
+  items: z.object({
+    terms: z.boolean(),
+    privacy: z.boolean(),
+    ai_support: z.boolean(),
+  }),
+});
+
+export const AppConsentResponseSchema = z.object({
+  success: z.boolean(),
+  consent: AppConsentSchema,
+});
+
 export const ChatSessionSchema = z.object({
   id: IdSchema,
   title: z.string(),
@@ -257,6 +273,20 @@ export const SimpleSuccessResponseSchema = z
   })
   .passthrough();
 
+export const ConsentStatusSchema = z.object({
+  consent_version: z.string(),
+  accepted: z.boolean(),
+  accepted_at: z.string().nullable().optional(),
+  processing_consent: z.boolean().optional(),
+  crisis_notice_acknowledged: z.boolean().optional(),
+  allow_proactive_support: z.boolean().optional(),
+});
+
+export const ConsentStatusResponseSchema = z.object({
+  success: z.boolean(),
+  consent: ConsentStatusSchema,
+});
+
 export const PushConfigResponseSchema = z
   .object({
     success: z.boolean(),
@@ -458,4 +488,5 @@ export type JournalEntry = z.infer<typeof JournalEntrySchema>;
 export type Goal = z.infer<typeof GoalSchema>;
 export type TimelineItem = z.infer<typeof TimelineItemSchema>;
 export type MomentItem = z.infer<typeof MomentItemSchema>;
+export type ConsentStatus = z.infer<typeof ConsentStatusSchema>;
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

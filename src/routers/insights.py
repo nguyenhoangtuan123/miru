@@ -4,8 +4,9 @@ import json
 import re
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from schemas import MomentCheckin, DailyMoodCheckin
+from auth_middleware import require_auth, require_auth_for_user, require_user_id
 from services import db_manager, memory_service, groq_client
 from utils import LOCAL_TZ
 from facts_parser import get_facts_parser
@@ -13,6 +14,7 @@ from facts_parser import get_facts_parser
 router = APIRouter(tags=["Insights"])
 
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+ENABLE_FACTS_DEBUG_ENDPOINTS = os.environ.get("ENABLE_FACTS_DEBUG_ENDPOINTS", "").lower() == "true"
 
 _MOOD_SCORE_PATTERN = re.compile(r"^[^:\n]{1,40}:\s*(\d{1,2})\s*/\s*10", re.IGNORECASE)
 
@@ -86,9 +88,12 @@ def _load_mood_checkins(db, user_id: str, days: Optional[int] = None, limit: int
 # ==================== Facts-Based Analytics ====================
 
 @router.get("/api/insights/facts/sessions")
-async def list_fact_sessions():
+async def list_fact_sessions(request: Request):
     """List all available fact sessions"""
     try:
+        await require_auth(request)
+        if not ENABLE_FACTS_DEBUG_ENDPOINTS:
+            raise HTTPException(status_code=404, detail="Not found")
         parser = get_facts_parser()
         sessions = parser.list_sessions()
         return {"success": True, "sessions": sessions}
@@ -96,9 +101,12 @@ async def list_fact_sessions():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/insights/facts/{session_id}")
-async def get_facts_insights(session_id: str):
+async def get_facts_insights(session_id: str, request: Request):
     """Get parsed facts for a specific session"""
     try:
+        await require_auth(request)
+        if not ENABLE_FACTS_DEBUG_ENDPOINTS:
+            raise HTTPException(status_code=404, detail="Not found")
         parser = get_facts_parser()
         data = parser.parse_session(session_id)
         if "error" in data:
@@ -113,9 +121,10 @@ async def get_facts_insights(session_id: str):
 
 
 @router.get("/api/insights/timeline/{user_id}")
-async def get_conversation_timeline(user_id: str, days: int = 30, limit: int = 10):
+async def get_conversation_timeline(user_id: str, request: Request, days: int = 30, limit: int = 10):
     """Get conversation timeline with AI-generated titles"""
     try:
+        await require_auth_for_user(request, user_id)
         user = db_manager.get_or_create_user(user_id)
         user_db_id = user['id']
         
@@ -181,14 +190,17 @@ async def get_conversation_timeline(user_id: str, days: int = 30, limit: int = 1
             })
         
         return {"success": True, "timeline": timeline_items}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Timeline] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/insights/emotions/{user_id}")
-async def get_emotion_timeline(user_id: str, days: int = 7):
+async def get_emotion_timeline(user_id: str, request: Request, days: int = 7):
     """Get emotion timeline from analyzed_sessions"""
     try:
+        await require_auth_for_user(request, user_id)
         data = db_manager.get_emotion_timeline(user_id, days)
         
         formatted_data = []
@@ -202,14 +214,17 @@ async def get_emotion_timeline(user_id: str, days: int = 7):
                 })
         
         return {"success": True, "data": formatted_data}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error getting emotion data: {e}")
         return {"success": False, "error": str(e), "data": []}
 
 @router.get("/api/insights/analysis/{user_id}")
-async def get_insights_analysis(user_id: str, days: int = 7):
+async def get_insights_analysis(user_id: str, request: Request, days: int = 7):
     """Get comprehensive insights analysis"""
     try:
+        await require_auth_for_user(request, user_id)
         # Get emotion data for the period
         emotion_data = db_manager.get_emotion_timeline(user_id, days)
         
@@ -351,12 +366,14 @@ Chỉ trả về đoạn tóm tắt, không có tiêu đề hay giải thích.""
         }
 
 @router.delete("/api/history/session/{session_id}")
-async def delete_session(session_id: int):
+async def delete_session(session_id: int, request: Request):
     """Delete a specific session from history"""
     try:
+        current_user_id = await require_user_id(request)
         db_manager.supabase.table('session_summaries')\
             .delete()\
             .eq('id', session_id)\
+            .eq('user_id', current_user_id)\
             .execute()
         return {"success": True, "message": "Session deleted successfully"}
     except Exception as e:
@@ -364,9 +381,10 @@ async def delete_session(session_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/insights/seed/{user_id}")
-async def seed_sample_insights(user_id: str):
+async def seed_sample_insights(user_id: str, request: Request):
     """Seed sample emotion data for testing"""
     try:
+        await require_auth_for_user(request, user_id)
         import random
         sample_data = []
         now = datetime.now(timezone.utc)
@@ -392,15 +410,18 @@ async def seed_sample_insights(user_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/moment")
-async def save_moment(moment: MomentCheckin):
+async def save_moment(moment: MomentCheckin, request: Request):
     """Save a moment check-in"""
     try:
+        await require_auth_for_user(request, moment.user_id)
         tags_str = ", ".join([f"#{tag}" for tag in moment.context_tags])
         note_str = f" - {moment.note}" if moment.note else ""
         summary = f"Cảm xúc: {moment.emotion_score}/10. Ngữ cảnh: {tags_str}{note_str}"
         
         result = db_manager.add_session_summary(moment.user_id, summary)
         return {"success": True, "message": "Đã lưu khoảnh khắc của bạn", "result": result}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -408,9 +429,10 @@ async def save_moment(moment: MomentCheckin):
 # ==================== Mood Check-in Daily Endpoints ====================
 
 @router.get("/api/moment/checkin-status/{user_id}")
-async def get_checkin_status(user_id: str):
+async def get_checkin_status(user_id: str, request: Request):
     """Lấy trạng thái check-in hôm nay của user"""
     try:
+        await require_auth_for_user(request, user_id)
         from database import DatabaseManager
         from datetime import datetime, timedelta
 
@@ -532,6 +554,8 @@ async def get_checkin_status(user_id: str):
             "last_checkin_time": last_checkin['analyzed_at'] if last_checkin else None
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Checkin Status] Error: {e}")
         return {"success": False, "error": str(e)}
@@ -624,7 +648,7 @@ async def calculate_mood_streak(user_id: str, db) -> int:
 
 
 @router.post("/api/moment/daily-checkin")
-async def save_daily_mood_checkin(checkin: DailyMoodCheckin):
+async def save_daily_mood_checkin(checkin: DailyMoodCheckin, request: Request):
     """
     Lưu mood check-in hàng ngày với streak tracking.
     """
@@ -819,19 +843,23 @@ async def generate_proactive_checkin_message(user_id: str) -> str:
 
 
 @router.get("/api/moment/proactive-message/{user_id}")
-async def get_proactive_message(user_id: str):
+async def get_proactive_message(user_id: str, request: Request):
     """Lấy message chủ động hỏi han user"""
     try:
+        await require_auth_for_user(request, user_id)
         message = await generate_proactive_checkin_message(user_id)
         return {"success": True, "message": message}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Proactive API] Error: {e}")
         return {"success": False, "error": str(e)}
 
 @router.get("/api/moments/{user_id}")
-async def get_moments(user_id: str, days: int = 7):
+async def get_moments(user_id: str, request: Request, days: int = 7):
     """Get moment check-ins history"""
     try:
+        await require_auth_for_user(request, user_id)
         from database import DatabaseManager
 
         db = DatabaseManager()
@@ -849,27 +877,35 @@ async def get_moments(user_id: str, days: int = 7):
         ]
 
         return {"success": True, "moments": moments, "count": len(moments)}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Moments] Error: {e}")
         return {"success": False, "moments": [], "count": 0, "error": str(e)}
 
 @router.get("/api/memories/{user_id}")
-async def get_memories(user_id: str, query: str = ""):
+async def get_memories(user_id: str, request: Request, query: str = ""):
     """Get relevant memories for user"""
     try:
+        await require_auth_for_user(request, user_id)
         if query:
             memories = db_manager.find_relevant_summaries(user_id, query)
         else:
             memories = db_manager.get_latest_session_summary(user_id)
         return {"success": True, "memories": memories}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/memory/save")
-async def save_memory(user_id: str, summary: str):
+async def save_memory(user_id: str, summary: str, request: Request):
     """Save a session summary"""
     try:
+        await require_auth_for_user(request, user_id)
         result = db_manager.add_session_summary(user_id, summary)
         return {"success": True, "result": result}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,9 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useConsent } from '../contexts/ConsentContext';
 import React, { useEffect, useState } from 'react';
+import { ConsentGate } from './ConsentGate';
 
 export function TherapistGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, checkAuth } = useAuth();
+  const { consent, loading: consentLoading } = useConsent();
   const [isRechecking, setIsRechecking] = useState(false);
   const [hasRechecked, setHasRechecked] = useState(false);
 
@@ -34,7 +37,7 @@ export function TherapistGuard({ children }: { children: React.ReactNode }) {
     };
   }, [checkAuth, hasRechecked, loading, user]);
 
-  if (loading || isRechecking) {
+  if (loading || isRechecking || (user && consentLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-miru-bg">
         <div className="w-8 h-8 border-4 border-miru-primary border-t-transparent rounded-full animate-spin" />
@@ -44,6 +47,10 @@ export function TherapistGuard({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth/login" replace />;
+  }
+
+  if (!consent?.accepted) {
+    return <ConsentGate />;
   }
 
   if (user.role !== 'therapist') {
