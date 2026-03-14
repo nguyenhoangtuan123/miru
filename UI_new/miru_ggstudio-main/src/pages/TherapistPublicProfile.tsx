@@ -8,43 +8,43 @@ function buildContactActions(profile: TherapistPublicProfileDetail) {
   return [
     profile.contact_phone
       ? {
-          key: 'phone',
-          label: 'Goi dien',
-          href: `tel:${profile.contact_phone}`,
-          icon: Phone,
-        }
+        key: 'phone',
+        label: 'Goi dien',
+        href: `tel:${profile.contact_phone}`,
+        icon: Phone,
+      }
       : null,
     profile.contact_email
       ? {
-          key: 'email',
-          label: 'Email',
-          href: `mailto:${profile.contact_email}`,
-          icon: Mail,
-        }
+        key: 'email',
+        label: 'Email',
+        href: `mailto:${profile.contact_email}`,
+        icon: Mail,
+      }
       : null,
     profile.contact_zalo_url
       ? {
-          key: 'zalo',
-          label: 'Zalo',
-          href: profile.contact_zalo_url,
-          icon: MessageCircle,
-        }
+        key: 'zalo',
+        label: 'Zalo',
+        href: profile.contact_zalo_url,
+        icon: MessageCircle,
+      }
       : null,
     profile.contact_facebook_url
       ? {
-          key: 'facebook',
-          label: 'Facebook',
-          href: profile.contact_facebook_url,
-          icon: ExternalLink,
-        }
+        key: 'facebook',
+        label: 'Facebook',
+        href: profile.contact_facebook_url,
+        icon: ExternalLink,
+      }
       : null,
     profile.contact_website_url
       ? {
-          key: 'website',
-          label: 'Website',
-          href: profile.contact_website_url,
-          icon: ExternalLink,
-        }
+        key: 'website',
+        label: 'Website',
+        href: profile.contact_website_url,
+        icon: ExternalLink,
+      }
       : null,
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
@@ -74,7 +74,7 @@ export function TherapistPublicProfilePage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Khong tai duoc ho so therapist');
+          setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ therapist');
         }
       } finally {
         if (!cancelled) {
@@ -106,7 +106,7 @@ export function TherapistPublicProfilePage() {
     return (
       <div className="min-h-screen px-4 py-10 md:px-8">
         <div className="mx-auto max-w-3xl rounded-[32px] border border-amber-400/30 bg-amber-500/10 px-6 py-8 text-center text-amber-100">
-          <p>{repairMojibake(error || 'Khong tim thay therapist')}</p>
+          <p>{repairMojibake(error || 'Không tìm thấy therapist')}</p>
           <Link
             to="/therapists"
             className="mt-5 inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white"
@@ -182,18 +182,18 @@ export function TherapistPublicProfilePage() {
               Gioi thieu
             </div>
             <p className="whitespace-pre-wrap text-sm leading-8 text-white/75 md:text-base">
-              {repairMojibake(profile.bio || 'Therapist chua cap nhat phan gioi thieu cong khai.')}
+              {repairMojibake(profile.bio || 'Therapist chưa cập nhật phần giới thiệu công khai.')}
             </p>
           </section>
 
           <aside className="glass-panel rounded-[32px] border border-white/10 p-7">
             <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">
-              Lien he
+              Liên hệ
             </div>
 
             {contactActions.length === 0 ? (
               <p className="text-sm leading-7 text-white/60">
-                Therapist chua cong khai kenh lien he. Ban co the quay lai sau hoac lien he qua kenh ma therapist cung cap ben ngoai.
+                Therapist chưa công khai kênh liên hệ. Bạn có thể quay lại sau hoặc liên hệ qua kênh mà therapist cung cấp bên ngoài.
               </p>
             ) : (
               <div className="space-y-3">
@@ -226,7 +226,7 @@ export function TherapistPublicProfilePage() {
           </div>
 
           {profile.certificate_images.length === 0 ? (
-            <p className="text-sm text-white/60">Therapist chua them anh chung chi cong khai.</p>
+            <p className="text-sm text-white/60">Therapist chưa thêm ảnh chứng chỉ công khai.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {profile.certificate_images.map((asset, index) => (
@@ -245,7 +245,7 @@ export function TherapistPublicProfilePage() {
                     />
                   ) : (
                     <div className="flex h-56 items-center justify-center text-sm text-white/40">
-                      Khong tai duoc anh
+                      Không tải được ảnh
                     </div>
                   )}
                 </a>

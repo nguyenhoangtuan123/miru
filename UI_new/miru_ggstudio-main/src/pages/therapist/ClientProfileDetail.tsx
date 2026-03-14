@@ -33,7 +33,7 @@ export function TherapistClientProfileDetailPage() {
     return (
       <div className="min-h-screen px-4 py-10 md:px-8">
         <div className="mx-auto max-w-3xl rounded-[32px] border border-amber-400/30 bg-amber-500/10 px-6 py-8 text-center text-amber-100">
-          <p>{repairMojibake(error || 'Khong tim thay ho so than chu')}</p>
+          <p>{repairMojibake(error || 'Không tìm thấy hồ sơ thân chủ')}</p>
           <Link
             to="/therapist/client-profiles"
             className="mt-5 inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white"
@@ -50,7 +50,7 @@ export function TherapistClientProfileDetailPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
           <Link to="/therapist/client-profiles" className="text-sm text-white/55 transition-colors hover:text-white">
-            Quay lai ho so than chu
+            Quay lại hồ sơ thân chủ
           </Link>
 
           <div className="mt-7 flex flex-col gap-6 md:flex-row md:items-center">
@@ -95,7 +95,7 @@ export function TherapistClientProfileDetailPage() {
 
           {profile.gallery_images.length === 0 ? (
             <div className="rounded-[28px] border border-dashed border-white/10 px-6 py-10 text-center text-sm text-white/45">
-              Than chu chua them anh bo sung trong ho so rieng tu.
+              Thân chủ chưa thêm ảnh bổ sung trong hồ sơ riêng tư.
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -115,7 +115,7 @@ export function TherapistClientProfileDetailPage() {
                     />
                   ) : (
                     <div className="flex h-52 items-center justify-center text-sm text-white/40">
-                      Khong tai duoc anh
+                      Không tải được ảnh
                     </div>
                   )}
                 </a>

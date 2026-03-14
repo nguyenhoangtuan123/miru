@@ -163,7 +163,7 @@ export function Chat() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Khong tai duoc phien chat');
+          setError(loadError instanceof Error ? loadError.message : 'Không tải được phiên chat');
         }
       } finally {
         if (!cancelled) {
@@ -198,7 +198,7 @@ export function Chat() {
         setMessages(response.messages.map(normalizeMessage));
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Khong tai duoc tin nhan');
+          setError(loadError instanceof Error ? loadError.message : 'Không tải được tin nhắn');
         }
       } finally {
         if (!cancelled) {
@@ -234,7 +234,7 @@ export function Chat() {
 
       const handleError = () => {
         cleanup();
-        reject(new Error('Khong mo duoc ket noi chat'));
+        reject(new Error('Không mở được kết nối chat'));
       };
 
       const timeoutId = window.setTimeout(() => {
@@ -266,7 +266,7 @@ export function Chat() {
     );
 
     if (!response.success || !response.session) {
-      throw new Error(response.error ?? 'Khong tao duoc phien chat');
+      throw new Error(response.error ?? 'Không tạo được phiên chat');
     }
 
     const nextSession: ChatSession = {
@@ -329,7 +329,7 @@ export function Chat() {
     } catch (sendError) {
       setMessages((prev) => prev.filter((message) => message.id !== STREAMING_MESSAGE_ID));
       setIsSending(false);
-      setError(sendError instanceof Error ? sendError.message : 'Khong gui duoc tin nhan');
+      setError(sendError instanceof Error ? sendError.message : 'Không gửi được tin nhắn');
     }
   }
 
@@ -366,7 +366,7 @@ export function Chat() {
           {isLoadingSessions ? (
             <div className="flex items-center gap-2 p-4 text-sm text-white/50">
               <LoaderCircle size={16} className="animate-spin" />
-              Dang tai phien...
+              Đang tải phiên...
             </div>
           ) : sessions.length === 0 ? (
             <p className="p-4 text-center text-sm text-white/40">Chua co phien nao</p>
@@ -414,7 +414,7 @@ export function Chat() {
             <div>
               <h1 className="font-semibold">Miru AI</h1>
               <p className="text-xs text-white/40">
-                {activeSessionId ? 'Dang ket noi realtime voi backend' : 'Bat dau mot phien moi'}
+                {activeSessionId ? 'Đang kết nối realtime với backend' : 'Bắt đầu một phiên mới'}
               </p>
             </div>
           </div>
@@ -460,14 +460,14 @@ export function Chat() {
                   )}
                 >
                   <p className="whitespace-pre-wrap text-sm leading-relaxed md:text-base">
-                    {message.content || (message.status === 'thinking' ? 'Miru dang suy nghi...' : '')}
+                    {message.content || (message.status === 'thinking' ? 'Miru đang suy nghĩ...' : '')}
                   </p>
                   {message.role === 'assistant' && message.status && message.status !== 'done' && (
                     <div className="mt-3 flex items-center gap-1.5 text-xs text-white/50">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
-                      <span>{message.status === 'thinking' ? 'Miru dang suy nghi' : 'Miru dang tra loi'}</span>
+                      <span>{message.status === 'thinking' ? 'Miru đang suy nghĩ' : 'Miru đang trả lời'}</span>
                     </div>
                   )}
                 </div>

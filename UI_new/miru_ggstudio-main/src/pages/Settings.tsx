@@ -206,16 +206,16 @@ export function Settings() {
                 <Download size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">Cai Miru thanh app</h3>
+                <h3 className="text-lg font-semibold">Cài Miru thành app</h3>
                 <p className="text-sm text-white/60 mt-1">
-                  Cai Miru len may de mo nhanh nhu mot ung dung rieng.
+                  Cài Miru lên máy để mở nhanh như một ứng dụng riêng.
                 </p>
                 <button
                   onClick={handleInstallApp}
                   disabled={!canInstall || isInstalling}
                   className="mt-4 glass-button px-4 py-2 rounded-xl font-medium disabled:opacity-50"
                 >
-                  {isInstalling ? 'Dang cai dat...' : canInstall ? 'Cai ung dung' : 'Da san sang tren thiet bi nay'}
+                  {isInstalling ? 'Đang cài đặt...' : canInstall ? 'Cài ứng dụng' : 'Đã sẵn sàng trên thiết bị này'}
                 </button>
               </div>
             </div>
@@ -227,9 +227,9 @@ export function Settings() {
                 <Bell size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">Thong bao he thong</h3>
+                <h3 className="text-lg font-semibold">Thông báo hệ thống</h3>
                 <p className="text-sm text-white/60 mt-1">
-                  Nhan thong bao khi Miru phan hoi, nha tri lieu nhan tin, giao bai tap moi.
+                  Nhận thông báo khi Miru phản hồi, nhà trị liệu nhắn tin, giao bài tập mới.
                 </p>
                 <button
                   onClick={handleEnableNotifications}
@@ -237,12 +237,12 @@ export function Settings() {
                   className="mt-4 glass-button px-4 py-2 rounded-xl font-medium disabled:opacity-50"
                 >
                   {isRequestingNotifications
-                    ? 'Dang bat thong bao...'
+                    ? 'Đang bật thông báo...'
                     : notificationPermission === 'granted'
-                      ? 'Thong bao da duoc bat'
+                      ? 'Thông báo đã được bật'
                       : notificationPermission === 'denied'
-                        ? 'Trinh duyet dang chan thong bao'
-                        : 'Bat thong bao'}
+                        ? 'Trình duyệt đang chặn thông báo'
+                        : 'Bật thông báo'}
                 </button>
               </div>
             </div>
@@ -312,9 +312,8 @@ export function Settings() {
                     <div
                       key={item.label}
                       onClick={item.onClick}
-                      className={`flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${
-                        item.onClick ? 'cursor-pointer' : ''
-                      } ${item.danger ? 'text-red-400' : 'text-white'}`}
+                      className={`flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${item.onClick ? 'cursor-pointer' : ''
+                        } ${item.danger ? 'text-red-400' : 'text-white'}`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon

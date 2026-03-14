@@ -239,17 +239,17 @@ export function TherapistMessages() {
         queryClient.setQueryData(
           therapistConversationsQueryOptions(user.id).queryKey,
           (current: { success?: boolean; conversations?: TherapistConversationRow[] } | undefined) => {
-          const nextConversation = {
-            client_id: activeClientId,
-            last_message: content,
-            last_sender: 'therapist',
-            last_time: new Date().toISOString(),
-            unread_count: 0,
-            client: activeClient ?? undefined,
-          };
-          const rest = (current?.conversations ?? []).filter(
-            (conversation) => getConversationClientId(conversation) !== activeClientId
-          );
+            const nextConversation = {
+              client_id: activeClientId,
+              last_message: content,
+              last_sender: 'therapist',
+              last_time: new Date().toISOString(),
+              unread_count: 0,
+              client: activeClient ?? undefined,
+            };
+            const rest = (current?.conversations ?? []).filter(
+              (conversation) => getConversationClientId(conversation) !== activeClientId
+            );
             return { success: true, conversations: [nextConversation, ...rest] };
           }
         );
@@ -263,7 +263,7 @@ export function TherapistMessages() {
         })
       );
       setDraft(content);
-      setError(sendError instanceof Error ? sendError.message : 'Khong gui duoc tin nhan');
+      setError(sendError instanceof Error ? sendError.message : 'Không gửi được tin nhắn');
     } finally {
       setIsSending(false);
     }
@@ -284,7 +284,7 @@ export function TherapistMessages() {
       setError(
         acknowledgeError instanceof Error
           ? acknowledgeError.message
-          : 'Khong cap nhat duoc crisis'
+          : 'Không cập nhật được crisis'
       );
     } finally {
       setAcknowledgingId(null);
@@ -303,7 +303,7 @@ export function TherapistMessages() {
         {isLoadingList && (
           <div className="text-sm text-white/40 flex items-center gap-2">
             <LoaderCircle size={16} className="animate-spin" />
-            Dang tai
+            Đang tải
           </div>
         )}
       </header>
@@ -325,9 +325,8 @@ export function TherapistMessages() {
 
       <div className="flex-1 glass-panel overflow-hidden flex flex-col md:flex-row rounded-none md:rounded-3xl border-x-0 md:border-x">
         <div
-          className={`w-full md:w-96 border-r border-white/10 flex flex-col ${
-            activeClientId ? 'hidden md:flex' : 'flex'
-          }`}
+          className={`w-full md:w-96 border-r border-white/10 flex flex-col ${activeClientId ? 'hidden md:flex' : 'flex'
+            }`}
         >
           <div className="p-4 border-b border-white/10">
             <div className="relative">
@@ -357,23 +356,22 @@ export function TherapistMessages() {
                 const unreadCount = conversation ? getConversationUnread(conversation) : 0;
                 const crisisCount = activeClientId
                   ? crises.filter(
-                      (crisis) =>
-                        typeof crisis.client_id === 'string' &&
-                        crisis.client_id === clientId
-                    ).length
+                    (crisis) =>
+                      typeof crisis.client_id === 'string' &&
+                      crisis.client_id === clientId
+                  ).length
                   : crises.filter(
-                      (crisis) =>
-                        typeof crisis.client_id === 'string' &&
-                        crisis.client_id === clientId
-                    ).length;
+                    (crisis) =>
+                      typeof crisis.client_id === 'string' &&
+                      crisis.client_id === clientId
+                  ).length;
 
                 return (
                   <button
                     key={clientId}
                     onClick={() => setActiveClientId(clientId)}
-                    className={`w-full p-4 border-b border-white/5 text-left hover:bg-white/5 transition-colors ${
-                      activeClientId === clientId ? 'bg-white/10' : ''
-                    }`}
+                    className={`w-full p-4 border-b border-white/5 text-left hover:bg-white/5 transition-colors ${activeClientId === clientId ? 'bg-white/10' : ''
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-miru-primary/20 flex items-center justify-center text-miru-primary font-bold shrink-0 relative">
@@ -421,7 +419,7 @@ export function TherapistMessages() {
                 <div>
                   <h3 className="font-semibold">{getClientName(activeClient)}</h3>
                   <span className="text-xs text-white/40">
-                    {getClientEmail(activeClient) || 'Khong co email'}
+                    {getClientEmail(activeClient) || 'Không có email'}
                   </span>
                 </div>
               </div>
@@ -436,7 +434,7 @@ export function TherapistMessages() {
             <div className="border-b border-white/10 px-4 md:px-6 py-4 space-y-3 bg-white/5">
               {activeClientCrises.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/50">
-                  Khong co canh bao AI dang mo cho than chu nay.
+                  Không có cảnh báo AI đang mở cho thân chủ này.
                 </div>
               ) : (
                 activeClientCrises.map((crisis) => (
@@ -459,7 +457,7 @@ export function TherapistMessages() {
                         disabled={acknowledgingId === Number(crisis.id)}
                         className="rounded-xl bg-red-500/15 px-3 py-2 text-xs font-medium text-red-200 hover:bg-red-500/25 disabled:opacity-50"
                       >
-                        {acknowledgingId === Number(crisis.id) ? 'Dang xu ly...' : 'Da xem'}
+                        {acknowledgingId === Number(crisis.id) ? 'Đang xử lý...' : 'Đã xem'}
                       </button>
                     </div>
                   </div>
@@ -482,17 +480,15 @@ export function TherapistMessages() {
                       className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                          isMine
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${isMine
                             ? 'bg-miru-primary text-white'
                             : 'bg-white/8 text-white/85'
-                        }`}
+                          }`}
                       >
                         <div>{String(message.message_content ?? '')}</div>
                         <div
-                          className={`text-[11px] mt-2 ${
-                            isMine ? 'text-white/70' : 'text-white/40'
-                          }`}
+                          className={`text-[11px] mt-2 ${isMine ? 'text-white/70' : 'text-white/40'
+                            }`}
                         >
                           {typeof message.created_at === 'string'
                             ? new Date(message.created_at).toLocaleString('vi-VN')

@@ -152,16 +152,16 @@ export function TherapistSettings() {
                 <Download size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">Cai Miru thanh app</h3>
+                <h3 className="text-lg font-semibold">Cài Miru thành app</h3>
                 <p className="text-sm text-white/60 mt-1">
-                  Cai dashboard therapist de mo nhanh nhu mot ung dung rieng tren may.
+                  Cài dashboard therapist để mở nhanh như một ứng dụng riêng trên máy.
                 </p>
                 <button
                   onClick={handleInstallApp}
                   disabled={!canInstall || isInstalling}
                   className="mt-4 glass-button px-4 py-2 rounded-xl font-medium disabled:opacity-50"
                 >
-                  {isInstalling ? 'Dang cai dat...' : canInstall ? 'Cai ung dung' : 'Da san sang tren thiet bi nay'}
+                  {isInstalling ? 'Đang cài đặt...' : canInstall ? 'Cài ứng dụng' : 'Đã sẵn sàng trên thiết bị này'}
                 </button>
               </div>
             </div>
@@ -173,9 +173,9 @@ export function TherapistSettings() {
                 <Bell size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold">Thong bao he thong</h3>
+                <h3 className="text-lg font-semibold">Thông báo hệ thống</h3>
                 <p className="text-sm text-white/60 mt-1">
-                  Nhan thong bao khi than chu nhan tin, AI canh bao va cac su kien quan trong.
+                  Nhận thông báo khi thân chủ nhắn tin, AI cảnh báo và các sự kiện quan trọng.
                 </p>
                 <button
                   onClick={handleEnableNotifications}
@@ -183,12 +183,12 @@ export function TherapistSettings() {
                   className="mt-4 glass-button px-4 py-2 rounded-xl font-medium disabled:opacity-50"
                 >
                   {isRequestingNotifications
-                    ? 'Dang bat thong bao...'
+                    ? 'Đang bật thông báo...'
                     : notificationPermission === 'granted'
-                      ? 'Thong bao da duoc bat'
+                      ? 'Thông báo đã được bật'
                       : notificationPermission === 'denied'
-                        ? 'Trinh duyet dang chan thong bao'
-                        : 'Bat thong bao'}
+                        ? 'Trình duyệt đang chặn thông báo'
+                        : 'Bật thông báo'}
                 </button>
               </div>
             </div>
@@ -252,9 +252,8 @@ export function TherapistSettings() {
                     <div
                       key={item.label}
                       onClick={item.onClick}
-                      className={`flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${
-                        item.onClick ? 'cursor-pointer' : ''
-                      } text-white`}
+                      className={`flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${item.onClick ? 'cursor-pointer' : ''
+                        } text-white`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon size={20} className="text-white/50" />

@@ -174,9 +174,9 @@ export function TherapistDashboard() {
             <Sparkles size={22} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Ho so cong khai</h2>
+            <h2 className="text-lg font-semibold">Hồ sơ công khai</h2>
             <p className="mt-2 text-sm leading-7 text-white/60">
-              Cap nhat phan gioi thieu, chuyen mon, kenh lien he va chung chi de hien thi tren danh ba cong khai.
+              Cập nhật phần giới thiệu, chuyên môn, kênh liên hệ và chứng chỉ để hiển thị trên danh bạ công khai.
             </p>
           </div>
         </Link>
@@ -189,7 +189,7 @@ export function TherapistDashboard() {
             <IdCard size={22} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Ho so rieng tu than chu</h2>
+            <h2 className="text-lg font-semibold">Hồ sơ riêng tư thân chủ</h2>
             <p className="mt-2 text-sm leading-7 text-white/60">
               Xem phan gioi thieu va gallery ma than chu da chon chia se sau khi pairing active.
             </p>

@@ -63,7 +63,7 @@ export function TherapistProfilePage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Khong tai duoc ho so therapist');
+          setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ therapist');
         }
       } finally {
         if (!cancelled) {
@@ -111,9 +111,9 @@ export function TherapistProfilePage() {
       setProfile(response.profile);
       setForm(toForm(response.profile));
       setSpecializationsInput((response.profile.specializations ?? []).join(', '));
-      setMessage(response.profile.is_public ? 'Ho so cong khai da duoc cap nhat.' : 'Ho so da duoc luu o che do an.');
+      setMessage(response.profile.is_public ? 'Hồ sơ công khai đã được cập nhật.' : 'Hồ sơ đã được lưu ở chế độ ẩn.');
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Khong luu duoc ho so therapist');
+      setError(saveError instanceof Error ? saveError.message : 'Không lưu được hồ sơ therapist');
     } finally {
       setSaving(false);
     }
@@ -132,9 +132,9 @@ export function TherapistProfilePage() {
       const response = await uploadMyTherapistAvatar(file);
       setProfile(response.profile);
       setForm(toForm(response.profile));
-      setMessage('Da cap nhat anh dai dien cong khai.');
+      setMessage('Đã cập nhật ảnh đại diện công khai.');
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Khong tai duoc anh dai dien');
+      setError(uploadError instanceof Error ? uploadError.message : 'Không tải được ảnh đại diện');
     } finally {
       setUploadingAvatar(false);
     }
@@ -153,9 +153,9 @@ export function TherapistProfilePage() {
       const response = await uploadMyTherapistCertificates(files);
       setProfile(response.profile);
       setForm(toForm(response.profile));
-      setMessage('Da them anh chung chi vao ho so cong khai.');
+      setMessage('Đã thêm ảnh chứng chỉ vào hồ sơ công khai.');
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Khong tai duoc anh chung chi');
+      setError(uploadError instanceof Error ? uploadError.message : 'Không tải được ảnh chứng chỉ');
     } finally {
       setUploadingCertificates(false);
     }
@@ -171,9 +171,9 @@ export function TherapistProfilePage() {
       const response = await deleteMyTherapistMedia(mediaId);
       setProfile(response.profile);
       setForm(toForm(response.profile));
-      setMessage('Da xoa media khoi ho so cong khai.');
+      setMessage('Đã xóa media khỏi hồ sơ công khai.');
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Khong xoa duoc media');
+      setError(deleteError instanceof Error ? deleteError.message : 'Không xóa được media');
     }
   }
 
@@ -219,15 +219,15 @@ export function TherapistProfilePage() {
                 {profile?.is_verified && (
                   <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
                     <ShieldCheck size={14} />
-                    Da xac minh
+                    Đã xác minh
                   </span>
                 )}
               </div>
               <h1 className="mt-3 text-3xl font-bold">
-                {repairMojibake(profile?.display_name ?? 'Ho so cong khai')}
+                {repairMojibake(profile?.display_name ?? 'Hồ sơ công khai')}
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-white/65">
-                Day la trang therapist tu quan ly thong tin cong khai, kenh lien he va anh bang cap. Chi khi bat che do cong khai thi therapist moi xuat hien trong danh ba tren trang chu va /therapists.
+                Đây là trang therapist tự quản lý thông tin công khai, kênh liên hệ và ảnh bằng cấp. Chi khi bật chế độ công khai thì therapist mới xuất hiện trong danh bạ trên trang chủ và /therapists.
               </p>
             </div>
           </div>
@@ -248,12 +248,12 @@ export function TherapistProfilePage() {
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
             <div className="mb-5 text-xs uppercase tracking-[0.35em] text-white/35">
-              Noi dung cong khai
+              Nội dung công khai
             </div>
 
             <div className="grid gap-5">
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">Ten hien thi</span>
+                <span className="text-sm text-white/70">Tên hiển thị</span>
                 <input
                   value={form.display_name}
                   onChange={(event) => setField('display_name', event.target.value)}
@@ -262,7 +262,7 @@ export function TherapistProfilePage() {
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">Headline ngan</span>
+                <span className="text-sm text-white/70">Headline ngắn</span>
                 <input
                   value={form.headline}
                   onChange={(event) => setField('headline', event.target.value)}
@@ -271,17 +271,17 @@ export function TherapistProfilePage() {
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">Chuyen mon</span>
+                <span className="text-sm text-white/70">Chuyên môn</span>
                 <input
                   value={specializationsInput}
                   onChange={(event) => setSpecializationsInput(event.target.value)}
-                  placeholder="Vi du: Tri lieu CBT, Lo au, Sang chan"
+                  placeholder="Ví dụ: Trị liệu CBT, Lo âu, Sang chấn"
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-miru-primary/50 focus:outline-none"
                 />
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">Gioi thieu chi tiet</span>
+                <span className="text-sm text-white/70">Giới thiệu chi tiết</span>
                 <textarea
                   value={form.bio}
                   onChange={(event) => setField('bio', event.target.value)}
@@ -294,12 +294,12 @@ export function TherapistProfilePage() {
 
           <aside className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
             <div className="mb-5 text-xs uppercase tracking-[0.35em] text-white/35">
-              Lien he cong khai
+              Liên hệ công khai
             </div>
 
             <div className="grid gap-4">
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">So dien thoai</span>
+                <span className="text-sm text-white/70">Số điện thoại</span>
                 <input
                   value={form.contact_phone}
                   onChange={(event) => setField('contact_phone', event.target.value)}
@@ -308,7 +308,7 @@ export function TherapistProfilePage() {
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm text-white/70">Email lien he</span>
+                <span className="text-sm text-white/70">Email liên hệ</span>
                 <input
                   value={form.contact_email}
                   onChange={(event) => setField('contact_email', event.target.value)}
@@ -347,20 +347,19 @@ export function TherapistProfilePage() {
             <div className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <div className="text-sm font-semibold text-white">Trang thai xuat hien trong danh ba</div>
+                  <div className="text-sm font-semibold text-white">Trạng thái xuất hiện trong danh bạ</div>
                   <p className="mt-1 text-sm text-white/55">
-                    Hien co {contactLinksCount} kenh lien he cong khai va {profile?.certificate_images.length ?? 0} anh chung chi.
+                    Hiện có {contactLinksCount} kênh liên hệ công khai và {profile?.certificate_images.length ?? 0} ảnh chứng chỉ.
                   </p>
                 </div>
                 <button
                   onClick={() => setField('is_public', !form.is_public)}
-                  className={`inline-flex rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
-                    form.is_public
+                  className={`inline-flex rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${form.is_public
                       ? 'bg-emerald-500/15 text-emerald-200'
                       : 'bg-white/10 text-white/55'
-                  }`}
+                    }`}
                 >
-                  {form.is_public ? 'Dang cong khai' : 'Dang an'}
+                  {form.is_public ? 'Đang công khai' : 'Đang ẩn'}
                 </button>
               </div>
             </div>
@@ -370,7 +369,7 @@ export function TherapistProfilePage() {
               disabled={saving}
               className="mt-6 w-full rounded-2xl bg-miru-primary px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {saving ? 'Dang luu...' : 'Luu ho so cong khai'}
+              {saving ? 'Đang lưu...' : 'Lưu hồ sơ công khai'}
             </button>
           </aside>
         </div>
@@ -380,16 +379,16 @@ export function TherapistProfilePage() {
             <div>
               <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.35em] text-white/35">
                 <Globe2 size={14} />
-                Chung chi cong khai
+                Chứng chỉ công khai
               </div>
               <p className="mt-2 text-sm leading-7 text-white/60">
-                Tai toi da 8 anh bang cap/chung chi. Moi anh se hien o trang cong khai cua therapist.
+                Tải tối đa 8 ảnh bằng cấp/chứng chỉ. Mỗi ảnh sẽ hiện ở trang công khai của therapist.
               </p>
             </div>
 
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/10">
               <ImagePlus size={18} />
-              {uploadingCertificates ? 'Dang tai...' : 'Them chung chi'}
+              {uploadingCertificates ? 'Đang tải...' : 'Thêm chứng chỉ'}
               <input
                 type="file"
                 multiple
@@ -415,13 +414,13 @@ export function TherapistProfilePage() {
                     />
                   ) : (
                     <div className="flex h-52 items-center justify-center text-sm text-white/40">
-                      Khong tai duoc anh
+                      Không tải được ảnh
                     </div>
                   )}
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="truncate text-sm text-white/65">
                       <LinkIcon size={14} className="mr-2 inline-flex" />
-                      {asset.name ?? `Chung chi ${index + 1}`}
+                      {asset.name ?? `Chứng chỉ ${index + 1}`}
                     </span>
                     {asset.id && (
                       <button
@@ -437,7 +436,7 @@ export function TherapistProfilePage() {
             </div>
           ) : (
             <div className="mt-6 rounded-[28px] border border-dashed border-white/10 px-6 py-10 text-center text-sm text-white/45">
-              Chua co anh chung chi cong khai nao.
+              Chưa có ảnh chứng chỉ công khai nào.
             </div>
           )}
         </div>

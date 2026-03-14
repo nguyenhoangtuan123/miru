@@ -166,7 +166,7 @@ export function TherapistAppointments() {
       setMeetingLink('');
       setNotes('');
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Khong tao duoc lich hen');
+      setError(createError instanceof Error ? createError.message : 'Không tạo được lịch hẹn');
     } finally {
       setIsSubmitting(false);
     }
@@ -181,7 +181,7 @@ export function TherapistAppointments() {
       await cancelTherapistAppointment(user.id, appointmentId, 'Cancelled by therapist');
       queryClient.invalidateQueries({ queryKey: therapistAppointmentsQueryOptions(user.id).queryKey });
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : 'Khong huy duoc lich hen');
+      setError(cancelError instanceof Error ? cancelError.message : 'Không hủy được lịch hẹn');
     } finally {
       setBusyAppointmentId(null);
     }
@@ -199,7 +199,7 @@ export function TherapistAppointments() {
       setError(
         completeError instanceof Error
           ? completeError.message
-          : 'Khong hoan tat duoc lich hen'
+          : 'Không hoàn tất được lịch hẹn'
       );
     } finally {
       setBusyAppointmentId(null);
@@ -218,21 +218,21 @@ export function TherapistAppointments() {
         {isLoading && (
           <div className="text-sm text-white/40 flex items-center gap-2">
             <LoaderCircle size={16} className="animate-spin" />
-            Dang tai
+            Đang tải
           </div>
         )}
       </header>
 
-        {(error || clientsQuery.error || appointmentsQuery.error) && (
-          <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            {error ??
-              (clientsQuery.error instanceof Error
-                ? clientsQuery.error.message
-                : appointmentsQuery.error instanceof Error
-                  ? appointmentsQuery.error.message
-                  : 'Không tải được lịch hẹn')}
-          </div>
-        )}
+      {(error || clientsQuery.error || appointmentsQuery.error) && (
+        <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {error ??
+            (clientsQuery.error instanceof Error
+              ? clientsQuery.error.message
+              : appointmentsQuery.error instanceof Error
+                ? appointmentsQuery.error.message
+                : 'Không tải được lịch hẹn')}
+        </div>
+      )}
 
       <div className="grid xl:grid-cols-[360px,1fr] gap-6">
         <div className="glass-panel p-6 rounded-3xl h-fit">
@@ -344,11 +344,10 @@ export function TherapistAppointments() {
                 onClick={() =>
                   setActiveTab(tab.id as 'scheduled' | 'completed' | 'cancelled')
                 }
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  activeTab === tab.id
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === tab.id
                     ? 'bg-miru-primary text-[#ffffff]'
                     : 'text-white/60 hover:text-white hover:bg-white/10'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -377,7 +376,7 @@ export function TherapistAppointments() {
                       <div className="text-sm text-white/60 mt-1">
                         {typeof appointment.appointment_date === 'string'
                           ? new Date(appointment.appointment_date).toLocaleString('vi-VN')
-                          : 'Khong ro thoi gian'}
+                          : 'Không rõ thời gian'}
                       </div>
                       <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-white/50">
                         <span>{String(appointment.type ?? 'online')}</span>
@@ -401,27 +400,27 @@ export function TherapistAppointments() {
                       {(appointment.status === 'scheduled' ||
                         appointment.status === 'rescheduled' ||
                         appointment.status === 'no_show') && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleCompleteAppointment(Number(appointment.id))}
-                            disabled={busyAppointmentId === Number(appointment.id)}
-                            className="rounded-xl bg-green-500/15 px-3 py-2 text-xs font-medium text-green-300 hover:bg-green-500/25 disabled:opacity-50 flex items-center gap-2"
-                          >
-                            <CheckCircle2 size={14} />
-                            {busyAppointmentId === Number(appointment.id)
-                              ? 'Dang xu ly...'
-                              : 'Hoan tat'}
-                          </button>
-                          <button
-                            onClick={() => handleCancelAppointment(Number(appointment.id))}
-                            disabled={busyAppointmentId === Number(appointment.id)}
-                            className="rounded-xl bg-red-500/15 px-3 py-2 text-xs font-medium text-red-300 hover:bg-red-500/25 disabled:opacity-50 flex items-center gap-2"
-                          >
-                            <XCircle size={14} />
-                            Huy
-                          </button>
-                        </div>
-                      )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCompleteAppointment(Number(appointment.id))}
+                              disabled={busyAppointmentId === Number(appointment.id)}
+                              className="rounded-xl bg-green-500/15 px-3 py-2 text-xs font-medium text-green-300 hover:bg-green-500/25 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <CheckCircle2 size={14} />
+                              {busyAppointmentId === Number(appointment.id)
+                                ? 'Đang xử lý...'
+                                : 'Hoan tat'}
+                            </button>
+                            <button
+                              onClick={() => handleCancelAppointment(Number(appointment.id))}
+                              disabled={busyAppointmentId === Number(appointment.id)}
+                              className="rounded-xl bg-red-500/15 px-3 py-2 text-xs font-medium text-red-300 hover:bg-red-500/25 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <XCircle size={14} />
+                              Huy
+                            </button>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </motion.div>

@@ -80,9 +80,9 @@ export function TherapistClientProfilesPage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="text-xs uppercase tracking-[0.35em] text-white/35">Client Profiles</div>
-              <h1 className="mt-3 text-3xl font-bold">Ho so rieng tu cua than chu</h1>
+              <h1 className="mt-3 text-3xl font-bold">Hồ sơ riêng tư của thân chủ</h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
-                Xem nhanh ho so ma than chu da tu nguyen cap nhat. Trang nay tach rieng khoi flow homework de giam va cham.
+                Xem nhanh hồ sơ mà thân chủ đã tự nguyện cập nhật. Trang này tách riêng khỏi flow homework để giảm va chạm.
               </p>
             </div>
 
@@ -108,46 +108,46 @@ export function TherapistClientProfilesPage() {
         <div className="mt-8 grid gap-4">
           {loading
             ? Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="glass-panel h-24 animate-pulse rounded-[28px] border border-white/10 bg-white/5"
-                />
-              ))
+              <div
+                key={index}
+                className="glass-panel h-24 animate-pulse rounded-[28px] border border-white/10 bg-white/5"
+              />
+            ))
             : filteredClients.map((client) => (
-                <div
-                  key={getClientId(client) || String(client.id ?? Math.random())}
-                  className="glass-panel flex flex-col gap-4 rounded-[28px] border border-white/10 p-5 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="flex items-center gap-4">
-                    {getClientPicture(client) ? (
-                      <img
-                        src={String(getClientPicture(client))}
-                        alt={getClientName(client)}
-                        className="h-14 w-14 rounded-2xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-miru-primary/15 text-miru-primary">
-                        <UserRound size={24} />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h2 className="truncate text-lg font-semibold">
-                        {repairMojibake(getClientName(client))}
-                      </h2>
-                      <p className="truncate text-sm text-white/55">
-                        {repairMojibake(getClientEmail(client) || getClientId(client))}
-                      </p>
+              <div
+                key={getClientId(client) || String(client.id ?? Math.random())}
+                className="glass-panel flex flex-col gap-4 rounded-[28px] border border-white/10 p-5 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  {getClientPicture(client) ? (
+                    <img
+                      src={String(getClientPicture(client))}
+                      alt={getClientName(client)}
+                      className="h-14 w-14 rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-miru-primary/15 text-miru-primary">
+                      <UserRound size={24} />
                     </div>
+                  )}
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold">
+                      {repairMojibake(getClientName(client))}
+                    </h2>
+                    <p className="truncate text-sm text-white/55">
+                      {repairMojibake(getClientEmail(client) || getClientId(client))}
+                    </p>
                   </div>
-
-                  <Link
-                    to={`/therapist/client-profiles/${encodeURIComponent(getClientId(client))}`}
-                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-white/10"
-                  >
-                    Xem ho so
-                  </Link>
                 </div>
-              ))}
+
+                <Link
+                  to={`/therapist/client-profiles/${encodeURIComponent(getClientId(client))}`}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-white/10"
+                >
+                  Xem hồ sơ
+                </Link>
+              </div>
+            ))}
         </div>
 
         {!loading && filteredClients.length === 0 && (
