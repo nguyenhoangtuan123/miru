@@ -1,5 +1,6 @@
 import {
   Calendar,
+  Inbox,
   LayoutDashboard,
   MessageCircle,
   Settings,
@@ -18,12 +19,13 @@ export function TherapistLayout() {
   const { user } = useAuth();
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Tong quan', path: '/therapist' },
-    { icon: Users, label: 'Than chu', path: '/therapist/clients' },
-    { icon: Sparkles, label: 'Ho so', path: '/therapist/profile' },
-    { icon: Calendar, label: 'Lich hen', path: '/therapist/appointments' },
-    { icon: MessageCircle, label: 'Tin nhan', path: '/therapist/messages' },
-    { icon: Settings, label: 'Cai dat', path: '/therapist/settings' },
+    { icon: LayoutDashboard, label: 'Tổng quan', path: '/therapist' },
+    { icon: Users, label: 'Thân chủ', path: '/therapist/clients' },
+    { icon: Sparkles, label: 'Hồ sơ', path: '/therapist/profile' },
+    { icon: Calendar, label: 'Lịch hẹn', path: '/therapist/appointments' },
+    { icon: MessageCircle, label: 'Tin nhắn', path: '/therapist/messages' },
+    { icon: Inbox, label: 'Yêu cầu', path: '/therapist/contact-requests' },
+    { icon: Settings, label: 'Cài đặt', path: '/therapist/settings' },
   ];
 
   function handlePrefetch(path: string) {

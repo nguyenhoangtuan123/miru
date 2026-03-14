@@ -28,6 +28,20 @@ export const TherapistPublicProfileSchema = z
     avatar_image: ProfileImageAssetSchema.nullable().optional(),
     certificate_images: z.array(ProfileImageAssetSchema).default([]),
     is_public: z.boolean().default(false),
+    accepting_new_clients: z.boolean().default(true),
+    service_mode: z.enum(['free', 'paid', 'both']).default('both'),
+    starting_price_vnd: z.preprocess((value) => {
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return value ?? null;
+    }, z.number().nullable()),
+    pricing_unit: z.enum(['session', 'package', 'custom']).default('session'),
+    pricing_note: z.string().nullable().optional(),
+    public_payment_note: z.string().nullable().optional(),
+    public_workflow_steps: z.array(z.string()).nullish().transform((value) => value ?? []),
+    can_receive_contact_requests: z.boolean().default(false),
     is_verified: z.boolean().default(false),
     verification_status: z
       .enum(['not_submitted', 'pending', 'approved', 'rejected'])
@@ -75,18 +89,229 @@ export const TherapistPublicProfileFormSchema = z.object({
   contact_facebook_url: z.string().trim().max(300).optional().default(''),
   contact_website_url: z.string().trim().max(300).optional().default(''),
   is_public: z.boolean().default(false),
+  accepting_new_clients: z.boolean().default(true),
+  service_mode: z.enum(['free', 'paid', 'both']).default('both'),
+  starting_price_vnd: z.number().nullable().optional(),
+  pricing_unit: z.enum(['session', 'package', 'custom']).default('session'),
+  pricing_note: z.string().trim().max(600).optional().default(''),
+  public_payment_note: z.string().trim().max(600).optional().default(''),
+  public_workflow_steps: z.array(z.string().trim().min(1).max(160)).max(5).default([]),
 });
 
 export const ClientPrivateProfileFormSchema = z.object({
   intro: z.string().trim().max(2000).optional().default(''),
 });
 
-export type ProfileImageAsset = z.infer<typeof ProfileImageAssetSchema>;
-export type TherapistPublicProfileCard = z.infer<typeof TherapistPublicProfileSchema>;
-export type TherapistPublicProfileDetail = z.infer<typeof TherapistPublicProfileSchema>;
-export type TherapistPublicProfileForm = z.infer<typeof TherapistPublicProfileFormSchema>;
-export type ClientPrivateProfile = z.infer<typeof ClientPrivateProfileSchema>;
-export type ClientPrivateProfileForm = z.infer<typeof ClientPrivateProfileFormSchema>;
+export const TherapistBillingProfileSchema = z
+  .object({
+    therapist_id: z.string(),
+    payment_mode: z.string().nullish().transform((value) => value ?? 'manual'),
+    bank_account_name: z.string().nullish().transform((value) => value ?? ''),
+    bank_name: z.string().nullish().transform((value) => value ?? ''),
+    bank_account_number: z.string().nullish().transform((value) => value ?? ''),
+    momo_phone: z.string().nullish().transform((value) => value ?? ''),
+    transfer_note: z.string().nullish().transform((value) => value ?? ''),
+    updated_at: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const TherapistBillingProfileResponseSchema = z.object({
+  success: z.boolean(),
+  profile: TherapistBillingProfileSchema,
+});
+
+export const TherapistBillingProfileFormSchema = z.object({
+  payment_mode: z.string().trim().max(40).optional().default('manual'),
+  bank_account_name: z.string().trim().max(120).optional().default(''),
+  bank_name: z.string().trim().max(120).optional().default(''),
+  bank_account_number: z.string().trim().max(60).optional().default(''),
+  momo_phone: z.string().trim().max(40).optional().default(''),
+  transfer_note: z.string().trim().max(240).optional().default(''),
+});
+
+export const TherapistContactRequestSchema = z
+  .object({
+    id: z.union([z.number(), z.string()]),
+    therapist_id: z.string(),
+    client_id: z.string(),
+    status: z.enum(['pending', 'approved', 'declined', 'archived']).default('pending'),
+    message: z.string().default(''),
+    preferred_contact_method: z.string().nullable().optional(),
+    client_contact_phone: z.string().nullable().optional(),
+    client_contact_zalo: z.string().nullable().optional(),
+    service_interest: z.string().default('unsure'),
+    therapist_reply: z.string().nullable().optional(),
+    shared_pairing_code: z.string().nullable().optional(),
+    created_at: z.string().nullable().optional(),
+    updated_at: z.string().nullable().optional(),
+    handled_at: z.string().nullable().optional(),
+    therapist: TherapistPublicProfileSchema.nullable().optional(),
+    client: z
+      .object({
+        id: z.string(),
+        name: z.string().nullable().optional(),
+        email: z.string().nullable().optional(),
+        picture: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+export const TherapistContactRequestsResponseSchema = z.object({
+  success: z.boolean(),
+  requests: z.array(TherapistContactRequestSchema).default([]),
+});
+
+export const TherapistContactRequestResponseSchema = z.object({
+  success: z.boolean(),
+  request: TherapistContactRequestSchema,
+});
+
+export const TherapistContactRequestCreateSchema = z.object({
+  therapist_id: z.string(),
+  message: z.string().trim().max(1200).optional().default(''),
+  preferred_contact_method: z.string().trim().max(40).optional().default(''),
+  client_contact_phone: z.string().trim().max(40).optional().default(''),
+  client_contact_zalo: z.string().trim().max(120).optional().default(''),
+  service_interest: z.enum(['free', 'paid', 'unsure']).optional().default('unsure'),
+});
+
+export const TherapistContactRequestHandleSchema = z.object({
+  therapist_reply: z.string().trim().max(1200).optional().default(''),
+  share_pairing_code: z.boolean().default(false),
+});
+
+export type ProfileImageAsset = {
+  id?: string | null;
+  name?: string | null;
+  mime_type?: string | null;
+  size?: number | null;
+  uploaded_at?: string | null;
+  url?: string | null;
+  source?: string | null;
+};
+
+export type TherapistPublicProfileCard = {
+  therapist_id: string;
+  display_name: string;
+  headline?: string | null;
+  bio?: string | null;
+  specializations: string[];
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  contact_zalo_url?: string | null;
+  contact_facebook_url?: string | null;
+  contact_website_url?: string | null;
+  avatar_image?: ProfileImageAsset | null;
+  certificate_images: ProfileImageAsset[];
+  is_public: boolean;
+  accepting_new_clients: boolean;
+  service_mode: 'free' | 'paid' | 'both';
+  starting_price_vnd?: number | null;
+  pricing_unit: 'session' | 'package' | 'custom';
+  pricing_note?: string | null;
+  public_payment_note?: string | null;
+  public_workflow_steps: string[];
+  can_receive_contact_requests: boolean;
+  is_verified: boolean;
+  verification_status?: 'not_submitted' | 'pending' | 'approved' | 'rejected' | null;
+  account_email?: string | null;
+  therapist_name?: string | null;
+};
+
+export type TherapistPublicProfileDetail = TherapistPublicProfileCard;
+
+export type TherapistPublicProfileForm = {
+  display_name: string;
+  headline: string;
+  bio: string;
+  specializations: string[];
+  contact_phone: string;
+  contact_email: string;
+  contact_zalo_url: string;
+  contact_facebook_url: string;
+  contact_website_url: string;
+  is_public: boolean;
+  accepting_new_clients: boolean;
+  service_mode: 'free' | 'paid' | 'both';
+  starting_price_vnd?: number | null;
+  pricing_unit: 'session' | 'package' | 'custom';
+  pricing_note: string;
+  public_payment_note: string;
+  public_workflow_steps: string[];
+};
+
+export type ClientPrivateProfile = {
+  user_id: string;
+  display_name: string;
+  email?: string | null;
+  intro: string;
+  avatar_image?: ProfileImageAsset | null;
+  gallery_images: ProfileImageAsset[];
+};
+
+export type ClientPrivateProfileForm = {
+  intro: string;
+};
+
+export type TherapistBillingProfile = {
+  therapist_id: string;
+  payment_mode: string;
+  bank_account_name: string;
+  bank_name: string;
+  bank_account_number: string;
+  momo_phone: string;
+  transfer_note: string;
+  updated_at?: string | null;
+};
+
+export type TherapistBillingProfileForm = {
+  payment_mode: string;
+  bank_account_name: string;
+  bank_name: string;
+  bank_account_number: string;
+  momo_phone: string;
+  transfer_note: string;
+};
+
+export type TherapistContactRequest = {
+  id: number | string;
+  therapist_id: string;
+  client_id: string;
+  status: 'pending' | 'approved' | 'declined' | 'archived';
+  message: string;
+  preferred_contact_method?: string | null;
+  client_contact_phone?: string | null;
+  client_contact_zalo?: string | null;
+  service_interest: string;
+  therapist_reply?: string | null;
+  shared_pairing_code?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  handled_at?: string | null;
+  therapist?: TherapistPublicProfileCard | null;
+  client?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    picture?: string | null;
+  } | null;
+};
+
+export type TherapistContactRequestCreate = {
+  therapist_id: string;
+  message: string;
+  preferred_contact_method: string;
+  client_contact_phone: string;
+  client_contact_zalo: string;
+  service_interest: 'free' | 'paid' | 'unsure';
+};
+
+export type TherapistContactRequestHandle = {
+  therapist_reply: string;
+  share_pairing_code: boolean;
+};
 
 export async function getPublicTherapists(limit?: number) {
   return parseApi(
@@ -104,6 +329,20 @@ export async function getPublicTherapist(therapistId: string) {
   );
 }
 
+export async function createTherapistContactRequest(payload: TherapistContactRequestCreate) {
+  return parseApi(
+    api.post('/api/therapist-contact-requests', TherapistContactRequestCreateSchema.parse(payload)),
+    TherapistContactRequestResponseSchema
+  );
+}
+
+export async function getMyTherapistContactRequests() {
+  return parseApi(
+    api.get('/api/therapist-contact-requests/me'),
+    TherapistContactRequestsResponseSchema
+  );
+}
+
 export async function getMyTherapistProfile() {
   return parseApi(api.get('/api/profiles/me/therapist'), TherapistPublicProfileResponseSchema);
 }
@@ -112,6 +351,20 @@ export async function updateMyTherapistProfile(payload: TherapistPublicProfileFo
   return parseApi(
     api.put('/api/profiles/me/therapist', TherapistPublicProfileFormSchema.parse(payload)),
     TherapistPublicProfileResponseSchema
+  );
+}
+
+export async function getMyTherapistBillingProfile() {
+  return parseApi(
+    api.get('/api/profiles/me/therapist/billing'),
+    TherapistBillingProfileResponseSchema
+  );
+}
+
+export async function updateMyTherapistBillingProfile(payload: TherapistBillingProfileForm) {
+  return parseApi(
+    api.put('/api/profiles/me/therapist/billing', TherapistBillingProfileFormSchema.parse(payload)),
+    TherapistBillingProfileResponseSchema
   );
 }
 
@@ -192,5 +445,54 @@ export async function getTherapistViewOfClientProfile(clientId: string) {
   return parseApi(
     api.get(`/api/profiles/clients/${clientId}`),
     ClientPrivateProfileResponseSchema
+  );
+}
+
+export async function getTherapistContactRequests(status?: string) {
+  return parseApi(
+    api.get('/api/therapist/contact-requests', {
+      params: status ? { status } : undefined,
+    }),
+    TherapistContactRequestsResponseSchema
+  );
+}
+
+export async function getTherapistContactRequestDetail(requestId: string | number) {
+  return parseApi(
+    api.get(`/api/therapist/contact-requests/${requestId}`),
+    TherapistContactRequestResponseSchema
+  );
+}
+
+export async function approveTherapistContactRequest(
+  requestId: string | number,
+  payload: TherapistContactRequestHandle
+) {
+  return parseApi(
+    api.post(
+      `/api/therapist/contact-requests/${requestId}/approve`,
+      TherapistContactRequestHandleSchema.parse(payload)
+    ),
+    TherapistContactRequestResponseSchema
+  );
+}
+
+export async function declineTherapistContactRequest(
+  requestId: string | number,
+  payload: TherapistContactRequestHandle
+) {
+  return parseApi(
+    api.post(
+      `/api/therapist/contact-requests/${requestId}/decline`,
+      TherapistContactRequestHandleSchema.parse(payload)
+    ),
+    TherapistContactRequestResponseSchema
+  );
+}
+
+export async function archiveTherapistContactRequest(requestId: string | number) {
+  return parseApi(
+    api.post(`/api/therapist/contact-requests/${requestId}/archive`),
+    TherapistContactRequestResponseSchema
   );
 }

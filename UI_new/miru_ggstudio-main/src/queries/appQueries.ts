@@ -19,9 +19,13 @@ import {
   getTherapistMessages,
 } from '../services/backend';
 import {
+  getMyTherapistBillingProfile,
+  getMyTherapistContactRequests,
   getMyClientProfile,
+  getPublicTherapist,
   getMyTherapistProfile,
   getPublicTherapists,
+  getTherapistContactRequests,
   getTherapistViewOfClientProfile,
 } from '../services/profiles';
 import {
@@ -73,7 +77,14 @@ export const queryKeys = {
     therapistMe: () => ['profiles', 'therapist', 'me'] as const,
     publicTherapists: (limit?: number) =>
       ['profiles', 'therapists', 'public', limit ?? 'all'] as const,
+    publicTherapistDetail: (therapistId: string) =>
+      ['profiles', 'therapists', 'public', 'detail', therapistId] as const,
     clientDetail: (clientId: string) => ['profiles', 'client', clientId] as const,
+    therapistBilling: () => ['profiles', 'therapist', 'billing'] as const,
+  },
+  contactRequests: {
+    clientMe: () => ['contact-requests', 'client', 'me'] as const,
+    therapistInbox: (status?: string) => ['contact-requests', 'therapist', status ?? 'all'] as const,
   },
   assessments: {
     templates: () => ['assessments', 'templates'] as const,
@@ -176,6 +187,8 @@ export function therapistProfileQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.profiles.therapistMe(),
     queryFn: getMyTherapistProfile,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
@@ -183,6 +196,40 @@ export function publicTherapistsQueryOptions(limit?: number) {
   return queryOptions({
     queryKey: queryKeys.profiles.publicTherapists(limit),
     queryFn: () => getPublicTherapists(limit),
+  });
+}
+
+export function publicTherapistDetailQueryOptions(therapistId: string) {
+  return queryOptions({
+    queryKey: queryKeys.profiles.publicTherapistDetail(therapistId),
+    queryFn: () => getPublicTherapist(therapistId),
+  });
+}
+
+export function therapistBillingProfileQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.profiles.therapistBilling(),
+    queryFn: getMyTherapistBillingProfile,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function myContactRequestsQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.contactRequests.clientMe(),
+    queryFn: getMyTherapistContactRequests,
+    staleTime: 30 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function therapistContactRequestsQueryOptions(status?: string) {
+  return queryOptions({
+    queryKey: queryKeys.contactRequests.therapistInbox(status),
+    queryFn: () => getTherapistContactRequests(status),
+    staleTime: 30 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
@@ -475,6 +522,11 @@ export async function prefetchTherapistRouteData(
 
   if (path === '/therapist/profile') {
     tasks.push(queryClient.prefetchQuery(therapistProfileQueryOptions()));
+    tasks.push(queryClient.prefetchQuery(therapistBillingProfileQueryOptions()));
+  }
+
+  if (path === '/therapist/contact-requests') {
+    tasks.push(queryClient.prefetchQuery(therapistContactRequestsQueryOptions()));
   }
 
   await Promise.all(tasks);

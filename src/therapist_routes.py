@@ -4,6 +4,7 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from auth_middleware import get_current_user
+from profile_service import get_profile_service
 from push_service import get_push_service
 from therapist_service import get_therapist_service
 from therapist_verification_service import get_therapist_verification_service
@@ -91,6 +92,11 @@ class AppointmentCreate(BaseModel):
 
 class AppointmentCancel(BaseModel):
     reason: Optional[str] = None
+
+
+class ContactRequestHandle(BaseModel):
+    therapist_reply: Optional[str] = None
+    share_pairing_code: bool = False
 
 
 async def _require_user_id(request: Request) -> str:
@@ -216,6 +222,100 @@ async def get_client_summary(therapist_id: str, client_id: str, request: Request
     service, resolved_therapist_id = await _require_therapist_access(request, therapist_id)
     _ensure_relationship(service, resolved_therapist_id, client_id)
     return {"success": True, "summary": service.get_client_summary(client_id)}
+
+
+@router.get("/contact-requests")
+async def get_therapist_contact_requests(
+    request: Request,
+    therapist_id: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    current_user_id = await _require_user_id(request)
+    resolved_therapist_id = therapist_id or current_user_id
+    _, _ = await _require_therapist_access(request, resolved_therapist_id)
+    requests = get_profile_service().get_therapist_contact_requests(current_user_id, status=status)
+    return {"success": True, "requests": requests}
+
+
+@router.get("/contact-requests/{request_id}")
+async def get_therapist_contact_request_detail(request_id: int, request: Request, therapist_id: Optional[str] = None):
+    current_user_id = await _require_user_id(request)
+    resolved_therapist_id = therapist_id or current_user_id
+    _, _ = await _require_therapist_access(request, resolved_therapist_id)
+    contact_request = get_profile_service().get_therapist_contact_request_detail(current_user_id, request_id)
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+    return {"success": True, "request": contact_request}
+
+
+@router.post("/contact-requests/{request_id}/approve")
+async def approve_contact_request(
+    request_id: int,
+    data: ContactRequestHandle,
+    request: Request,
+    therapist_id: Optional[str] = None,
+):
+    current_user_id = await _require_user_id(request)
+    resolved_therapist_id = therapist_id or current_user_id
+    _, _ = await _require_therapist_access(request, resolved_therapist_id)
+    contact_request = get_profile_service().handle_contact_request(
+        current_user_id,
+        request_id,
+        action="approve",
+        therapist_reply=data.therapist_reply,
+        share_pairing_code=data.share_pairing_code,
+    )
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+    _send_push_best_effort(
+        contact_request.get("client_id"),
+        "Yêu cầu liên hệ đã được chấp nhận",
+        (contact_request.get("therapist_reply") or "Nhà trị liệu đã phản hồi yêu cầu liên hệ của bạn.")[:140],
+        "/therapy",
+        "contact-request-approved",
+    )
+    return {"success": True, "request": contact_request}
+
+
+@router.post("/contact-requests/{request_id}/decline")
+async def decline_contact_request(
+    request_id: int,
+    data: ContactRequestHandle,
+    request: Request,
+    therapist_id: Optional[str] = None,
+):
+    current_user_id = await _require_user_id(request)
+    resolved_therapist_id = therapist_id or current_user_id
+    _, _ = await _require_therapist_access(request, resolved_therapist_id)
+    contact_request = get_profile_service().handle_contact_request(
+        current_user_id,
+        request_id,
+        action="decline",
+        therapist_reply=data.therapist_reply,
+        share_pairing_code=False,
+    )
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+    return {"success": True, "request": contact_request}
+
+
+@router.post("/contact-requests/{request_id}/archive")
+async def archive_contact_request(
+    request_id: int,
+    request: Request,
+    therapist_id: Optional[str] = None,
+):
+    current_user_id = await _require_user_id(request)
+    resolved_therapist_id = therapist_id or current_user_id
+    _, _ = await _require_therapist_access(request, resolved_therapist_id)
+    contact_request = get_profile_service().handle_contact_request(
+        current_user_id,
+        request_id,
+        action="archive",
+    )
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+    return {"success": True, "request": contact_request}
 
 
 @router.get("/clients/{therapist_id}/{client_id}/assignments")

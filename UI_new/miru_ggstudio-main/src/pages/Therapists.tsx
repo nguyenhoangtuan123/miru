@@ -2,8 +2,9 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Search, ShieldCheck } from 'lucide-react';
+import { ContactRequestModal } from '../components/profiles/ContactRequestModal';
+import { TherapistOfferingBadges } from '../components/profiles/TherapistOfferingBadges';
 import { type TherapistPublicProfileCard } from '../services/profiles';
-import { repairMojibake } from '../lib/text';
 import { publicTherapistsQueryOptions } from '../queries/appQueries';
 
 function getContactCount(profile: TherapistPublicProfileCard) {
@@ -18,9 +19,10 @@ function getContactCount(profile: TherapistPublicProfileCard) {
 
 export function TherapistsDirectory() {
   const [search, setSearch] = useState('');
+  const [selectedTherapist, setSelectedTherapist] = useState<TherapistPublicProfileCard | null>(null);
   const deferredSearch = useDeferredValue(search);
   const therapistsQuery = useQuery(publicTherapistsQueryOptions());
-  const therapists: TherapistPublicProfileCard[] = therapistsQuery.data?.therapists ?? [];
+  const therapists = (therapistsQuery.data?.therapists ?? []) as TherapistPublicProfileCard[];
   const loading = therapistsQuery.isLoading;
   const error = therapistsQuery.error instanceof Error ? therapistsQuery.error.message : null;
 
@@ -55,7 +57,8 @@ export function TherapistsDirectory() {
                 Tìm nhà trị liệu phù hợp với bạn
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-7 text-white/65 md:text-base">
-                Xem giới thiệu, chuyên môn và cách liên hệ trực tiếp với từng therapist. V1 chỉ hỗ trợ liên hệ ngoài app; pairing code vẫn là bước kết nối nội bộ sau đó.
+                Xem giới thiệu, hình thức hỗ trợ, mức giá tham khảo và gửi yêu cầu liên hệ trực tiếp
+                ngay từ danh bạ.
               </p>
             </div>
 
@@ -74,7 +77,7 @@ export function TherapistsDirectory() {
 
         {error && (
           <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            {repairMojibake(error)}
+            {error}
           </div>
         )}
 
@@ -83,7 +86,7 @@ export function TherapistsDirectory() {
             ? Array.from({ length: 6 }).map((_, index) => (
                 <div
                   key={index}
-                  className="glass-panel h-[280px] animate-pulse rounded-[28px] border border-white/10 bg-white/5"
+                  className="glass-panel h-[320px] animate-pulse rounded-[28px] border border-white/10 bg-white/5"
                 />
               ))
             : filteredTherapists.map((profile) => (
@@ -105,34 +108,34 @@ export function TherapistsDirectory() {
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h2 className="truncate text-xl font-semibold">
-                          {repairMojibake(profile.display_name)}
-                        </h2>
+                        <h2 className="truncate text-xl font-semibold">{profile.display_name}</h2>
                         {profile.is_verified && <ShieldCheck size={16} className="text-emerald-300" />}
                       </div>
                       {profile.headline && (
-                        <p className="mt-1 text-sm text-white/60">
-                          {repairMojibake(profile.headline)}
-                        </p>
+                        <p className="mt-1 text-sm text-white/60">{profile.headline}</p>
                       )}
                     </div>
                   </div>
 
+                  <div className="mt-5">
+                    <TherapistOfferingBadges profile={profile} />
+                  </div>
+
                   {profile.specializations.length > 0 && (
-                    <div className="mt-5 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {profile.specializations.slice(0, 4).map((item) => (
                         <span
                           key={item}
                           className="rounded-full border border-miru-primary/20 bg-miru-primary/10 px-3 py-1 text-xs text-miru-primary"
                         >
-                          {repairMojibake(item)}
+                          {item}
                         </span>
                       ))}
                     </div>
                   )}
 
                   <p className="mt-5 line-clamp-4 min-h-[96px] text-sm leading-7 text-white/70">
-                    {repairMojibake(profile.bio || 'Hồ sơ công khai sẽ hiện phần giới thiệu tại đây.')}
+                    {profile.bio || 'Hồ sơ công khai sẽ hiển thị phần giới thiệu tại đây.'}
                   </p>
 
                   <div className="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/35">
@@ -140,13 +143,21 @@ export function TherapistsDirectory() {
                     <span>{profile.certificate_images.length} hình chứng chỉ</span>
                   </div>
 
-                  <div className="mt-5 flex items-center gap-3">
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
                     <Link
                       to={`/therapists/${profile.therapist_id}`}
                       className="inline-flex items-center justify-center rounded-2xl bg-miru-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-miru-primary/85"
                     >
                       Xem hồ sơ
                     </Link>
+                    {profile.can_receive_contact_requests && (
+                      <button
+                        onClick={() => setSelectedTherapist(profile)}
+                        className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                      >
+                        Liên hệ ngay
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}
@@ -158,6 +169,14 @@ export function TherapistsDirectory() {
           </div>
         )}
       </div>
+
+      {selectedTherapist && (
+        <ContactRequestModal
+          open={Boolean(selectedTherapist)}
+          therapist={selectedTherapist}
+          onClose={() => setSelectedTherapist(null)}
+        />
+      )}
     </div>
   );
 }

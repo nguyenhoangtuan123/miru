@@ -464,7 +464,7 @@ export function Home() {
     return <Dashboard />;
   }
 
-  const publicTherapists: TherapistPublicProfileCard[] = publicTherapistsQuery.data?.therapists ?? [];
+  const publicTherapists = (publicTherapistsQuery.data?.therapists ?? []) as TherapistPublicProfileCard[];
   const loadingPublicTherapists = publicTherapistsQuery.isLoading;
 
   const features = [

@@ -21,10 +21,40 @@ class TherapistProfileUpdatePayload(BaseModel):
     contact_facebook_url: Optional[str] = None
     contact_website_url: Optional[str] = None
     is_public: Optional[bool] = None
+    accepting_new_clients: Optional[bool] = None
+    service_mode: Optional[str] = None
+    starting_price_vnd: Optional[int] = None
+    pricing_unit: Optional[str] = None
+    pricing_note: Optional[str] = None
+    public_payment_note: Optional[str] = None
+    public_workflow_steps: Optional[List[str]] = None
+
+
+class TherapistBillingProfilePayload(BaseModel):
+    payment_mode: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    momo_phone: Optional[str] = None
+    transfer_note: Optional[str] = None
 
 
 class ClientProfileUpdatePayload(BaseModel):
     intro: Optional[str] = None
+
+
+class TherapistContactRequestCreatePayload(BaseModel):
+    therapist_id: str
+    message: str = ""
+    preferred_contact_method: Optional[str] = None
+    client_contact_phone: Optional[str] = None
+    client_contact_zalo: Optional[str] = None
+    service_interest: Optional[str] = None
+
+
+class TherapistContactRequestHandlePayload(BaseModel):
+    therapist_reply: Optional[str] = None
+    share_pairing_code: bool = False
 
 
 async def _require_current_user(request: Request) -> Dict[str, Any]:
@@ -106,6 +136,33 @@ async def update_my_therapist_profile(data: TherapistProfileUpdatePayload, reque
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not profile:
         raise HTTPException(status_code=400, detail="Failed to update therapist profile")
+    return {"success": True, "profile": profile}
+
+
+@router.get("/me/therapist/billing")
+async def get_my_therapist_billing_profile(request: Request):
+    current_user = await _require_therapist_user(request)
+    profile = get_profile_service().get_my_therapist_billing_profile(
+        current_user["resolved_user_id"],
+        email=str(current_user.get("email") or ""),
+        name=str(current_user.get("name") or ""),
+    )
+    if not profile:
+        raise HTTPException(status_code=400, detail="Therapist billing profile is unavailable")
+    return {"success": True, "profile": profile}
+
+
+@router.put("/me/therapist/billing")
+async def update_my_therapist_billing_profile(data: TherapistBillingProfilePayload, request: Request):
+    current_user = await _require_therapist_user(request)
+    profile = get_profile_service().update_my_therapist_billing_profile(
+        current_user["resolved_user_id"],
+        data.model_dump(exclude_unset=True),
+        email=str(current_user.get("email") or ""),
+        name=str(current_user.get("name") or ""),
+    )
+    if not profile:
+        raise HTTPException(status_code=400, detail="Failed to update therapist billing profile")
     return {"success": True, "profile": profile}
 
 

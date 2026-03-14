@@ -35,6 +35,7 @@ import { TherapistClientProfileDetailPage } from './pages/therapist/ClientProfil
 import { TherapistAppointments } from './pages/therapist/Appointments';
 import { TherapistMessages } from './pages/therapist/Messages';
 import { TherapistProfilePage } from './pages/therapist/Profile';
+import { TherapistContactRequestsPage } from './pages/therapist/ContactRequests';
 import { TherapistSettings } from './pages/therapist/Settings';
 import { TherapistApplyPage } from './pages/therapist/Apply';
 import { TherapistReviewStatusPage } from './pages/therapist/ReviewStatus';
@@ -123,6 +124,7 @@ export default function App() {
                   <Route path="client-profiles/:clientId" element={<TherapistClientProfileDetailPage />} />
                   <Route path="appointments" element={<TherapistAppointments />} />
                   <Route path="messages" element={<TherapistMessages />} />
+                  <Route path="contact-requests" element={<TherapistContactRequestsPage />} />
                   <Route path="settings" element={<TherapistSettings />} />
                 </Route>
               </Routes>

@@ -1,94 +1,56 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ExternalLink, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
-import { getPublicTherapist, type TherapistPublicProfileDetail } from '../services/profiles';
-import { repairMojibake } from '../lib/text';
+import { ContactRequestModal } from '../components/profiles/ContactRequestModal';
+import { TherapistOfferingBadges } from '../components/profiles/TherapistOfferingBadges';
+import { publicTherapistDetailQueryOptions } from '../queries/appQueries';
+import type { TherapistPublicProfileDetail } from '../services/profiles';
 
-function buildContactActions(profile: TherapistPublicProfileDetail) {
+function buildContactActions(profile: NonNullable<ReturnType<typeof useTherapistProfile>['profile']>) {
   return [
     profile.contact_phone
-      ? {
-        key: 'phone',
-        label: 'Goi dien',
-        href: `tel:${profile.contact_phone}`,
-        icon: Phone,
-      }
+      ? { key: 'phone', label: 'Gọi điện', href: `tel:${profile.contact_phone}`, icon: Phone }
       : null,
     profile.contact_email
-      ? {
-        key: 'email',
-        label: 'Email',
-        href: `mailto:${profile.contact_email}`,
-        icon: Mail,
-      }
+      ? { key: 'email', label: 'Email', href: `mailto:${profile.contact_email}`, icon: Mail }
       : null,
     profile.contact_zalo_url
-      ? {
-        key: 'zalo',
-        label: 'Zalo',
-        href: profile.contact_zalo_url,
-        icon: MessageCircle,
-      }
+      ? { key: 'zalo', label: 'Zalo', href: profile.contact_zalo_url, icon: MessageCircle }
       : null,
     profile.contact_facebook_url
-      ? {
-        key: 'facebook',
-        label: 'Facebook',
-        href: profile.contact_facebook_url,
-        icon: ExternalLink,
-      }
+      ? { key: 'facebook', label: 'Facebook', href: profile.contact_facebook_url, icon: ExternalLink }
       : null,
     profile.contact_website_url
-      ? {
-        key: 'website',
-        label: 'Website',
-        href: profile.contact_website_url,
-        icon: ExternalLink,
-      }
+      ? { key: 'website', label: 'Website', href: profile.contact_website_url, icon: ExternalLink }
       : null,
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
-export function TherapistPublicProfilePage() {
+function useTherapistProfile() {
   const { therapistId } = useParams<{ therapistId: string }>();
-  const [profile, setProfile] = useState<TherapistPublicProfileDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    ...publicTherapistDetailQueryOptions(therapistId ?? ''),
+    enabled: Boolean(therapistId),
+  });
+  return {
+    therapistId,
+    profile: (query.data?.profile ?? null) as TherapistPublicProfileDetail | null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : null,
+  };
+}
 
-  useEffect(() => {
-    if (!therapistId) {
-      setError('Thieu therapist id');
-      setLoading(false);
-      return;
-    }
+function formatVnd(value: number | null | undefined) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return null;
+  }
+  return new Intl.NumberFormat('vi-VN').format(value);
+}
 
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getPublicTherapist(therapistId);
-        if (!cancelled) {
-          setProfile(response.profile);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ therapist');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [therapistId]);
-
+export function TherapistPublicProfilePage() {
+  const { profile, loading, error } = useTherapistProfile();
+  const [contactOpen, setContactOpen] = useState(false);
   const contactActions = useMemo(() => (profile ? buildContactActions(profile) : []), [profile]);
 
   if (loading) {
@@ -106,12 +68,12 @@ export function TherapistPublicProfilePage() {
     return (
       <div className="min-h-screen px-4 py-10 md:px-8">
         <div className="mx-auto max-w-3xl rounded-[32px] border border-amber-400/30 bg-amber-500/10 px-6 py-8 text-center text-amber-100">
-          <p>{repairMojibake(error || 'Không tìm thấy therapist')}</p>
+          <p>{error || 'Không tìm thấy therapist'}</p>
           <Link
             to="/therapists"
             className="mt-5 inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white"
           >
-            Quay lai danh ba
+            Quay lại danh bạ
           </Link>
         </div>
       </div>
@@ -124,7 +86,7 @@ export function TherapistPublicProfilePage() {
         <div className="glass-panel overflow-hidden rounded-[36px] border border-white/10">
           <div className="bg-gradient-to-br from-miru-primary/25 via-transparent to-cyan-400/10 p-7 md:p-10">
             <Link to="/therapists" className="text-sm text-white/55 transition-colors hover:text-white">
-              Quay lai danh ba therapist
+              Quay lại danh bạ therapist
             </Link>
 
             <div className="mt-8 flex flex-col gap-8 md:flex-row md:items-center">
@@ -142,22 +104,22 @@ export function TherapistPublicProfilePage() {
 
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-4xl font-bold tracking-tight">
-                    {repairMojibake(profile.display_name)}
-                  </h1>
+                  <h1 className="text-4xl font-bold tracking-tight">{profile.display_name}</h1>
                   {profile.is_verified && (
                     <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-200">
                       <ShieldCheck size={16} />
-                      Da xac minh
+                      Đã xác minh
                     </span>
                   )}
                 </div>
 
                 {profile.headline && (
-                  <p className="mt-3 max-w-2xl text-lg leading-8 text-white/75">
-                    {repairMojibake(profile.headline)}
-                  </p>
+                  <p className="mt-3 max-w-2xl text-lg leading-8 text-white/75">{profile.headline}</p>
                 )}
+
+                <div className="mt-5">
+                  <TherapistOfferingBadges profile={profile} />
+                </div>
 
                 {profile.specializations.length > 0 && (
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -166,10 +128,19 @@ export function TherapistPublicProfilePage() {
                         key={item}
                         className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75"
                       >
-                        {repairMojibake(item)}
+                        {item}
                       </span>
                     ))}
                   </div>
+                )}
+
+                {profile.can_receive_contact_requests && (
+                  <button
+                    onClick={() => setContactOpen(true)}
+                    className="mt-6 inline-flex items-center justify-center rounded-2xl bg-miru-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-miru-primary/85"
+                  >
+                    Liên hệ ngay
+                  </button>
                 )}
               </div>
             </div>
@@ -178,53 +149,110 @@ export function TherapistPublicProfilePage() {
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-            <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">
-              Gioi thieu
-            </div>
+            <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">Giới thiệu</div>
             <p className="whitespace-pre-wrap text-sm leading-8 text-white/75 md:text-base">
-              {repairMojibake(profile.bio || 'Therapist chưa cập nhật phần giới thiệu công khai.')}
+              {profile.bio || 'Therapist chưa cập nhật phần giới thiệu công khai.'}
             </p>
-          </section>
 
-          <aside className="glass-panel rounded-[32px] border border-white/10 p-7">
-            <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">
-              Liên hệ
-            </div>
-
-            {contactActions.length === 0 ? (
-              <p className="text-sm leading-7 text-white/60">
-                Therapist chưa công khai kênh liên hệ. Bạn có thể quay lại sau hoặc liên hệ qua kênh mà therapist cung cấp bên ngoài.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {contactActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <a
-                      key={action.key}
-                      href={action.href}
-                      target={action.href.startsWith('http') ? '_blank' : undefined}
-                      rel={action.href.startsWith('http') ? 'noreferrer' : undefined}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10"
+            {profile.public_workflow_steps.length > 0 && (
+              <div className="mt-8">
+                <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">
+                  Lộ trình làm việc
+                </div>
+                <ol className="space-y-3">
+                  {profile.public_workflow_steps.map((step, index) => (
+                    <li
+                      key={`${step}-${index}`}
+                      className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75"
                     >
-                      <span className="inline-flex items-center gap-3">
-                        <Icon size={18} className="text-miru-primary" />
-                        {action.label}
+                      <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-miru-primary/20 text-xs font-semibold text-miru-primary">
+                        {index + 1}
                       </span>
-                      <ExternalLink size={16} className="text-white/35" />
-                    </a>
-                  );
-                })}
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
+          </section>
+
+          <aside className="space-y-6">
+            <section className="glass-panel rounded-[32px] border border-white/10 p-7">
+              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">Chi phí và thanh toán</div>
+              <div className="space-y-3 text-sm text-white/75">
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <div className="text-white/50">Hình thức hỗ trợ</div>
+                  <div className="mt-1 font-semibold">
+                    {profile.service_mode === 'free'
+                      ? 'Miễn phí'
+                      : profile.service_mode === 'paid'
+                        ? 'Có phí'
+                        : 'Miễn phí hoặc có phí'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                  <div className="text-white/50">Giá khởi điểm</div>
+                  <div className="mt-1 font-semibold">
+                    {profile.starting_price_vnd
+                      ? `${formatVnd(profile.starting_price_vnd)}đ / ${
+                          profile.pricing_unit === 'session'
+                            ? 'phiên'
+                            : profile.pricing_unit === 'package'
+                              ? 'gói'
+                              : 'thoả thuận'
+                        }`
+                      : 'Therapist sẽ trao đổi thêm khi tiếp nhận'}
+                  </div>
+                </div>
+                {profile.pricing_note && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div className="text-white/50">Ghi chú giá dịch vụ</div>
+                    <div className="mt-1">{profile.pricing_note}</div>
+                  </div>
+                )}
+                {profile.public_payment_note && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div className="text-white/50">Ghi chú thanh toán</div>
+                    <div className="mt-1">{profile.public_payment_note}</div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="glass-panel rounded-[32px] border border-white/10 p-7">
+              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">Liên hệ ngoài app</div>
+              {contactActions.length === 0 ? (
+                <p className="text-sm leading-7 text-white/60">
+                  Therapist chưa công khai kênh liên hệ ngoài app. Bạn vẫn có thể dùng nút Liên hệ ngay để gửi yêu cầu trực tiếp.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {contactActions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <a
+                        key={action.key}
+                        href={action.href}
+                        target={action.href.startsWith('http') ? '_blank' : undefined}
+                        rel={action.href.startsWith('http') ? 'noreferrer' : undefined}
+                        className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10"
+                      >
+                        <span className="inline-flex items-center gap-3">
+                          <Icon size={18} className="text-miru-primary" />
+                          {action.label}
+                        </span>
+                        <ExternalLink size={16} className="text-white/35" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           </aside>
         </div>
 
         <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-          <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">
-            Chung chi va bang cap
-          </div>
-
+          <div className="mb-4 text-xs uppercase tracking-[0.35em] text-white/35">Chứng chỉ và bằng cấp</div>
           {profile.certificate_images.length === 0 ? (
             <p className="text-sm text-white/60">Therapist chưa thêm ảnh chứng chỉ công khai.</p>
           ) : (
@@ -240,13 +268,11 @@ export function TherapistPublicProfilePage() {
                   {asset.url ? (
                     <img
                       src={asset.url}
-                      alt={`Chung chi ${index + 1} cua ${profile.display_name}`}
+                      alt={`Chứng chỉ ${index + 1} của ${profile.display_name}`}
                       className="h-56 w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-56 items-center justify-center text-sm text-white/40">
-                      Không tải được ảnh
-                    </div>
+                    <div className="flex h-56 items-center justify-center text-sm text-white/40">Không tải được ảnh</div>
                   )}
                 </a>
               ))}
@@ -254,6 +280,12 @@ export function TherapistPublicProfilePage() {
           )}
         </section>
       </div>
+
+      <ContactRequestModal
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        therapist={profile}
+      />
     </div>
   );
 }

@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 # Import Routers
 from auth_routes import router as auth_router
 from profile_routes import router as profile_router
+from contact_request_routes import router as contact_request_router
 from therapist_routes import router as therapist_router
 from memory_routes import router as memory_router
 from proactive_routes import router as proactive_router
@@ -227,6 +228,7 @@ app.add_middleware(
 # Register authentication routes
 app.include_router(auth_router)
 app.include_router(profile_router)
+app.include_router(contact_request_router)
 app.include_router(therapist_router)
 app.include_router(memory_router)
 app.include_router(proactive_router)
