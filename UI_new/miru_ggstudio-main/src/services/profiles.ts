@@ -29,6 +29,10 @@ export const TherapistPublicProfileSchema = z
     certificate_images: z.array(ProfileImageAssetSchema).default([]),
     is_public: z.boolean().default(false),
     is_verified: z.boolean().default(false),
+    verification_status: z
+      .enum(['not_submitted', 'pending', 'approved', 'rejected'])
+      .nullable()
+      .optional(),
     account_email: z.string().nullable().optional(),
     therapist_name: z.string().nullable().optional(),
   })

@@ -4,11 +4,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Activity,
   ArrowLeft,
+  Brain,
   CalendarPlus,
   ClipboardList,
   LoaderCircle,
   MessageCircle,
   Plus,
+  Route,
   Trash2,
 } from 'lucide-react';
 import { repairMojibake } from '../../lib/text';
@@ -256,6 +258,27 @@ export function TherapistClientDetail() {
         </div>
 
         <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => navigate(`/therapist/clients/${id}/treatment-plan`)}
+            className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/12"
+          >
+            <Route size={16} />
+            Kế hoạch trị liệu
+          </button>
+          <button
+            onClick={() => navigate(`/therapist/clients/${id}/context`)}
+            className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/12"
+          >
+            <Brain size={16} />
+            Bối cảnh AI
+          </button>
+          <button
+            onClick={() => navigate(`/therapist/clients/${id}/assessments`)}
+            className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/12"
+          >
+            <ClipboardList size={16} />
+            Thang đo
+          </button>
           <button
             onClick={() => navigate(`/therapist/messages?client=${id}`)}
             className="flex items-center gap-2 rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/12"

@@ -17,6 +17,11 @@ This repo is not Next.js. Treat the frontend as a Vite SPA.
 - Chat WebSocket route: `src/routers/chat.py`
 - Push/Web Push routes: `src/push_routes.py`
 - Proactive push scheduler: `src/proactive_push_service.py`
+- Public therapist profile routes: `src/profile_routes.py`
+- Therapist verification routes: `src/therapist_verification_routes.py`
+- Assessment routes: `src/assessment_routes.py`
+- Therapist sharing routes: `src/therapist_sharing_routes.py`
+- Treatment program routes: `src/treatment_program_routes.py`
 
 ## Local Run Commands
 
@@ -49,6 +54,17 @@ Important files:
 - `UI_new/miru_ggstudio-main/src/lib/notifications.ts`
 - `UI_new/miru_ggstudio-main/public/sw.js`
 - `UI_new/miru_ggstudio-main/src/pages/Chat.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/Therapists.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/Sharing.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/Assessments.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/therapist/Apply.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/therapist/ClientContext.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/therapist/TreatmentPlan.tsx`
+- `UI_new/miru_ggstudio-main/src/services/profiles.ts`
+- `UI_new/miru_ggstudio-main/src/services/therapistVerification.ts`
+- `UI_new/miru_ggstudio-main/src/services/therapistSharing.ts`
+- `UI_new/miru_ggstudio-main/src/services/assessments.ts`
+- `UI_new/miru_ggstudio-main/src/services/treatmentPrograms.ts`
 
 ## Current Frontend Features
 
@@ -56,11 +72,21 @@ Important files:
 - The app is packaged as a PWA with manifest + service worker
 - Notification permission in settings now also attempts real Web Push subscription sync
 - Therapist/client event polling notifications still exist, but real Web Push is now the preferred path for background delivery
+- Public therapist directory and therapist public profile pages live in the Vite SPA
+- Therapist onboarding now has a separate apply/review-status flow before full therapist portal access
+- Client data sharing preferences live in `/sharing`
+- Assessment flows now support therapist assignment and client submission for PHQ-9, GAD-7, and DASS-21
+- Treatment plans now have therapist edit views and client read-only published views
 
 ## Backend Notes
 
 - Active therapist routes live in `src/therapist_routes.py`
 - Active therapist service lives in `src/therapist_service.py`
+- Public therapist profile logic lives in `src/profile_service.py`
+- Therapist verification logic lives in `src/therapist_verification_service.py`
+- Assessment logic lives in `src/assessment_service.py` and `src/assessment_definitions.py`
+- Therapist data sharing logic lives in `src/therapist_sharing_service.py`
+- Treatment plan logic lives in `src/treatment_program_service.py`
 - AI crisis logging is wired from `src/agent_graph.py`
 - Memory features run directly inside the main backend and no longer require a sidecar
 - Memory and insight helpers now run directly inside the main backend
@@ -110,6 +136,25 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 - Therapist generates a pairing code from therapist settings
 - Client connects using the code from client settings
 - If the database schema does not support pending pairing codes, the backend falls back to `pairing_codes.json` in the repo root
+- Therapist-only flows should continue to check active therapist-client relationships before exposing client context, assessment assignment, or treatment-plan editing
+
+## Profile / Verification / Treatment Features
+
+- Public therapist profile media is split from therapist verification evidence
+- Therapist verification requires an approved reviewer before therapist portal access is granted
+- Therapist sharing consent is stored separately from general app consent and can expose `none`, `ai_report`, or `direct` access levels
+- Assessment templates are seeded and scored in-app; wording should remain screening-oriented rather than diagnostic
+- Treatment plans are per-client, therapist-authored, and only become client-visible after publish
+
+## Migrations To Know About
+
+- `018_add_profile_features.sql`
+- `019_add_push_subscriptions.sql`
+- `020_add_therapist_verification.sql`
+- `021_backfill_existing_public_therapists_as_approved.sql`
+- `022_add_assessments.sql`
+- `023_add_therapist_sharing_preferences.sql`
+- `024_add_treatment_programs.sql`
 
 ## Current Constraints
 
@@ -125,6 +170,8 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 - Prefer editing files in `src/` for backend changes
 - Prefer editing files in `UI_new/miru_ggstudio-main/src/` for frontend changes
 - Do not reintroduce legacy frontend folders or PWA static mounts
+- Vercel deploys for the SPA should be run from `UI_new/miru_ggstudio-main/`
+- SPA rewrites for Vercel are defined in `UI_new/miru_ggstudio-main/vercel.json`
 - Keep auth redirects aligned with:
   - backend callback: `/auth/callback`
   - frontend callback route: `/auth/callback`
@@ -134,7 +181,7 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 After meaningful changes, run:
 
 ```powershell
-python -m py_compile src\app.py src\therapist_routes.py src\therapist_service.py src\push_routes.py src\push_service.py src\proactive_push_service.py src\routers\chat.py
+python -m py_compile src\app.py src\profile_routes.py src\profile_service.py src\therapist_routes.py src\therapist_service.py src\therapist_verification_routes.py src\therapist_verification_service.py src\assessment_routes.py src\assessment_service.py src\assessment_definitions.py src\therapist_sharing_routes.py src\therapist_sharing_service.py src\treatment_program_routes.py src\treatment_program_service.py src\push_routes.py src\push_service.py src\proactive_push_service.py src\routers\chat.py
 cd UI_new\miru_ggstudio-main
 npm run lint
 npm run build

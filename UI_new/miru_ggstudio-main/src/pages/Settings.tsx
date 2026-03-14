@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useConsent } from '../contexts/ConsentContext';
@@ -10,6 +11,7 @@ import {
   Link2,
   LogOut,
   Moon,
+  ShieldCheck,
   Stethoscope,
   Sun,
   Trash2,
@@ -298,6 +300,22 @@ export function Settings() {
             </div>
           )}
         </div>
+
+        <Link
+          to="/sharing"
+          className="glass-panel mb-8 flex items-start gap-4 p-6 transition-colors hover:bg-white/8"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-miru-primary/20 text-miru-primary">
+            <ShieldCheck size={20} />
+          </div>
+          <div className="flex-1">
+            <div className="mb-1 text-lg font-semibold">Chia sẻ dữ liệu với therapist</div>
+            <p className="text-sm text-white/60">
+              Chọn riêng cho từng therapist mức chia sẻ chat AI, hoạt động trên web, kết quả thang đo và AI insights.
+            </p>
+          </div>
+          <ChevronRight size={18} className="mt-1 text-white/35" />
+        </Link>
 
         <div className="space-y-8">
           {settingsGroups.map((group) => (

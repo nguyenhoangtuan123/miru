@@ -185,6 +185,15 @@ export function TherapistClients() {
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">
                           <button
+                            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-black/25"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`/therapist/clients/${clientId}/assessments`);
+                            }}
+                          >
+                            Đánh giá
+                          </button>
+                          <button
                             className="rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/15"
                             onClick={(event) => {
                               event.stopPropagation();

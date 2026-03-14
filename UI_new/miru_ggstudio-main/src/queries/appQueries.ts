@@ -24,6 +24,25 @@ import {
   getPublicTherapists,
   getTherapistViewOfClientProfile,
 } from '../services/profiles';
+import {
+  getAssessmentTemplates,
+  getMyAssessmentDetail,
+  getMyAssessments,
+  getTherapistAssessmentDetail,
+  getTherapistClientAssessments,
+} from '../services/assessments';
+import {
+  getMyTherapistSharingPreferences,
+  getTherapistSharedActivities,
+  getTherapistSharedAssessments,
+  getTherapistSharedChat,
+  getTherapistSharedContextOverview,
+  getTherapistSharedInsights,
+} from '../services/therapistSharing';
+import {
+  getMyCurrentTreatmentProgram,
+  getTherapistTreatmentProgram,
+} from '../services/treatmentPrograms';
 import { getClientSummary } from '../services/backend';
 
 export const queryKeys = {
@@ -55,6 +74,28 @@ export const queryKeys = {
     publicTherapists: (limit?: number) =>
       ['profiles', 'therapists', 'public', limit ?? 'all'] as const,
     clientDetail: (clientId: string) => ['profiles', 'client', clientId] as const,
+  },
+  assessments: {
+    templates: () => ['assessments', 'templates'] as const,
+    myAssignments: () => ['assessments', 'client', 'me'] as const,
+    myAssignmentDetail: (assignmentId: string) =>
+      ['assessments', 'client', 'me', assignmentId] as const,
+    therapistClientAssignments: (therapistId: string, clientId: string) =>
+      ['assessments', 'therapist', therapistId, 'client', clientId] as const,
+    therapistAssignmentDetail: (therapistId: string, clientId: string, assignmentId: string) =>
+      ['assessments', 'therapist', therapistId, 'client', clientId, assignmentId] as const,
+  },
+  therapistSharing: {
+    myPreferences: () => ['therapist-sharing', 'client', 'me'] as const,
+    overview: (clientId: string) => ['therapist-sharing', 'therapist', 'overview', clientId] as const,
+    chat: (clientId: string) => ['therapist-sharing', 'therapist', 'chat', clientId] as const,
+    activities: (clientId: string) => ['therapist-sharing', 'therapist', 'activities', clientId] as const,
+    assessments: (clientId: string) => ['therapist-sharing', 'therapist', 'assessments', clientId] as const,
+    insights: (clientId: string) => ['therapist-sharing', 'therapist', 'insights', clientId] as const,
+  },
+  treatmentPrograms: {
+    clientCurrent: () => ['treatment-programs', 'client', 'current'] as const,
+    therapistClient: (clientId: string) => ['treatment-programs', 'therapist', 'client', clientId] as const,
   },
   clientTherapist: {
     detail: (clientId: string) => ['client-therapist', clientId] as const,
@@ -240,6 +281,117 @@ export function therapistClientAssignmentsQueryOptions(therapistId: string, clie
   });
 }
 
+export function assessmentTemplatesQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.assessments.templates(),
+    queryFn: getAssessmentTemplates,
+  });
+}
+
+export function myAssessmentsQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.assessments.myAssignments(),
+    queryFn: getMyAssessments,
+  });
+}
+
+export function myAssessmentDetailQueryOptions(assignmentId: string) {
+  return queryOptions({
+    queryKey: queryKeys.assessments.myAssignmentDetail(assignmentId),
+    queryFn: () => getMyAssessmentDetail(assignmentId),
+  });
+}
+
+export function therapistClientAssessmentsQueryOptions(therapistId: string, clientId: string) {
+  return queryOptions({
+    queryKey: queryKeys.assessments.therapistClientAssignments(therapistId, clientId),
+    queryFn: () => getTherapistClientAssessments(clientId),
+  });
+}
+
+export function therapistAssessmentDetailQueryOptions(
+  therapistId: string,
+  clientId: string,
+  assignmentId: string
+) {
+  return queryOptions({
+    queryKey: queryKeys.assessments.therapistAssignmentDetail(therapistId, clientId, assignmentId),
+    queryFn: () => getTherapistAssessmentDetail(clientId, assignmentId),
+  });
+}
+
+export function myTherapistSharingPreferencesQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.therapistSharing.myPreferences(),
+    queryFn: getMyTherapistSharingPreferences,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function therapistSharedContextOverviewQueryOptions(clientId: string) {
+  return queryOptions({
+    queryKey: queryKeys.therapistSharing.overview(clientId),
+    queryFn: () => getTherapistSharedContextOverview(clientId),
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+}
+
+export function therapistSharedChatQueryOptions(clientId: string, isAiReport = false) {
+  return queryOptions({
+    queryKey: [...queryKeys.therapistSharing.chat(clientId), isAiReport ? 'ai-report' : 'raw'] as const,
+    queryFn: () => getTherapistSharedChat(clientId),
+    staleTime: isAiReport ? 10 * 60 * 1000 : 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function therapistSharedActivitiesQueryOptions(clientId: string, isAiReport = false) {
+  return queryOptions({
+    queryKey: [...queryKeys.therapistSharing.activities(clientId), isAiReport ? 'ai-report' : 'raw'] as const,
+    queryFn: () => getTherapistSharedActivities(clientId),
+    staleTime: isAiReport ? 10 * 60 * 1000 : 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function therapistSharedAssessmentsQueryOptions(clientId: string, isAiReport = false) {
+  return queryOptions({
+    queryKey: [...queryKeys.therapistSharing.assessments(clientId), isAiReport ? 'ai-report' : 'raw'] as const,
+    queryFn: () => getTherapistSharedAssessments(clientId),
+    staleTime: isAiReport ? 10 * 60 * 1000 : 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function therapistSharedInsightsQueryOptions(clientId: string, isAiReport = false) {
+  return queryOptions({
+    queryKey: [...queryKeys.therapistSharing.insights(clientId), isAiReport ? 'ai-report' : 'raw'] as const,
+    queryFn: () => getTherapistSharedInsights(clientId),
+    staleTime: isAiReport ? 10 * 60 * 1000 : 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function myCurrentTreatmentProgramQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.treatmentPrograms.clientCurrent(),
+    queryFn: getMyCurrentTreatmentProgram,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  });
+}
+
+export function therapistTreatmentProgramQueryOptions(clientId: string) {
+  return queryOptions({
+    queryKey: queryKeys.treatmentPrograms.therapistClient(clientId),
+    queryFn: () => getTherapistTreatmentProgram(clientId),
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+}
+
 export async function prefetchClientRouteData(
   queryClient: QueryClient,
   path: string,
@@ -271,6 +423,7 @@ export async function prefetchClientRouteData(
     tasks.push(queryClient.prefetchQuery(clientAssignmentsQueryOptions(userId)));
     tasks.push(queryClient.prefetchQuery(clientAppointmentsQueryOptions(userId)));
     tasks.push(queryClient.prefetchQuery(clientTherapistMessagesQueryOptions(userId)));
+    tasks.push(queryClient.prefetchQuery(myCurrentTreatmentProgramQueryOptions()));
   }
 
   if (path === '/profile') {
@@ -279,6 +432,10 @@ export async function prefetchClientRouteData(
 
   if (path === '/therapists') {
     tasks.push(queryClient.prefetchQuery(publicTherapistsQueryOptions()));
+  }
+
+  if (path === '/assessments') {
+    tasks.push(queryClient.prefetchQuery(myAssessmentsQueryOptions()));
   }
 
   await Promise.all(tasks);

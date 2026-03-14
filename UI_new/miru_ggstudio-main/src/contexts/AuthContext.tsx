@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../services/api';
 import { getCurrentUser, setUserRole } from '../services/backend';
 
 type UserRole = 'client' | 'therapist';
+type TherapistStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
 const AUTH_USER_STORAGE_KEY = 'miru_auth_user';
 
 interface User {
@@ -11,6 +12,9 @@ interface User {
   name?: string | null;
   picture?: string | null;
   role?: UserRole | null;
+  therapist_status?: TherapistStatus | null;
+  can_access_therapist_portal?: boolean;
+  is_admin_reviewer?: boolean;
 }
 
 interface AuthContextType {

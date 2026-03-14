@@ -57,5 +57,17 @@ export function TherapistGuard({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
+  if (user.therapist_status === 'pending') {
+    return <Navigate to="/therapist/review-status" replace />;
+  }
+
+  if (user.therapist_status === 'not_submitted' || user.therapist_status === 'rejected') {
+    return <Navigate to="/therapist/apply" replace />;
+  }
+
+  if (!user.can_access_therapist_portal) {
+    return <Navigate to="/therapist/apply" replace />;
+  }
+
   return <>{children}</>;
 }

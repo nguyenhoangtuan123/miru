@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { setUserRole } from '../services/backend';
+
+const AUTH_USER_STORAGE_KEY = 'miru_auth_user';
 
 function sanitizeNextPath(nextPath: string | null, fallback: string) {
   if (!nextPath || !nextPath.startsWith('/') || nextPath.startsWith('//')) {
@@ -35,6 +38,12 @@ export function AuthCallback() {
 
       try {
         localStorage.setItem('access_token', token);
+        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+
+        if (pendingRole === 'client' || pendingRole === 'therapist') {
+          await setUserRole(pendingRole);
+          localStorage.removeItem('pending_role');
+        }
 
         if (!cancelled) {
           window.location.replace(nextPath);

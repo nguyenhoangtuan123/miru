@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from auth_middleware import get_current_user
 from push_service import get_push_service
 from therapist_service import get_therapist_service
+from therapist_verification_service import get_therapist_verification_service
 
 
 router = APIRouter(prefix="/api/therapist", tags=["Therapist"])
@@ -116,6 +117,8 @@ async def _require_therapist_access(request: Request, therapist_id: str):
     requested_therapist_id = service._resolve_therapist_id(therapist_id)
     if not current_therapist_id or not requested_therapist_id or current_therapist_id != requested_therapist_id:
         raise HTTPException(status_code=403, detail="Access denied")
+    if not get_therapist_verification_service().can_access_portal(current_user_id):
+        raise HTTPException(status_code=403, detail="Therapist verification approval required")
     return service, requested_therapist_id
 
 
@@ -199,6 +202,8 @@ async def create_pairing_code(therapist_id: str, request: Request):
     requested_therapist_id = service._resolve_therapist_id(therapist_id)
     if requested_therapist_id and current_therapist_id and requested_therapist_id != current_therapist_id:
         raise HTTPException(status_code=403, detail="Access denied")
+    if not get_therapist_verification_service().can_access_portal(current_user_id):
+        raise HTTPException(status_code=403, detail="Therapist verification approval required")
 
     pairing = service.create_pairing_code(current_user_id)
     if not pairing:

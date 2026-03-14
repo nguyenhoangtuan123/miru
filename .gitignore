@@ -30,3 +30,8 @@ pairing_codes.json
 proactive_push_state.json
 temp_facts_*.txt
 nul
+user_consents.json
+
+# Local side projects / experiments
+computer_vision/
+memory_skill/

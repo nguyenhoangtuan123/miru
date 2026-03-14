@@ -8,11 +8,17 @@ export const UserSchema = z.object({
   name: z.string().nullable().optional(),
   picture: z.string().nullable().optional(),
   role: z.enum(['client', 'therapist']).optional(),
+  therapist_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).nullable().optional(),
+  can_access_therapist_portal: z.boolean().optional(),
+  is_admin_reviewer: z.boolean().optional(),
 });
 
 export const CurrentUserResponseSchema = z.object({
   user: UserSchema.extend({
     role: z.enum(['client', 'therapist']).nullable().optional(),
+    therapist_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).nullable().optional(),
+    can_access_therapist_portal: z.boolean().optional(),
+    is_admin_reviewer: z.boolean().optional(),
   }),
 });
 
@@ -23,6 +29,9 @@ export const LogoutResponseSchema = z.object({
 export const SetRoleResponseSchema = z.object({
   success: z.boolean(),
   role: z.enum(['client', 'therapist']),
+  therapist_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).nullable().optional(),
+  can_access_therapist_portal: z.boolean().optional(),
+  warning: z.string().optional(),
 });
 
 export const AppConsentSchema = z.object({

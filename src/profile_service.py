@@ -380,6 +380,8 @@ class ProfileService:
             ),
             "is_public": bool(profile_row.get("is_public")) if isinstance(profile_row, dict) else False,
             "is_verified": bool(therapist.get("is_verified")),
+            "verification_status": therapist.get("verification_status")
+            or ("approved" if therapist.get("is_verified") else "not_submitted"),
         }
         if not public_view:
             account_email = therapist.get("email")
@@ -440,7 +442,12 @@ class ProfileService:
         cards: List[Dict[str, Any]] = []
         for row in rows:
             therapist = therapists_by_id.get(str(row.get("therapist_id")))
-            if not therapist or therapist.get("is_active") is False:
+            verification_status = (
+                therapist.get("verification_status")
+                if isinstance(therapist, dict)
+                else None
+            ) or ("approved" if isinstance(therapist, dict) and therapist.get("is_verified") else "not_submitted")
+            if not therapist or therapist.get("is_active") is False or verification_status != "approved":
                 continue
             user = users_by_id.get(therapist.get("user_id")) if isinstance(therapist.get("user_id"), str) else None
             cards.append(self._serialize_therapist_profile(therapist, row, user, public_view=True))
@@ -455,7 +462,12 @@ class ProfileService:
         if not profile_row or not profile_row.get("is_public"):
             return None
         therapist = self.therapist_service.get_therapist(therapist_id)
-        if not therapist or therapist.get("is_active") is False:
+        verification_status = (
+            therapist.get("verification_status")
+            if isinstance(therapist, dict)
+            else None
+        ) or ("approved" if isinstance(therapist, dict) and therapist.get("is_verified") else "not_submitted")
+        if not therapist or therapist.get("is_active") is False or verification_status != "approved":
             return None
         user = self._get_user(therapist.get("user_id")) if isinstance(therapist.get("user_id"), str) else None
         return self._serialize_therapist_profile(therapist, profile_row, user, public_view=True)
@@ -508,6 +520,11 @@ class ProfileService:
         if "specializations" in payload:
             clean_payload["specializations"] = self._normalize_specializations(payload.get("specializations"))
         if "is_public" in payload:
+            verification_status = therapist.get("verification_status") or (
+                "approved" if therapist.get("is_verified") else "not_submitted"
+            )
+            if bool(payload.get("is_public")) and verification_status != "approved":
+                raise ValueError("Therapist must be approved before the public profile can be published")
             clean_payload["is_public"] = bool(payload.get("is_public"))
 
         written = self._write_single(

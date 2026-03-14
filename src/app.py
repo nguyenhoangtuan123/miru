@@ -22,6 +22,11 @@ from therapist_routes import router as therapist_router
 from memory_routes import router as memory_router
 from proactive_routes import router as proactive_router
 from push_routes import router as push_router
+from therapist_verification_routes import router as therapist_verification_router
+from assessment_routes import router as assessment_router
+from therapist_sharing_routes import router as therapist_sharing_router
+from treatment_program_routes import router as treatment_program_router
+from therapist_verification_service import get_therapist_verification_service
 
 from routers.journal import router as journal_router
 from routers.goals import router as goals_router
@@ -227,6 +232,10 @@ app.include_router(memory_router)
 app.include_router(proactive_router)
 app.include_router(push_router)
 app.include_router(consent_router)
+app.include_router(therapist_verification_router)
+app.include_router(assessment_router)
+app.include_router(therapist_sharing_router)
+app.include_router(treatment_program_router)
 
 # Register new modular routes
 app.include_router(journal_router)
@@ -323,6 +332,15 @@ async def get_current_user(request: Request):
     print(f"[DEBUG] Final role: {role}")
 
     response = {"user": _build_user_payload(user, db_user=db_user, role=role)}
+    verification_service = get_therapist_verification_service()
+    user_email = str(user.get("email") or (db_user or {}).get("email") or "")
+    response["user"]["therapist_status"] = (
+        verification_service.therapist_status(user_id) if role == "therapist" else None
+    )
+    response["user"]["can_access_therapist_portal"] = (
+        verification_service.can_access_portal(user_id) if role == "therapist" else False
+    )
+    response["user"]["is_admin_reviewer"] = verification_service.is_admin_reviewer(user_email)
     if warning:
         response["warning"] = warning
     return response
@@ -438,6 +456,16 @@ async def set_user_role(data: RoleUpdate, request: Request):
                 name=user.get("name") or (db_user or {}).get("name", ""),
             )
             if therapist:
+                try:
+                    db.supabase.table("therapists").update(
+                        {
+                            "verification_status": therapist.get("verification_status") or "not_submitted",
+                            "is_verified": bool(therapist.get("is_verified")),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ).eq("id", therapist["id"]).execute()
+                except Exception:
+                    pass
                 persisted = True
                 print(f"[Role] Therapist profile ready for {user_id}: {therapist.get('id')}")
             else:
@@ -448,7 +476,13 @@ async def set_user_role(data: RoleUpdate, request: Request):
     elif data.role == 'client':
         persisted = True
 
-    response = {"success": persisted, "role": data.role}
+    verification_service = get_therapist_verification_service()
+    response = {
+        "success": persisted,
+        "role": data.role,
+        "therapist_status": verification_service.therapist_status(user_id) if data.role == "therapist" else None,
+        "can_access_therapist_portal": verification_service.can_access_portal(user_id) if data.role == "therapist" else False,
+    }
     if warnings:
         response["warning"] = " ".join(warnings)
     return response

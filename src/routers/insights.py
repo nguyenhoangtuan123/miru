@@ -457,102 +457,6 @@ async def get_checkin_status(user_id: str, request: Request):
             "last_score": last_checkin.get("emotion_score") if last_checkin else None,
             "last_checkin_time": last_checkin.get("created_at") if last_checkin else None
         }
-
-        mood_dates = set()
-        for item in _load_mood_checkins(db, user_id, days=45):
-            created_at = _parse_iso_datetime(item.get("created_at"))
-            if created_at:
-                mood_dates.add(created_at.astimezone(LOCAL_TZ).date())
-
-        if not mood_dates:
-            return 0
-
-        streak = 0
-        today = datetime.now(LOCAL_TZ).date()
-
-        if today in mood_dates:
-            streak += 1
-            check_date = today - timedelta(days=1)
-        else:
-            check_date = today
-
-        while check_date in mood_dates:
-            streak += 1
-            check_date -= timedelta(days=1)
-
-        return streak
-        
-        db = DatabaseManager()
-        today = datetime.now(LOCAL_TZ).date()
-        mood_entries = _load_mood_checkins(db, user_id, days=90)
-
-        today_checkin = None
-        for item in mood_entries:
-            created_at = _parse_iso_datetime(item.get("created_at"))
-            if created_at and created_at.astimezone(LOCAL_TZ).date() == today:
-                today_checkin = item
-                break
-
-        streak = await calculate_mood_streak(user_id, db)
-        last_checkin = mood_entries[0] if mood_entries else None
-
-        return {
-            "success": True,
-            "has_checked_in_today": today_checkin is not None,
-            "streak": streak,
-            "last_score": last_checkin.get("emotion_score") if last_checkin else None,
-            "last_checkin_time": last_checkin.get("created_at") if last_checkin else None
-        }
-
-        today = datetime.now().date()
-        
-        # Get today's check-in
-        today_checkin = None
-        try:
-            response = db.supabase.table('analyzed_sessions') \
-                .select('id, analyzed_at, summary_text') \
-                .eq('user_id', db.get_or_create_user(user_id)['id']) \
-                .execute()
-            
-            if response.data:
-                for item in response.data:
-                    if item.get('summary_text') and 'Cảm xúc:' in item['summary_text']:
-                        analyzed_at = datetime.fromisoformat(item['analyzed_at'].replace('Z', '+00:00'))
-                        if analyzed_at.date() == today:
-                            today_checkin = item
-                            break
-        except Exception as e:
-            print(f"[Checkin Status] Error getting data: {e}")
-        
-        # Calculate streak
-        streak = await calculate_mood_streak(user_id, db)
-        
-        # Get last check-in
-        last_checkin = None
-        if response.data:
-            for item in response.data:
-                if item.get('summary_text') and 'Cảm xúc:' in item['summary_text']:
-                    last_checkin = item
-                    break
-        
-        last_score = None
-        if last_checkin and last_checkin.get('summary_text'):
-            try:
-                # Extract score from summary
-                import re
-                match = re.search(r'Cảm xúc: (\d+)/10', last_checkin['summary_text'])
-                if match:
-                    last_score = int(match.group(1))
-            except:
-                pass
-        
-        return {
-            "success": True,
-            "has_checked_in_today": today_checkin is not None,
-            "streak": streak,
-            "last_score": last_score,
-            "last_checkin_time": last_checkin['analyzed_at'] if last_checkin else None
-        }
         
     except HTTPException:
         raise
@@ -611,37 +515,6 @@ async def calculate_mood_streak(user_id: str, db) -> int:
         
         return streak
         
-    except Exception as e:
-        print(f"[Calculate Streak] Error: {e}")
-        return 0
-
-
-async def calculate_mood_streak(user_id: str, db) -> int:
-    """Calculate consecutive mood-checkin days from session_summaries."""
-    try:
-        mood_dates = set()
-        for item in _load_mood_checkins(db, user_id, days=45):
-            created_at = _parse_iso_datetime(item.get("created_at"))
-            if created_at:
-                mood_dates.add(created_at.astimezone(LOCAL_TZ).date())
-
-        if not mood_dates:
-            return 0
-
-        streak = 0
-        today = datetime.now(LOCAL_TZ).date()
-
-        if today in mood_dates:
-            streak += 1
-            check_date = today - timedelta(days=1)
-        else:
-            check_date = today
-
-        while check_date in mood_dates:
-            streak += 1
-            check_date -= timedelta(days=1)
-
-        return streak
     except Exception as e:
         print(f"[Calculate Streak] Error: {e}")
         return 0
@@ -708,8 +581,6 @@ async def save_daily_mood_checkin(checkin: DailyMoodCheckin, request: Request):
 async def generate_proactive_checkin_message(user_id: str) -> str:
     """Tạo message chủ động hỏi han user"""
     try:
-        from services import get_reminder_config
-        import google.generativeai as genai
         from database import DatabaseManager
         from datetime import datetime
         
@@ -722,91 +593,6 @@ async def generate_proactive_checkin_message(user_id: str) -> str:
         hour = datetime.now().hour
 
         if hour < 12:
-            time_greeting = "ChÃ o buá»•i sÃ¡ng"
-        elif hour < 14:
-            time_greeting = "ChÃ o trÆ°a"
-        elif hour < 18:
-            time_greeting = "ChÃ o buá»•i chiá»u"
-        else:
-            time_greeting = "ChÃ o buá»•i tá»‘i"
-
-        if last_score is None:
-            follow_up = "HÃ´m nay báº¡n tháº¿ nÃ o?"
-        elif last_score <= 3:
-            follow_up = "Mong lÃ  hÃ´m nay báº¡n cáº£m tháº¥y tá»‘t hÆ¡n ðŸ’™"
-        elif last_score <= 5:
-            follow_up = "Hy vá»ng má»i thá»© Ä‘ang dáº§n tá»‘t hÆ¡n ðŸŒ±"
-        elif last_score <= 7:
-            follow_up = "Ráº¥t vui khi báº¡n Ä‘ang cÃ³ ngÃ y tá»‘t!"
-        else:
-            follow_up = "Tuyá»‡t vá»i! Tiáº¿p tá»¥c giá»¯ nÄƒng lÆ°á»£ng nhÃ©! âœ¨"
-
-        if streak >= 7:
-            streak_msg = f" {streak} ngÃ y liÃªn tiáº¿p rá»“i! Tuyá»‡t vá»i! ðŸ”¥"
-        elif streak >= 3:
-            streak_msg = f" {streak} ngÃ y rá»“i! Tiáº¿p tá»¥c nhÃ©! ðŸ’ª"
-        else:
-            streak_msg = ""
-
-        return f"{time_greeting}! {follow_up}{streak_msg}"
-
-        mood_dates = set()
-        for item in _load_mood_checkins(db, user_id, days=45):
-            created_at = _parse_iso_datetime(item.get("created_at"))
-            if created_at:
-                mood_dates.add(created_at.astimezone(LOCAL_TZ).date())
-
-        if not mood_dates:
-            return 0
-
-        streak = 0
-        today = datetime.now(LOCAL_TZ).date()
-
-        if today in mood_dates:
-            streak += 1
-            check_date = today - timedelta(days=1)
-        else:
-            check_date = today
-
-        while check_date in mood_dates:
-            streak += 1
-            check_date -= timedelta(days=1)
-
-        return streak
-
-        user = db.get_or_create_user(user_id)
-        if not user:
-            return "Chào buổi sáng! Hôm nay bạn thế nào? ☀️"
-        
-        # Get last check-in
-        response = db.supabase.table('analyzed_sessions') \
-            .select('analyzed_at, summary_text') \
-            .eq('user_id', user['id']) \
-            .order('analyzed_at', desc=False) \
-            .limit(10) \
-            .execute()
-        
-        last_score = None
-        last_checkin_date = None
-        
-        if response.data:
-            for item in response.data:
-                if item.get('summary_text') and 'Cảm xúc:' in item['summary_text']:
-                    import re
-                    match = re.search(r'Cảm xúc: (\d+)/10', item['summary_text'])
-                    if match:
-                        last_score = int(match.group(1))
-                        last_checkin_date = datetime.fromisoformat(item['analyzed_at'].replace('Z', '+00:00'))
-                    break
-        
-        # Get streak
-        streak = await calculate_mood_streak(user_id, db)
-        
-        # Generate message based on time and context
-        hour = datetime.now().hour
-        
-        # Time-based greeting
-        if hour < 12:
             time_greeting = "Chào buổi sáng"
         elif hour < 14:
             time_greeting = "Chào trưa"
@@ -814,8 +600,7 @@ async def generate_proactive_checkin_message(user_id: str) -> str:
             time_greeting = "Chào buổi chiều"
         else:
             time_greeting = "Chào buổi tối"
-        
-        # Score-based follow-up
+
         if last_score is None:
             follow_up = "Hôm nay bạn thế nào?"
         elif last_score <= 3:
@@ -826,16 +611,16 @@ async def generate_proactive_checkin_message(user_id: str) -> str:
             follow_up = "Rất vui khi bạn đang có ngày tốt!"
         else:
             follow_up = "Tuyệt vời! Tiếp tục giữ năng lượng nhé! ✨"
-        
-        # Streak celebration
+
         if streak >= 7:
             streak_msg = f" {streak} ngày liên tiếp rồi! Tuyệt vời! 🔥"
         elif streak >= 3:
             streak_msg = f" {streak} ngày rồi! Tiếp tục nhé! 💪"
         else:
             streak_msg = ""
-        
+
         return f"{time_greeting}! {follow_up}{streak_msg}"
+
         
     except Exception as e:
         print(f"[Proactive Message] Error: {e}")
@@ -888,24 +673,19 @@ async def get_memories(user_id: str, request: Request, query: str = ""):
     """Get relevant memories for user"""
     try:
         await require_auth_for_user(request, user_id)
-        if query:
-            memories = db_manager.find_relevant_summaries(user_id, query)
-        else:
-            memories = db_manager.get_latest_session_summary(user_id)
+        memories = memory_service.search_memories(user_id, query) if memory_service else []
         return {"success": True, "memories": memories}
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Memories] Error: {e}")
+        return {"success": False, "error": str(e)}
 
-@router.post("/api/memory/save")
+@router.post("/api/memory/{user_id}")
 async def save_memory(user_id: str, summary: str, request: Request):
     """Save a session summary"""
     try:
         await require_auth_for_user(request, user_id)
         result = db_manager.add_session_summary(user_id, summary)
         return {"success": True, "result": result}
-    except HTTPException:
-        raise
     except Exception as e:
+        print(f"[Save Memory] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

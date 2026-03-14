@@ -94,13 +94,16 @@ async def get_my_therapist_profile(request: Request):
 @router.put("/me/therapist")
 async def update_my_therapist_profile(data: TherapistProfileUpdatePayload, request: Request):
     current_user = await _require_therapist_user(request)
-    profile = get_profile_service().update_my_therapist_profile(
-        current_user["resolved_user_id"],
-        data.model_dump(exclude_unset=True),
-        email=str(current_user.get("email") or ""),
-        name=str(current_user.get("name") or ""),
-        picture=str(current_user.get("picture") or ""),
-    )
+    try:
+        profile = get_profile_service().update_my_therapist_profile(
+            current_user["resolved_user_id"],
+            data.model_dump(exclude_unset=True),
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
+            picture=str(current_user.get("picture") or ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if not profile:
         raise HTTPException(status_code=400, detail="Failed to update therapist profile")
     return {"success": True, "profile": profile}

@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 import hashlib
+from therapist_verification_service import get_therapist_verification_service
 
 
 class TherapistSecurity:
@@ -40,6 +41,11 @@ class TherapistSecurity:
             raise HTTPException(
                 status_code=403, 
                 detail="Access denied. Therapist role required."
+            )
+        if not get_therapist_verification_service().can_access_portal(user_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. Therapist verification approval required."
             )
         
         return user_id
