@@ -80,59 +80,59 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
       <div className="glass-panel w-full max-w-2xl rounded-[32px] border border-white/10 p-6 md:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.35em] text-white/35">Liên hệ ngay</div>
-            <h2 className="mt-3 text-2xl font-bold text-white">
+            <div className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Liên hệ ngay</div>
+            <h2 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
               Gửi yêu cầu tới {therapist.display_name}
             </h2>
-            <p className="mt-2 text-sm leading-7 text-white/60">{contactHelp}</p>
+            <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/60">{contactHelp}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-2xl border border-white/10 bg-white/5 p-3 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <X size={18} />
           </button>
         </div>
 
         {!user && (
-          <div className="mt-6 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-100">
             Bạn cần đăng nhập trước khi gửi yêu cầu. Sau khi đăng nhập, hệ thống sẽ quay lại đúng hồ sơ này.
           </div>
         )}
 
         {error && (
-          <div className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">
             {success}
           </div>
         )}
 
         <div className="mt-6 grid gap-5">
           <label className="grid gap-2">
-            <span className="text-sm text-white/70">Lời nhắn ngắn</span>
+            <span className="text-sm text-slate-700 dark:text-white/70">Lời nhắn ngắn</span>
             <textarea
               value={form.message}
               onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))}
               rows={5}
               placeholder="Hãy mô tả ngắn gọn điều bạn đang cần hỗ trợ hoặc kỳ vọng ở buổi đầu."
-              className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-white focus:border-miru-primary/50 focus:outline-none"
+              className="rounded-[24px] border border-slate-200 bg-white p-4 text-slate-900 placeholder:text-slate-400 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
             />
           </label>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm text-white/70">Kênh liên hệ mong muốn</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">Kênh liên hệ mong muốn</span>
               <select
                 value={form.preferred_contact_method}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, preferred_contact_method: event.target.value }))
                 }
-                className="rounded-2xl border border-white/10 bg-miru-bg px-4 py-3 text-white focus:border-miru-primary/50 focus:outline-none"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-miru-bg dark:text-white"
               >
                 <option value="zalo">Zalo</option>
                 <option value="phone">Điện thoại</option>
@@ -143,7 +143,7 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm text-white/70">Nhu cầu dịch vụ</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">Nhu cầu dịch vụ</span>
               <select
                 value={form.service_interest}
                 onChange={(event) =>
@@ -152,7 +152,7 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
                     service_interest: event.target.value as TherapistContactRequestCreate['service_interest'],
                   }))
                 }
-                className="rounded-2xl border border-white/10 bg-miru-bg px-4 py-3 text-white focus:border-miru-primary/50 focus:outline-none"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-miru-bg dark:text-white"
               >
                 <option value="free">Ưu tiên miễn phí</option>
                 <option value="paid">Có thể làm việc có phí</option>
@@ -163,20 +163,20 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm text-white/70">Số điện thoại (tùy chọn)</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">Số điện thoại (tùy chọn)</span>
               <input
                 value={form.client_contact_phone}
                 onChange={(event) => setForm((current) => ({ ...current, client_contact_phone: event.target.value }))}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-miru-primary/50 focus:outline-none"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm text-white/70">Zalo (tùy chọn)</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">Zalo (tùy chọn)</span>
               <input
                 value={form.client_contact_zalo}
                 onChange={(event) => setForm((current) => ({ ...current, client_contact_zalo: event.target.value }))}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-miru-primary/50 focus:outline-none"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
             </label>
           </div>
@@ -185,7 +185,7 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button
             onClick={onClose}
-            className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/75 transition-colors hover:bg-white/10"
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10"
           >
             Để sau
           </button>

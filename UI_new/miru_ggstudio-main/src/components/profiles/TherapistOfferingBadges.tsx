@@ -13,24 +13,24 @@ export function TherapistOfferingBadges({ profile }: { profile: TherapistPublicP
   if (!profile.accepting_new_clients) {
     badges.push({
       label: 'Tạm ngừng nhận thân chủ',
-      className: 'border-amber-400/20 bg-amber-500/10 text-amber-100',
+      className: 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100',
     });
   } else if (profile.service_mode === 'free') {
     badges.push({
       label: 'Miễn phí',
-      className: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100',
+      className: 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100',
     });
   } else if (profile.service_mode === 'paid' && profile.starting_price_vnd) {
     badges.push({
       label: `Có phí từ ${formatVnd(profile.starting_price_vnd)}đ`,
-      className: 'border-sky-400/20 bg-sky-500/10 text-sky-100',
+      className: 'border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-100',
     });
   } else if (profile.service_mode === 'both') {
     badges.push({
       label: profile.starting_price_vnd
         ? `Miễn phí / Có phí từ ${formatVnd(profile.starting_price_vnd)}đ`
         : 'Miễn phí hoặc có phí',
-      className: 'border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-100',
+      className: 'border-fuchsia-300 bg-fuchsia-100 text-fuchsia-900 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-100',
     });
   }
 

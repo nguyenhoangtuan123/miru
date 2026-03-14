@@ -259,7 +259,7 @@ export function TherapistProfilePage() {
                   Public Therapist Profile
                 </div>
                 {profile?.is_verified && (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
                     <ShieldCheck size={14} />
                     Đã xác minh
                   </span>
@@ -274,13 +274,13 @@ export function TherapistProfilePage() {
         </div>
 
         {error && (
-          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
             {error}
           </div>
         )}
 
         {message && (
-          <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-100">
             {message}
           </div>
         )}
@@ -458,7 +458,7 @@ export function TherapistProfilePage() {
                   <button
                     onClick={() => setProfileField('is_public', !profileForm?.is_public)}
                     className={`inline-flex rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
-                      profileForm?.is_public ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-white/55'
+                      profileForm?.is_public ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200' : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/55'
                     }`}
                   >
                     {profileForm?.is_public ? 'Đang công khai' : 'Đang ẩn'}
@@ -516,7 +516,7 @@ export function TherapistProfilePage() {
                       {asset.id && (
                         <button
                           onClick={() => void handleDeleteMedia(asset.id)}
-                          className="rounded-xl border border-red-400/20 bg-red-500/10 p-2 text-red-200 transition-colors hover:bg-red-500/20"
+                          className="rounded-xl border border-red-200 bg-red-50 p-2 text-red-700 transition-colors hover:bg-red-100 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
                         >
                           <Trash2 size={16} />
                         </button>
