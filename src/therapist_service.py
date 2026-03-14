@@ -2,7 +2,7 @@ import json
 import os
 import random
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
@@ -10,8 +10,12 @@ from uuid import uuid4
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
+from utils import LOCAL_TZ
 
 load_dotenv()
+
+ASSIGNMENT_SUBMISSION_BUCKET = "assignment-submissions"
+ASSIGNMENT_SIGNED_URL_TTL = 60 * 60
 
 
 class TherapistService:
@@ -213,6 +217,23 @@ class TherapistService:
             if isinstance(row, dict) and row.get("id")
         }
 
+    def _safe_exact_count(
+        self,
+        table_name: str,
+        eq_filters: Optional[Dict[str, Any]] = None,
+        in_filters: Optional[Dict[str, List[Any]]] = None,
+    ) -> int:
+        try:
+            query = self.supabase.table(table_name).select("id", count="exact")
+            for key, value in (eq_filters or {}).items():
+                query = query.eq(key, value)
+            for key, values in (in_filters or {}).items():
+                query = query.in_(key, values)
+            response = query.execute()
+            return int(response.count or 0)
+        except Exception:
+            return 0
+
     def _attach_client_users(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         users_by_id = self._get_users_by_ids(
             [
@@ -255,6 +276,178 @@ class TherapistService:
             except Exception:
                 return []
         return response.data or []
+
+    def _parse_json_list(self, value: Any) -> List[Any]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                return []
+        return []
+
+    def _ensure_assignment_bucket(self) -> None:
+        try:
+            self.supabase.storage.create_bucket(ASSIGNMENT_SUBMISSION_BUCKET)
+        except Exception:
+            pass
+
+    def _normalize_submission_attachments(self, attachments: Any) -> List[Dict[str, Any]]:
+        normalized: List[Dict[str, Any]] = []
+        for item in self._parse_json_list(attachments):
+            if not isinstance(item, dict):
+                continue
+            path = item.get("path")
+            name = item.get("name")
+            if not isinstance(path, str) or not path.strip():
+                continue
+            if not isinstance(name, str) or not name.strip():
+                name = Path(path).name
+            row = {
+                "path": path.strip(),
+                "name": name.strip(),
+                "mime_type": item.get("mime_type") if isinstance(item.get("mime_type"), str) else None,
+                "size": item.get("size") if isinstance(item.get("size"), int) else None,
+                "uploaded_at": item.get("uploaded_at") if isinstance(item.get("uploaded_at"), str) else None,
+            }
+            try:
+                signed = self.supabase.storage.from_(ASSIGNMENT_SUBMISSION_BUCKET).create_signed_url(
+                    row["path"],
+                    ASSIGNMENT_SIGNED_URL_TTL,
+                )
+                if isinstance(signed, dict):
+                    row["url"] = signed.get("signedURL") or signed.get("signedUrl") or signed.get("signed_url")
+                else:
+                    row["url"] = getattr(signed, "get", lambda *_args, **_kwargs: None)("signedURL")
+            except Exception:
+                row["url"] = None
+            normalized.append(row)
+        return normalized
+
+    def _normalize_checklist_items(self, checklist_items: Any) -> List[Dict[str, str]]:
+        normalized: List[Dict[str, str]] = []
+        seen_ids: set[str] = set()
+
+        for index, item in enumerate(self._parse_json_list(checklist_items)):
+            label = ""
+            item_id = ""
+
+            if isinstance(item, str):
+                label = item.strip()
+            elif isinstance(item, dict):
+                raw_label = item.get("label")
+                raw_id = item.get("id")
+                if isinstance(raw_label, str):
+                    label = raw_label.strip()
+                if isinstance(raw_id, str):
+                    item_id = raw_id.strip()
+
+            if not label:
+                continue
+
+            if not item_id:
+                item_id = f"step-{index + 1}"
+
+            if item_id in seen_ids:
+                suffix = 2
+                candidate = f"{item_id}-{suffix}"
+                while candidate in seen_ids:
+                    suffix += 1
+                    candidate = f"{item_id}-{suffix}"
+                item_id = candidate
+
+            seen_ids.add(item_id)
+            normalized.append({"id": item_id, "label": label})
+
+        return normalized
+
+    def _normalize_checked_item_ids(self, checked_item_ids: Any, checklist_items: List[Dict[str, str]]) -> List[str]:
+        allowed_ids = {
+            item["id"]
+            for item in checklist_items
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        normalized: List[str] = []
+
+        for item_id in self._parse_json_list(checked_item_ids):
+            if not isinstance(item_id, str):
+                continue
+            cleaned = item_id.strip()
+            if not cleaned or cleaned not in allowed_ids or cleaned in normalized:
+                continue
+            normalized.append(cleaned)
+
+        return normalized
+
+    def _parse_due_date(self, value: Any) -> Optional[date]:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        try:
+            return date.fromisoformat(value.strip()[:10])
+        except Exception:
+            return None
+
+    def _hydrate_assignment(self, assignment: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not assignment or not isinstance(assignment, dict):
+            return None
+
+        row = dict(assignment)
+        checklist_items = self._normalize_checklist_items(row.get("checklist_items"))
+        checked_item_ids = self._normalize_checked_item_ids(row.get("checked_item_ids"), checklist_items)
+        total_steps = len(checklist_items)
+        status = str(row.get("status") or "pending")
+
+        if total_steps > 0:
+            completed_steps = total_steps if status == "completed" else len(checked_item_ids)
+            progress_percent = 100 if status == "completed" else int((completed_steps / total_steps) * 100)
+        else:
+            completed_steps = 0
+            progress_percent = 100 if status == "completed" else 0
+
+        due_date_value = self._parse_due_date(row.get("due_date"))
+        today_local = datetime.now(LOCAL_TZ).date()
+        is_overdue = bool(
+            due_date_value
+            and due_date_value < today_local
+            and status not in {"completed", "cancelled", "skipped"}
+        )
+
+        row["type"] = row.get("type") or "task"
+        row["priority"] = row.get("priority") or "medium"
+        row["checklist_items"] = checklist_items
+        row["checked_item_ids"] = checked_item_ids
+        row["completion_notes"] = row.get("completion_notes") or row.get("client_feedback")
+        row["submission_attachments"] = self._normalize_submission_attachments(row.get("submission_attachments"))
+        row["completed_steps"] = completed_steps
+        row["total_steps"] = total_steps
+        row["progress_percent"] = progress_percent
+        row["is_overdue"] = is_overdue
+        return row
+
+    def _hydrate_assignments(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        hydrated: List[Dict[str, Any]] = []
+        for row in rows:
+            normalized = self._hydrate_assignment(row)
+            if normalized:
+                hydrated.append(normalized)
+        return hydrated
+
+    def _update_assignment_row(self, assignment_id: int, payload_variants: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        for payload in payload_variants:
+            try:
+                response = (
+                    self.supabase.table("assignments")
+                    .update(payload)
+                    .eq("id", assignment_id)
+                    .execute()
+                )
+                if response.data:
+                    return response.data[0]
+            except Exception:
+                continue
+        return None
 
     def get_therapist(self, therapist_identifier: str) -> Optional[Dict[str, Any]]:
         candidates: List[Dict[str, Any]] = []
@@ -623,12 +816,44 @@ class TherapistService:
         client_id: str,
         title: str,
         description: str,
+        assignment_type: str = "task",
+        priority: str = "medium",
         due_date: str = None,
+        checklist_items: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, Any]]:
         therapist_id = self._resolve_therapist_id(therapist_identifier)
         if not therapist_id:
             return None
-        response = self.supabase.table("assignments").insert(
+
+        normalized_checklist = self._normalize_checklist_items(checklist_items or [])
+        created_at = self._now()
+        payload_variants = [
+            {
+                "therapist_id": therapist_id,
+                "client_id": client_id,
+                "title": title,
+                "description": description,
+                "type": assignment_type,
+                "priority": priority,
+                "due_date": due_date,
+                "checklist_items": normalized_checklist,
+                "checked_item_ids": [],
+                "status": "pending",
+                "created_at": created_at,
+                "updated_at": created_at,
+            },
+            {
+                "therapist_id": therapist_id,
+                "client_id": client_id,
+                "title": title,
+                "description": description,
+                "type": assignment_type,
+                "priority": priority,
+                "due_date": due_date,
+                "status": "pending",
+                "created_at": created_at,
+                "updated_at": created_at,
+            },
             {
                 "therapist_id": therapist_id,
                 "client_id": client_id,
@@ -636,11 +861,19 @@ class TherapistService:
                 "description": description,
                 "due_date": due_date,
                 "status": "pending",
-                "created_at": self._now(),
-                "updated_at": self._now(),
-            }
-        ).execute()
-        return response.data[0] if response.data else None
+                "created_at": created_at,
+                "updated_at": created_at,
+            },
+        ]
+
+        for payload in payload_variants:
+            try:
+                response = self.supabase.table("assignments").insert(payload).execute()
+                if response.data:
+                    return self._hydrate_assignment(response.data[0])
+            except Exception:
+                continue
+        return None
 
     def get_client_assignments(self, client_id: str, status: str = None) -> List[Dict[str, Any]]:
         query = self.supabase.table("assignments").select("*").eq("client_id", client_id)
@@ -650,14 +883,14 @@ class TherapistService:
             response = query.order("created_at", desc=True).execute()
         except Exception:
             response = query.execute()
-        return response.data or []
+        return self._hydrate_assignments(response.data or [])
 
     def get_therapist_assignments(self, therapist_identifier: str) -> List[Dict[str, Any]]:
         therapist_id = self._resolve_therapist_id(therapist_identifier)
         if not therapist_id:
             return []
         rows = self._select_rows("assignments", therapist_id)
-        return self._attach_client_users(rows)
+        return self._hydrate_assignments(self._attach_client_users(rows))
 
     def get_assignment(self, assignment_id: int) -> Optional[Dict[str, Any]]:
         response = (
@@ -667,23 +900,214 @@ class TherapistService:
             .limit(1)
             .execute()
         )
-        return response.data[0] if response.data else None
+        return self._hydrate_assignment(response.data[0]) if response.data else None
+
+    def update_assignment_progress(
+        self,
+        assignment_id: int,
+        checked_item_ids: Optional[List[str]] = None,
+        completion_notes: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        assignment = self.get_assignment(assignment_id)
+        if not assignment:
+            return None
+
+        checklist_items = assignment.get("checklist_items") or []
+        normalized_checked = self._normalize_checked_item_ids(
+            checked_item_ids if checked_item_ids is not None else assignment.get("checked_item_ids"),
+            checklist_items if isinstance(checklist_items, list) else [],
+        )
+
+        cleaned_notes = completion_notes if isinstance(completion_notes, str) else assignment.get("completion_notes")
+        has_progress = bool(normalized_checked or (isinstance(cleaned_notes, str) and cleaned_notes.strip()))
+        current_status = str(assignment.get("status") or "pending")
+        next_status = current_status
+
+        if current_status not in {"completed", "cancelled", "skipped"} and has_progress:
+            next_status = "in_progress"
+
+        now_value = self._now()
+        payload_variants = [
+            {
+                "checked_item_ids": normalized_checked,
+                "completion_notes": cleaned_notes,
+                "client_feedback": cleaned_notes,
+                "status": next_status,
+                "started_at": assignment.get("started_at") or (now_value if has_progress else None),
+                "last_progress_at": now_value,
+                "updated_at": now_value,
+            },
+            {
+                "client_feedback": cleaned_notes,
+                "status": next_status,
+                "updated_at": now_value,
+            },
+            {
+                "status": next_status,
+                "updated_at": now_value,
+            },
+        ]
+        updated = self._update_assignment_row(assignment_id, payload_variants)
+        return self._hydrate_assignment(updated) if updated else None
 
     def complete_assignment(self, assignment_id: int, completion_notes: str = None) -> Optional[Dict[str, Any]]:
-        response = (
-            self.supabase.table("assignments")
-            .update(
+        assignment = self.get_assignment(assignment_id)
+        if not assignment:
+            return None
+
+        checklist_items = assignment.get("checklist_items") or []
+        checklist_ids = [
+            item["id"]
+            for item in checklist_items
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        ]
+        cleaned_notes = completion_notes if isinstance(completion_notes, str) else assignment.get("completion_notes")
+        now_value = self._now()
+
+        payload_variants = [
+            {
+                "status": "completed",
+                "completed_at": now_value,
+                "completion_notes": cleaned_notes,
+                "client_feedback": cleaned_notes,
+                "checked_item_ids": checklist_ids,
+                "last_progress_at": now_value,
+                "updated_at": now_value,
+            },
+            {
+                "status": "completed",
+                "completed_at": now_value,
+                "client_feedback": cleaned_notes,
+                "updated_at": now_value,
+            },
+            {
+                "status": "completed",
+                "completed_at": now_value,
+                "updated_at": now_value,
+            },
+        ]
+        updated = self._update_assignment_row(assignment_id, payload_variants)
+        return self._hydrate_assignment(updated) if updated else None
+
+    def add_assignment_submission_attachments(
+        self,
+        assignment_id: int,
+        client_id: str,
+        files: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        assignment = self.get_assignment(assignment_id)
+        if not assignment or assignment.get("client_id") != client_id:
+            return None
+
+        if not files:
+            return assignment
+
+        self._ensure_assignment_bucket()
+        uploaded_entries: List[Dict[str, Any]] = []
+        timestamp_prefix = datetime.now(LOCAL_TZ).strftime("%Y%m%d%H%M%S")
+
+        for index, file_info in enumerate(files):
+            filename = file_info.get("filename")
+            content = file_info.get("content")
+            mime_type = file_info.get("mime_type")
+            size = file_info.get("size")
+            if not isinstance(filename, str) or not filename.strip() or not isinstance(content, bytes):
+                continue
+
+            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename).name)
+            object_path = f"{client_id}/assignment-{assignment_id}/{timestamp_prefix}-{index}-{safe_name}"
+            upload_options = {"content-type": mime_type} if isinstance(mime_type, str) and mime_type else None
+
+            self.supabase.storage.from_(ASSIGNMENT_SUBMISSION_BUCKET).upload(
+                object_path,
+                content,
+                file_options=upload_options,
+            )
+            uploaded_entries.append(
                 {
-                    "status": "completed",
-                    "completed_at": self._now(),
-                    "completion_notes": completion_notes,
-                    "updated_at": self._now(),
+                    "path": object_path,
+                    "name": Path(filename).name,
+                    "mime_type": mime_type if isinstance(mime_type, str) else None,
+                    "size": size if isinstance(size, int) else None,
+                    "uploaded_at": self._now(),
                 }
             )
-            .eq("id", assignment_id)
-            .execute()
-        )
-        return response.data[0] if response.data else None
+
+        if not uploaded_entries:
+            return assignment
+
+        existing_attachments = self._parse_json_list(assignment.get("submission_attachments"))
+        merged_attachments = existing_attachments + uploaded_entries
+        now_value = self._now()
+        payload_variants = [
+            {
+                "submission_attachments": merged_attachments,
+                "status": "in_progress" if assignment.get("status") == "pending" else assignment.get("status"),
+                "started_at": assignment.get("started_at") or now_value,
+                "last_progress_at": now_value,
+                "updated_at": now_value,
+            },
+        ]
+        updated = self._update_assignment_row(assignment_id, payload_variants)
+        if updated:
+            return self._hydrate_assignment(updated)
+
+        try:
+            self.supabase.storage.from_(ASSIGNMENT_SUBMISSION_BUCKET).remove(
+                [entry["path"] for entry in uploaded_entries if isinstance(entry.get("path"), str)]
+            )
+        except Exception:
+            pass
+        return None
+
+    def get_assignments_due_for_reminder(self, lookahead_hours: int = 24) -> List[Dict[str, Any]]:
+        try:
+            response = (
+                self.supabase.table("assignments")
+                .select("*")
+                .in_("status", ["pending", "in_progress"])
+                .execute()
+            )
+        except Exception:
+            return []
+
+        now_local = datetime.now(LOCAL_TZ)
+        reminder_window = timedelta(hours=max(lookahead_hours, 1))
+        due_assignments: List[Dict[str, Any]] = []
+
+        for assignment in self._hydrate_assignments(response.data or []):
+            if not isinstance(assignment, dict):
+                continue
+            if assignment.get("near_due_reminded_at"):
+                continue
+
+            client_id = assignment.get("client_id")
+            if not isinstance(client_id, str) or not client_id:
+                continue
+
+            due_date_value = self._parse_due_date(assignment.get("due_date"))
+            if not due_date_value:
+                continue
+
+            due_at = datetime.combine(due_date_value, time(hour=23, minute=59, second=59), LOCAL_TZ)
+            if now_local < due_at - reminder_window:
+                continue
+
+            due_assignments.append(assignment)
+
+        return due_assignments
+
+    def mark_assignment_near_due_reminded(self, assignment_id: int) -> bool:
+        payload_variants = [
+            {
+                "near_due_reminded_at": self._now(),
+                "updated_at": self._now(),
+            },
+            {
+                "updated_at": self._now(),
+            },
+        ]
+        return bool(self._update_assignment_row(assignment_id, payload_variants))
 
     # === Messaging ===
 
@@ -1030,15 +1454,18 @@ class TherapistService:
         return response.data[0] if response.data else None
 
     def get_client_summary(self, client_id: str) -> Dict[str, int]:
-        sessions = self.supabase.table("chat_sessions").select("id", count="exact").eq("user_id", client_id).execute()
-        completed = self.supabase.table("assignments").select("id", count="exact").eq("client_id", client_id).eq("status", "completed").execute()
-        pending = self.supabase.table("assignments").select("id", count="exact").eq("client_id", client_id).eq("status", "pending").execute()
-        crises = self.supabase.table("crisis_events").select("id", count="exact").eq("client_id", client_id).execute()
         return {
-            "total_sessions": sessions.count if sessions.count else 0,
-            "completed_assignments": completed.count if completed.count else 0,
-            "pending_assignments": pending.count if pending.count else 0,
-            "crisis_events": crises.count if crises.count else 0,
+            "total_sessions": self._safe_exact_count("chat_sessions", eq_filters={"user_id": client_id}),
+            "completed_assignments": self._safe_exact_count(
+                "assignments",
+                eq_filters={"client_id": client_id, "status": "completed"},
+            ),
+            "pending_assignments": self._safe_exact_count(
+                "assignments",
+                eq_filters={"client_id": client_id},
+                in_filters={"status": ["pending", "in_progress"]},
+            ),
+            "crisis_events": self._safe_exact_count("crisis_events", eq_filters={"client_id": client_id}),
         }
 
 

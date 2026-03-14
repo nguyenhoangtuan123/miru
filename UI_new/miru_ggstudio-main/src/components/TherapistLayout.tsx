@@ -1,38 +1,95 @@
-import { Users, Calendar, MessageCircle, LayoutDashboard, Settings } from 'lucide-react';
+import {
+  Calendar,
+  LayoutDashboard,
+  MessageCircle,
+  Settings,
+  Sparkles,
+  Users,
+} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
+import { prefetchTherapistRouteData } from '../queries/appQueries';
 
 export function TherapistLayout() {
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Tổng quan', path: '/therapist' },
-    { icon: Users, label: 'Thân chủ', path: '/therapist/clients' },
-    { icon: Calendar, label: 'Lịch hẹn', path: '/therapist/appointments' },
-    { icon: MessageCircle, label: 'Tin nhắn', path: '/therapist/messages' },
-    { icon: Settings, label: 'Cài đặt', path: '/therapist/settings' },
+    { icon: LayoutDashboard, label: 'Tong quan', path: '/therapist' },
+    { icon: Users, label: 'Than chu', path: '/therapist/clients' },
+    { icon: Sparkles, label: 'Ho so', path: '/therapist/profile' },
+    { icon: Calendar, label: 'Lich hen', path: '/therapist/appointments' },
+    { icon: MessageCircle, label: 'Tin nhan', path: '/therapist/messages' },
+    { icon: Settings, label: 'Cai dat', path: '/therapist/settings' },
   ];
 
+  function handlePrefetch(path: string) {
+    void prefetchTherapistRouteData(queryClient, path, user?.id);
+  }
+
   return (
-    <div className="min-h-screen bg-miru-bg text-white font-sans md:pl-24">
-      {/* Mobile Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
-        <div className="glass-panel mx-4 mb-4 px-6 py-3 flex justify-between items-center rounded-full shadow-lg">
+    <div className="min-h-screen bg-miru-bg font-sans text-white md:pl-24">
+      <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden">
+        <div className="glass-panel mx-4 mb-4 flex items-center justify-between rounded-full px-4 py-3 shadow-lg">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path || 
-                            (item.path !== '/therapist' && location.pathname.startsWith(item.path));
-            
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/therapist' && location.pathname.startsWith(item.path));
+
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => handlePrefetch(item.path)}
+                onFocus={() => handlePrefetch(item.path)}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300",
-                  isActive ? "text-miru-primary" : "text-white/50 hover:text-white/80"
+                  'flex min-w-0 flex-col items-center gap-1 rounded-xl p-2 text-center transition-all duration-300',
+                  isActive ? 'text-miru-primary' : 'text-white/50 hover:text-white/80'
                 )}
               >
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[9px] font-medium">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="glass-panel fixed bottom-0 left-0 top-0 z-50 hidden w-24 flex-col items-center border-r border-white/10 py-8 md:flex">
+        <div className="mb-12 flex h-12 w-12 items-center justify-center rounded-2xl bg-miru-primary/20 shadow-[0_0_20px_rgba(127,13,242,0.3)]">
+          <span className="text-xl font-bold text-miru-primary">M</span>
+        </div>
+
+        <div className="flex w-full flex-col gap-5 px-4">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/therapist' && location.pathname.startsWith(item.path));
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onMouseEnter={() => handlePrefetch(item.path)}
+                onFocus={() => handlePrefetch(item.path)}
+                className={cn(
+                  'group flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition-all duration-300',
+                  isActive
+                    ? 'bg-miru-primary/20 text-miru-primary'
+                    : 'text-white/50 hover:bg-white/5 hover:text-white/80'
+                )}
+                title={item.label}
+              >
+                <Icon
+                  size={24}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className="transition-transform group-hover:scale-110"
+                />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </NavLink>
             );
@@ -40,37 +97,6 @@ export function TherapistLayout() {
         </div>
       </div>
 
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 flex-col items-center py-8 z-50 glass-panel border-r border-white/10">
-        <div className="w-12 h-12 bg-miru-primary/20 rounded-2xl flex items-center justify-center mb-12 shadow-[0_0_20px_rgba(127,13,242,0.3)]">
-          <span className="text-miru-primary font-bold text-xl">M</span>
-        </div>
-        
-        <div className="flex flex-col gap-6 w-full px-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path || 
-                            (item.path !== '/therapist' && location.pathname.startsWith(item.path));
-            
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 group",
-                  isActive ? "bg-miru-primary/20 text-miru-primary" : "text-white/50 hover:text-white/80 hover:bg-white/5"
-                )}
-                title={item.label}
-              >
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-medium text-center">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content */}
       <main className="pb-24 md:pb-0">
         <Outlet />
       </main>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -10,13 +11,15 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import {
   acknowledgeTherapistCrisis,
-  getTherapistClients,
-  getTherapistConversations,
-  getTherapistCrises,
-  getTherapistMessages,
   markTherapistMessagesRead,
   sendTherapistMessage,
 } from '../../services/backend';
+import {
+  therapistClientsQueryOptions,
+  therapistConversationsQueryOptions,
+  therapistCrisesQueryOptions,
+  therapistMessagesQueryOptions,
+} from '../../queries/appQueries';
 
 type TherapistClientRow = Record<string, unknown>;
 type TherapistConversationRow = Record<string, unknown>;
@@ -100,135 +103,75 @@ function getCrisisSeverity(crisis: TherapistCrisisRow) {
 
 export function TherapistMessages() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [clients, setClients] = useState<TherapistClientRow[]>([]);
-  const [conversations, setConversations] = useState<TherapistConversationRow[]>([]);
-  const [crises, setCrises] = useState<TherapistCrisisRow[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<TherapistMessageRow[]>([]);
   const [draft, setDraft] = useState('');
-  const [isLoadingList, setIsLoadingList] = useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const therapistId = user?.id ?? '';
+  const clientsQuery = useQuery({
+    ...therapistClientsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const conversationsQuery = useQuery({
+    ...therapistConversationsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const crisesQuery = useQuery({
+    ...therapistCrisesQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const messagesQuery = useQuery({
+    ...therapistMessagesQueryOptions(therapistId, activeClientId ?? ''),
+    enabled: Boolean(user?.id && activeClientId),
+  });
+  const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
+  const conversations = (conversationsQuery.data?.conversations ?? []) as TherapistConversationRow[];
+  const crises = (crisesQuery.data?.crises ?? []) as TherapistCrisisRow[];
+  const messages = (messagesQuery.data?.messages ?? []) as TherapistMessageRow[];
+  const isLoadingList =
+    clientsQuery.isLoading || conversationsQuery.isLoading || crisesQuery.isLoading;
+  const isLoadingMessages = messagesQuery.isLoading;
 
   useEffect(() => {
-    if (!user?.id) {
+    const clientFromUrl = searchParams.get('client');
+    setActiveClientId((current) => {
+      if (clientFromUrl) {
+        return clientFromUrl;
+      }
+      if (current) {
+        return current;
+      }
+      return (
+        getConversationClientId(conversations[0] ?? {}) ||
+        getClientId(clients[0] ?? {}) ||
+        null
+      );
+    });
+  }, [clients, conversations, searchParams]);
+
+  useEffect(() => {
+    if (!user?.id || !activeClientId || !messagesQuery.data?.messages) {
       return;
     }
 
-    let cancelled = false;
-
-    const loadInbox = async () => {
-      try {
-        setIsLoadingList(true);
-        setError(null);
-
-        const [clientsResult, conversationsResult, crisesResult] = await Promise.allSettled([
-          getTherapistClients(user.id),
-          getTherapistConversations(user.id),
-          getTherapistCrises(user.id),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        const nextClients =
-          clientsResult.status === 'fulfilled' ? clientsResult.value.clients : [];
-        const nextConversations =
-          conversationsResult.status === 'fulfilled'
-            ? conversationsResult.value.conversations
-            : [];
-        const nextCrises =
-          crisesResult.status === 'fulfilled' ? crisesResult.value.crises : [];
-
-        setClients(nextClients);
-        setConversations(nextConversations);
-        setCrises(nextCrises);
-
-        const clientFromUrl = searchParams.get('client');
-        const fallbackClientId =
-          clientFromUrl ||
-          getConversationClientId(nextConversations[0] ?? {}) ||
-          getClientId(nextClients[0] ?? {});
-        setActiveClientId(fallbackClientId || null);
-
-        const firstFailure =
-          clientsResult.status === 'rejected'
-            ? clientsResult.reason
-            : conversationsResult.status === 'rejected'
-              ? conversationsResult.reason
-              : crisesResult.status === 'rejected'
-                ? crisesResult.reason
-                : null;
-
-        if (firstFailure instanceof Error) {
-          setError(firstFailure.message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingList(false);
-        }
-      }
-    };
-
-    void loadInbox();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, user?.id]);
-
-  useEffect(() => {
-    if (!user?.id || !activeClientId) {
-      setMessages([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadMessages = async () => {
-      try {
-        setIsLoadingMessages(true);
-        const response = await getTherapistMessages(user.id, activeClientId);
-        if (cancelled) {
-          return;
-        }
-        setMessages(response.messages);
-        await markTherapistMessagesRead(user.id, activeClientId);
-        if (!cancelled) {
-          setConversations((prev) =>
-            prev.map((conversation) =>
-              getConversationClientId(conversation) === activeClientId
-                ? { ...conversation, unread_count: 0 }
-                : conversation
-            )
-          );
-        }
-      } catch (messageError) {
-        if (!cancelled) {
-          setError(
-            messageError instanceof Error
-              ? messageError.message
-              : 'Khong tai duoc tin nhan'
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingMessages(false);
-        }
-      }
-    };
-
-    void loadMessages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeClientId, user?.id]);
+    void markTherapistMessagesRead(user.id, activeClientId);
+    queryClient.setQueryData(
+      therapistConversationsQueryOptions(user.id).queryKey,
+      (current: { success?: boolean; conversations?: TherapistConversationRow[] } | undefined) => ({
+        success: current?.success ?? true,
+        conversations:
+          current?.conversations?.map((conversation) =>
+            getConversationClientId(conversation) === activeClientId
+              ? { ...conversation, unread_count: 0 }
+              : conversation
+          ) ?? [],
+      })
+    );
+  }, [activeClientId, messagesQuery.data?.messages, queryClient, user?.id]);
 
   const conversationMap = useMemo(() => {
     const map = new Map<string, TherapistConversationRow>();
@@ -273,15 +216,29 @@ export function TherapistMessages() {
     try {
       setIsSending(true);
       setDraft('');
-      setMessages((prev) => [...prev, optimisticMessage]);
+      queryClient.setQueryData(
+        therapistMessagesQueryOptions(user.id, activeClientId).queryKey,
+        (current: { success?: boolean; messages?: TherapistMessageRow[] } | undefined) => ({
+          success: true,
+          messages: [...(current?.messages ?? []), optimisticMessage],
+        })
+      );
 
       const response = await sendTherapistMessage(user.id, activeClientId, content);
       if (response.message) {
-        setMessages((prev) => [
-          ...prev.filter((message) => message.id !== optimisticMessage.id),
-          response.message,
-        ]);
-        setConversations((prev) => {
+        queryClient.setQueryData(
+          therapistMessagesQueryOptions(user.id, activeClientId).queryKey,
+          (current: { success?: boolean; messages?: TherapistMessageRow[] } | undefined) => ({
+            success: true,
+            messages: [
+              ...(current?.messages ?? []).filter((message) => message.id !== optimisticMessage.id),
+              response.message,
+            ],
+          })
+        );
+        queryClient.setQueryData(
+          therapistConversationsQueryOptions(user.id).queryKey,
+          (current: { success?: boolean; conversations?: TherapistConversationRow[] } | undefined) => {
           const nextConversation = {
             client_id: activeClientId,
             last_message: content,
@@ -290,15 +247,20 @@ export function TherapistMessages() {
             unread_count: 0,
             client: activeClient ?? undefined,
           };
-          const rest = prev.filter(
+          const rest = (current?.conversations ?? []).filter(
             (conversation) => getConversationClientId(conversation) !== activeClientId
           );
-          return [nextConversation, ...rest];
-        });
+            return { success: true, conversations: [nextConversation, ...rest] };
+          }
+        );
       }
     } catch (sendError) {
-      setMessages((prev) =>
-        prev.filter((message) => message.id !== optimisticMessage.id)
+      queryClient.setQueryData(
+        therapistMessagesQueryOptions(user.id, activeClientId).queryKey,
+        (current: { success?: boolean; messages?: TherapistMessageRow[] } | undefined) => ({
+          success: current?.success ?? true,
+          messages: (current?.messages ?? []).filter((message) => message.id !== optimisticMessage.id),
+        })
       );
       setDraft(content);
       setError(sendError instanceof Error ? sendError.message : 'Khong gui duoc tin nhan');
@@ -311,7 +273,13 @@ export function TherapistMessages() {
     try {
       setAcknowledgingId(crisisId);
       await acknowledgeTherapistCrisis(crisisId);
-      setCrises((prev) => prev.filter((crisis) => Number(crisis.id) !== crisisId));
+      queryClient.setQueryData(
+        therapistCrisesQueryOptions(user.id ?? '').queryKey,
+        (current: { success?: boolean; crises?: TherapistCrisisRow[] } | undefined) => ({
+          success: current?.success ?? true,
+          crises: (current?.crises ?? []).filter((crisis) => Number(crisis.id) !== crisisId),
+        })
+      );
     } catch (acknowledgeError) {
       setError(
         acknowledgeError instanceof Error
@@ -340,9 +308,18 @@ export function TherapistMessages() {
         )}
       </header>
 
-      {error && (
+      {(error || clientsQuery.error || conversationsQuery.error || crisesQuery.error || messagesQuery.error) && (
         <div className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          {error}
+          {error ??
+            (clientsQuery.error instanceof Error
+              ? clientsQuery.error.message
+              : conversationsQuery.error instanceof Error
+                ? conversationsQuery.error.message
+                : crisesQuery.error instanceof Error
+                  ? crisesQuery.error.message
+                  : messagesQuery.error instanceof Error
+                    ? messagesQuery.error.message
+                    : 'Không tải được hộp thư therapist')}
         </div>
       )}
 

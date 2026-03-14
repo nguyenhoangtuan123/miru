@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 # Import Routers
 from auth_routes import router as auth_router
+from profile_routes import router as profile_router
 from therapist_routes import router as therapist_router
 from memory_routes import router as memory_router
 from proactive_routes import router as proactive_router
@@ -27,6 +28,7 @@ from routers.goals import router as goals_router
 from routers.chat import router as chat_router
 from routers.insights import router as insights_router
 from proactive_push_service import proactive_push_scheduler
+from assignment_reminder_service import assignment_reminder_scheduler
 from consent_routes import router as consent_router
 
 # Load env
@@ -213,12 +215,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # Register authentication routes
 app.include_router(auth_router)
+app.include_router(profile_router)
 app.include_router(therapist_router)
 app.include_router(memory_router)
 app.include_router(proactive_router)
@@ -238,11 +241,13 @@ app.mount("/picture_avatar", StaticFiles(directory="picture_avatar"), name="pict
 @app.on_event("startup")
 async def startup_background_services():
     await proactive_push_scheduler.start()
+    await assignment_reminder_scheduler.start()
 
 
 @app.on_event("shutdown")
 async def shutdown_background_services():
     await proactive_push_scheduler.stop()
+    await assignment_reminder_scheduler.stop()
 
 # ==================== API Endpoints ====================
 

@@ -4,6 +4,26 @@ export function registerMiruServiceWorker() {
   }
 
   window.addEventListener('load', () => {
+    if (import.meta.env.DEV) {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => {
+          void registration.unregister();
+        });
+      });
+
+      if ('caches' in window) {
+        void caches.keys().then((keys) => {
+          keys.forEach((key) => {
+            if (key.startsWith('miru-shell')) {
+              void caches.delete(key);
+            }
+          });
+        });
+      }
+
+      return;
+    }
+
     void navigator.serviceWorker.register('/sw.js');
   });
 }

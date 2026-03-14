@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from pydantic import BaseModel, Field
 
 from auth_middleware import get_current_user
 from push_service import get_push_service
@@ -10,15 +10,53 @@ from therapist_service import get_therapist_service
 
 router = APIRouter(prefix="/api/therapist", tags=["Therapist"])
 
+ALLOWED_ASSIGNMENT_UPLOAD_MIME_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/x-m4a",
+    "video/mp4",
+    "image/jpeg",
+    "image/png",
+}
+ALLOWED_ASSIGNMENT_UPLOAD_EXTENSIONS = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".mp3",
+    ".m4a",
+    ".mp4",
+    ".jpg",
+    ".jpeg",
+    ".png",
+}
+MAX_ASSIGNMENT_UPLOAD_BYTES = 40 * 1024 * 1024
+
+
+class ChecklistItemPayload(BaseModel):
+    id: Optional[str] = None
+    label: str
+
 
 class AssignmentCreate(BaseModel):
     client_id: str
     title: str
     description: str
+    type: str = "task"
+    priority: str = "medium"
     due_date: Optional[str] = None
+    checklist_items: List[ChecklistItemPayload] = Field(default_factory=list)
 
 
 class AssignmentComplete(BaseModel):
+    completion_notes: Optional[str] = None
+
+
+class AssignmentProgressUpdate(BaseModel):
+    checked_item_ids: List[str] = Field(default_factory=list)
     completion_notes: Optional[str] = None
 
 
@@ -101,6 +139,19 @@ def _send_push_best_effort(user_id: Optional[str], title: str, body: str, url: s
         pass
 
 
+def _validate_assignment_upload(file: UploadFile, size: int):
+    filename = (file.filename or "").strip()
+    extension = f".{filename.rsplit('.', 1)[-1].lower()}" if "." in filename else ""
+    mime_type = (file.content_type or "").strip().lower()
+
+    if size <= 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if size > MAX_ASSIGNMENT_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="Uploaded file exceeds the 40 MB limit")
+    if extension not in ALLOWED_ASSIGNMENT_UPLOAD_EXTENSIONS and mime_type not in ALLOWED_ASSIGNMENT_UPLOAD_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+
 @router.get("/me/{therapist_id}")
 async def get_therapist_info(therapist_id: str, request: Request):
     service, _ = await _require_therapist_access(request, therapist_id)
@@ -157,9 +208,21 @@ async def create_pairing_code(therapist_id: str, request: Request):
 
 @router.get("/clients/{therapist_id}/{client_id}/summary")
 async def get_client_summary(therapist_id: str, client_id: str, request: Request):
+    service, resolved_therapist_id = await _require_therapist_access(request, therapist_id)
+    _ensure_relationship(service, resolved_therapist_id, client_id)
+    return {"success": True, "summary": service.get_client_summary(client_id)}
+
+
+@router.get("/clients/{therapist_id}/{client_id}/assignments")
+async def get_client_assignments_for_therapist(
+    therapist_id: str,
+    client_id: str,
+    request: Request,
+    status: Optional[str] = None,
+):
     service, _ = await _require_therapist_access(request, therapist_id)
     _ensure_relationship(service, therapist_id, client_id)
-    return {"success": True, "summary": service.get_client_summary(client_id)}
+    return {"success": True, "assignments": service.get_client_assignments(client_id, status)}
 
 
 @router.get("/clients/{therapist_id}/{client_id}/messages")
@@ -178,7 +241,7 @@ async def send_therapist_message(therapist_id: str, client_id: str, data: Therap
         raise HTTPException(status_code=400, detail="Failed to send message")
     _send_push_best_effort(
         client_id,
-        "Nha tri lieu vua nhan tin",
+        "Nhà trị liệu vừa nhắn tin",
         data.message_content[:140],
         "/therapy",
         "therapist-message",
@@ -252,12 +315,21 @@ async def get_all_assignments(therapist_id: str, request: Request):
 async def create_assignment(therapist_id: str, data: AssignmentCreate, request: Request):
     service, _ = await _require_therapist_access(request, therapist_id)
     _ensure_relationship(service, therapist_id, data.client_id)
-    assignment = service.create_assignment(therapist_id, data.client_id, data.title, data.description, data.due_date)
+    assignment = service.create_assignment(
+        therapist_id,
+        data.client_id,
+        data.title,
+        data.description,
+        assignment_type=data.type,
+        priority=data.priority,
+        due_date=data.due_date,
+        checklist_items=[item.model_dump() for item in data.checklist_items],
+    )
     if not assignment:
         raise HTTPException(status_code=400, detail="Failed to create assignment")
     _send_push_best_effort(
         data.client_id,
-        "Ban co bai tap moi",
+        "Bạn có bài tập mới",
         data.title[:140],
         "/therapy",
         "assignment-created",
@@ -270,6 +342,70 @@ async def get_client_assignments(client_id: str, request: Request, status: Optio
     await _require_client_access(request, client_id)
     service = get_therapist_service()
     return {"success": True, "assignments": service.get_client_assignments(client_id, status)}
+
+
+@router.patch("/assignments/{assignment_id}/progress")
+async def update_assignment_progress(assignment_id: int, data: AssignmentProgressUpdate, request: Request):
+    service = get_therapist_service()
+    current_user_id = await _require_user_id(request)
+    assignment = service.get_assignment(assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    therapist_id = assignment.get("therapist_id")
+    client_id = assignment.get("client_id")
+    current_therapist_id = service._resolve_therapist_id(current_user_id)
+    allowed = current_user_id == client_id or (
+        isinstance(therapist_id, str) and current_therapist_id == therapist_id
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    updated = service.update_assignment_progress(
+        assignment_id,
+        checked_item_ids=data.checked_item_ids,
+        completion_notes=data.completion_notes,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    return {"success": True, "assignment": updated}
+
+
+@router.post("/assignments/{assignment_id}/attachments")
+async def upload_assignment_attachments(
+    assignment_id: int,
+    request: Request,
+    files: List[UploadFile] = File(...),
+):
+    service = get_therapist_service()
+    current_user_id = await _require_user_id(request)
+    assignment = service.get_assignment(assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment.get("client_id") != current_user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    prepared_files: List[Dict[str, Any]] = []
+    for file in files:
+        content = await file.read()
+        _validate_assignment_upload(file, len(content))
+        prepared_files.append(
+            {
+                "filename": file.filename or "upload.bin",
+                "mime_type": file.content_type,
+                "size": len(content),
+                "content": content,
+            }
+        )
+
+    updated = service.add_assignment_submission_attachments(
+        assignment_id,
+        current_user_id,
+        prepared_files,
+    )
+    if not updated:
+        raise HTTPException(status_code=400, detail="Failed to upload assignment attachments")
+    return {"success": True, "assignment": updated}
 
 
 @router.post("/assignments/{assignment_id}/complete")
@@ -287,6 +423,10 @@ async def complete_assignment(assignment_id: int, data: AssignmentComplete, requ
     )
     if not allowed:
         raise HTTPException(status_code=403, detail="Access denied")
+    total_steps = int(assignment.get("total_steps") or 0)
+    completed_steps = int(assignment.get("completed_steps") or 0)
+    if total_steps > 0 and completed_steps < total_steps:
+        raise HTTPException(status_code=400, detail="Please complete all checklist items first")
     assignment = service.complete_assignment(assignment_id, data.completion_notes)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")

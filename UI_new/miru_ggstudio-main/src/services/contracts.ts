@@ -311,10 +311,53 @@ export const TherapistClientsResponseSchema = z
   })
   .passthrough();
 
+export const TherapistAssignmentChecklistItemSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+  })
+  .passthrough();
+
+export const TherapistAssignmentAttachmentSchema = z
+  .object({
+    path: z.string(),
+    name: z.string(),
+    mime_type: z.string().nullable().optional(),
+    size: z.number().nullable().optional(),
+    uploaded_at: z.string().nullable().optional(),
+    url: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const TherapistAssignmentSchema = z
+  .object({
+    id: IdSchema.optional(),
+    therapist_id: z.string().nullable().optional(),
+    client_id: z.string().nullable().optional(),
+    title: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    type: z.string().nullable().optional(),
+    priority: z.string().nullable().optional(),
+    due_date: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    checklist_items: z.array(TherapistAssignmentChecklistItemSchema).default([]),
+    checked_item_ids: z.array(z.string()).default([]),
+    submission_attachments: z.array(TherapistAssignmentAttachmentSchema).default([]),
+    completion_notes: z.string().nullable().optional(),
+    completed_steps: z.number().default(0),
+    total_steps: z.number().default(0),
+    progress_percent: z.number().default(0),
+    is_overdue: z.boolean().default(false),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+    completed_at: z.string().nullable().optional(),
+  })
+  .passthrough();
+
 export const TherapistAssignmentsResponseSchema = z
   .object({
     success: z.boolean(),
-    assignments: z.array(z.record(z.unknown())).default([]),
+    assignments: z.array(TherapistAssignmentSchema).default([]),
     error: z.string().optional(),
   })
   .passthrough();
@@ -322,7 +365,7 @@ export const TherapistAssignmentsResponseSchema = z
 export const TherapistAssignmentMutationResponseSchema = z
   .object({
     success: z.boolean(),
-    assignment: z.record(z.unknown()).optional(),
+    assignment: TherapistAssignmentSchema.optional(),
     error: z.string().optional(),
   })
   .passthrough();
@@ -489,4 +532,7 @@ export type Goal = z.infer<typeof GoalSchema>;
 export type TimelineItem = z.infer<typeof TimelineItemSchema>;
 export type MomentItem = z.infer<typeof MomentItemSchema>;
 export type ConsentStatus = z.infer<typeof ConsentStatusSchema>;
+export type TherapistAssignment = z.infer<typeof TherapistAssignmentSchema>;
+export type TherapistAssignmentChecklistItem = z.infer<typeof TherapistAssignmentChecklistItemSchema>;
+export type TherapistAssignmentAttachment = z.infer<typeof TherapistAssignmentAttachmentSchema>;
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

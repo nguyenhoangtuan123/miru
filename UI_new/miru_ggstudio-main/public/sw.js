@@ -27,6 +27,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isDevAsset =
+    isSameOrigin &&
+    (requestUrl.pathname.startsWith('/src/') ||
+      requestUrl.pathname.startsWith('/node_modules/') ||
+      requestUrl.pathname.startsWith('/@vite/') ||
+      requestUrl.searchParams.has('t'));
+
+  if (isDevAsset) {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)

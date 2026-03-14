@@ -1,10 +1,15 @@
 import { Home, MessageCircle, BrainCircuit, Settings, Stethoscope } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { prefetchClientRouteData } from '../queries/appQueries';
 
 export function BottomNav() {
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -39,6 +44,10 @@ export function BottomNav() {
     { icon: Settings, label: 'Cài đặt', path: '/settings' },
   ];
 
+  function handlePrefetch(path: string) {
+    void prefetchClientRouteData(queryClient, path, user?.id);
+  }
+
   return (
     <>
       {/* Mobile Bottom Nav */}
@@ -58,6 +67,8 @@ export function BottomNav() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => handlePrefetch(item.path)}
+                onFocus={() => handlePrefetch(item.path)}
                 className={cn(
                   "flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300",
                   isActive ? "text-miru-primary" : "text-white/50 hover:text-white/80"
@@ -83,6 +94,8 @@ export function BottomNav() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => handlePrefetch(item.path)}
+                onFocus={() => handlePrefetch(item.path)}
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 group",
                   isActive ? "bg-miru-primary/20 text-miru-primary" : "text-white/50 hover:text-white/80 hover:bg-white/5"

@@ -1,18 +1,24 @@
-import { useEffect, useState } from 'react';
-import { LoaderCircle, MoreVertical, Search, User } from 'lucide-react';
+import { useState } from 'react';
+import { LoaderCircle, MessageCircle, Search, User } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { repairMojibake } from '../../lib/text';
 import { useAuth } from '../../contexts/AuthContext';
-import { getTherapistClients } from '../../services/backend';
+import { therapistClientsQueryOptions } from '../../queries/appQueries';
 
 type TherapistClientRow = Record<string, unknown>;
+
+function vi(text: string) {
+  return repairMojibake(text);
+}
 
 function getClientName(client: TherapistClientRow) {
   const nested = client.users;
   if (nested && typeof nested === 'object') {
     const user = nested as Record<string, unknown>;
     if (typeof user.name === 'string' && user.name.trim()) {
-      return user.name;
+      return vi(user.name);
     }
   }
 
@@ -51,52 +57,20 @@ export function TherapistClients() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [clients, setClients] = useState<TherapistClientRow[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadClients = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await getTherapistClients(user.id);
-
-        if (!cancelled) {
-          setClients(response.clients);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error ? loadError.message : 'Không tải được danh sách thân chủ'
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadClients();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  const clientsQuery = useQuery({
+    ...therapistClientsQueryOptions(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
+  const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
+  const isLoading = clientsQuery.isLoading;
+  const error =
+    clientsQuery.error instanceof Error ? clientsQuery.error.message : null;
 
   const filteredClients = clients.filter((client) => {
     const name = getClientName(client).toLowerCase();
     const email = getClientEmail(client).toLowerCase();
-    const status =
-      typeof client.status === 'string' ? client.status.toLowerCase() : 'active';
+    const status = typeof client.status === 'string' ? client.status.toLowerCase() : 'active';
 
     const matchesSearch =
       !searchQuery.trim() ||
@@ -109,16 +83,16 @@ export function TherapistClients() {
   });
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+    <div className="mx-auto max-w-7xl p-6 md:p-10">
+      <header className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Quản lý Thân chủ</h1>
+          <h1 className="mb-2 text-3xl font-bold">Quản lý thân chủ</h1>
           <p className="text-white/60">
-            Danh sách này đang đọc trực tiếp từ `/api/therapist/clients/{'{therapist_id}'}`.
+            Chạm vào từng thân chủ để xem tiến độ, giao bài tập, nhắn tin và theo dõi hỗ trợ.
           </p>
         </div>
         {isLoading && (
-          <div className="text-sm text-white/40 flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-white/40">
             <LoaderCircle size={16} className="animate-spin" />
             Đang tải
           </div>
@@ -132,7 +106,7 @@ export function TherapistClients() {
       )}
 
       <div className="glass-panel p-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
             <input
@@ -140,28 +114,28 @@ export function TherapistClients() {
               placeholder="Tìm kiếm theo tên hoặc email..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-white/40 focus:outline-none focus:border-miru-primary/50 transition-colors"
+              className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder:text-white/40 transition-colors focus:border-miru-primary/50 focus:outline-none"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-miru-primary/50 transition-colors appearance-none"
+            className="appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white transition-colors focus:border-miru-primary/50 focus:outline-none"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="active">active</option>
-            <option value="inactive">inactive</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Tạm ngưng</option>
           </select>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-white/10 text-white/50 text-sm">
-                <th className="pb-4 font-medium px-4">Thân chủ</th>
-                <th className="pb-4 font-medium px-4">Trạng thái</th>
-                <th className="pb-4 font-medium px-4">Ghép cặp</th>
-                <th className="pb-4 font-medium px-4 text-right">Hành động</th>
+              <tr className="border-b border-white/10 text-sm text-white/50">
+                <th className="px-4 pb-4 font-medium">Thân chủ</th>
+                <th className="px-4 pb-4 font-medium">Trạng thái</th>
+                <th className="px-4 pb-4 font-medium">Ghép cặp</th>
+                <th className="px-4 pb-4 font-medium text-right">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -176,8 +150,7 @@ export function TherapistClients() {
                   const clientId = getClientId(client);
                   const clientName = getClientName(client);
                   const clientEmail = getClientEmail(client);
-                  const status =
-                    typeof client.status === 'string' ? client.status : 'active';
+                  const status = typeof client.status === 'string' ? client.status : 'active';
                   const pairedAt =
                     typeof client.paired_at === 'string'
                       ? new Date(client.paired_at).toLocaleDateString('vi-VN')
@@ -189,12 +162,12 @@ export function TherapistClients() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.04 }}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                      className="cursor-pointer border-b border-white/5 transition-colors hover:bg-white/5"
                       onClick={() => navigate(`/therapist/clients/${clientId}`)}
                     >
-                      <td className="py-4 px-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-miru-primary/20 flex items-center justify-center text-miru-primary font-bold">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-miru-primary/20 font-bold text-miru-primary">
                             {clientName.charAt(0)}
                           </div>
                           <div>
@@ -203,19 +176,34 @@ export function TherapistClients() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium">
+                      <td className="px-4 py-4">
+                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
                           {status}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-white/70 text-sm">{pairedAt}</td>
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/50 hover:text-white"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <MoreVertical size={20} />
-                        </button>
+                      <td className="px-4 py-4 text-sm text-white/70">{pairedAt}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            className="rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/15"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`/therapist/clients/${clientId}`);
+                            }}
+                          >
+                            Giao bài tập
+                          </button>
+                          <button
+                            className="flex items-center gap-2 rounded-xl bg-black/20 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-black/30"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`/therapist/messages?client=${clientId}`);
+                            }}
+                          >
+                            <MessageCircle size={14} />
+                            Nhắn tin
+                          </button>
+                        </div>
                       </td>
                     </motion.tr>
                   );
@@ -226,9 +214,9 @@ export function TherapistClients() {
         </div>
 
         {clients.length === 0 && !isLoading && (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/50 flex items-center gap-3">
+          <div className="mt-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/50">
             <User size={18} />
-            Tài khoản therapist hiện tại chưa có client nào được ghép cặp trong backend.
+            Tài khoản therapist hiện tại chưa có thân chủ nào được ghép cặp trong hệ thống.
           </div>
         )}
       </div>

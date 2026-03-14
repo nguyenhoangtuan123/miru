@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useConsent } from '../../contexts/ConsentContext';
 import {
   Bell,
   ChevronRight,
@@ -21,6 +22,7 @@ import { repairMojibake } from '../../lib/text';
 export function TherapistSettings() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { consent } = useConsent();
   const { canInstall, installApp, notificationPermission, enableNotifications } = usePwa();
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
@@ -132,6 +134,18 @@ export function TherapistSettings() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <div className="glass-panel p-5">
+            <div className="text-sm uppercase tracking-[0.25em] text-white/40 mb-2">
+              Cam kết sử dụng
+            </div>
+            <h3 className="text-lg font-semibold">Đã chấp thuận</h3>
+            <p className="text-sm text-white/60 mt-1">
+              {consent?.accepted_at
+                ? `Lần gần nhất: ${new Date(consent.accepted_at).toLocaleString('vi-VN')}`
+                : 'Chưa có thời điểm xác nhận'}
+            </p>
+          </div>
+
           <div className="glass-panel p-5">
             <div className="flex items-start gap-3">
               <div className="w-11 h-11 rounded-2xl bg-miru-primary/20 flex items-center justify-center text-miru-primary shrink-0">

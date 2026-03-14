@@ -22,6 +22,7 @@ class PushNotificationService:
         self.vapid_public_key = os.getenv("VAPID_PUBLIC_KEY", "").strip()
         self.vapid_private_key = os.getenv("VAPID_PRIVATE_KEY", "").strip()
         self.vapid_subject = os.getenv("VAPID_CLAIMS_SUBJECT", "mailto:notifications@miru.app").strip()
+        self._missing_push_table_logged = False
 
     def is_enabled(self) -> bool:
         return bool(
@@ -39,6 +40,18 @@ class PushNotificationService:
 
     def _db(self) -> DatabaseManager:
         return DatabaseManager()
+
+    def _is_missing_push_table_error(self, exc: Exception) -> bool:
+        message = str(exc)
+        return "public.push_subscriptions" in message or "push_subscriptions" in message and "schema cache" in message
+
+    def _warn_missing_push_table_once(self):
+        if self._missing_push_table_logged:
+            return
+        self._missing_push_table_logged = True
+        logger.warning(
+            "push_subscriptions table is missing; Web Push features stay disabled until the migration is applied."
+        )
 
     def save_subscription(self, user_id: str, subscription: Dict[str, Any]) -> bool:
         endpoint = str(subscription.get("endpoint") or "").strip()
@@ -62,6 +75,9 @@ class PushNotificationService:
             db.supabase.table("push_subscriptions").upsert(payload, on_conflict="endpoint").execute()
             return True
         except Exception as exc:
+            if self._is_missing_push_table_error(exc):
+                self._warn_missing_push_table_once()
+                return False
             logger.warning("Failed to save push subscription for %s: %s", user_id, exc)
             return False
 
@@ -70,6 +86,9 @@ class PushNotificationService:
             self._db().supabase.table("push_subscriptions").delete().eq("user_id", user_id).eq("endpoint", endpoint).execute()
             return True
         except Exception as exc:
+            if self._is_missing_push_table_error(exc):
+                self._warn_missing_push_table_once()
+                return False
             logger.warning("Failed to delete push subscription for %s: %s", user_id, exc)
             return False
 
@@ -84,6 +103,9 @@ class PushNotificationService:
             )
             return response.data or []
         except Exception as exc:
+            if self._is_missing_push_table_error(exc):
+                self._warn_missing_push_table_once()
+                return []
             logger.warning("Failed to load push subscriptions for %s: %s", user_id, exc)
             return []
 
@@ -91,6 +113,9 @@ class PushNotificationService:
         try:
             response = self._db().supabase.table("push_subscriptions").select("user_id").execute()
         except Exception as exc:
+            if self._is_missing_push_table_error(exc):
+                self._warn_missing_push_table_once()
+                return []
             logger.warning("Failed to load subscribed users: %s", exc)
             return []
 
@@ -105,6 +130,9 @@ class PushNotificationService:
         try:
             self._db().supabase.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
         except Exception as exc:
+            if self._is_missing_push_table_error(exc):
+                self._warn_missing_push_table_once()
+                return
             logger.warning("Failed to clean invalid push endpoint %s: %s", endpoint, exc)
 
     def send_push_to_user(

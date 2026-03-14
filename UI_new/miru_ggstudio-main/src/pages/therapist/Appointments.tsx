@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Calendar as CalendarIcon, CheckCircle2, LoaderCircle, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -7,9 +8,11 @@ import {
   cancelTherapistAppointment,
   completeTherapistAppointment,
   createTherapistAppointment,
-  getTherapistAppointments,
-  getTherapistClients,
 } from '../../services/backend';
+import {
+  therapistAppointmentsQueryOptions,
+  therapistClientsQueryOptions,
+} from '../../queries/appQueries';
 
 type TherapistClientRow = Record<string, unknown>;
 type AppointmentRow = Record<string, unknown>;
@@ -65,9 +68,8 @@ function sortAppointments(items: AppointmentRow[]) {
 
 export function TherapistAppointments() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [clients, setClients] = useState<TherapistClientRow[]>([]);
-  const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [activeTab, setActiveTab] = useState<'scheduled' | 'completed' | 'cancelled'>(
     'scheduled'
   );
@@ -78,71 +80,34 @@ export function TherapistAppointments() {
   const [location, setLocation] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
   const [notes, setNotes] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyAppointmentId, setBusyAppointmentId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const therapistId = user?.id ?? '';
+  const clientsQuery = useQuery({
+    ...therapistClientsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const appointmentsQuery = useQuery({
+    ...therapistAppointmentsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
+  const appointments = sortAppointments((appointmentsQuery.data?.appointments ?? []) as AppointmentRow[]);
+  const isLoading = clientsQuery.isLoading || appointmentsQuery.isLoading;
 
   useEffect(() => {
-    if (!user?.id) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const [clientsResult, appointmentsResult] = await Promise.allSettled([
-          getTherapistClients(user.id),
-          getTherapistAppointments(user.id),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        const nextClients =
-          clientsResult.status === 'fulfilled' ? clientsResult.value.clients : [];
-        const nextAppointments =
-          appointmentsResult.status === 'fulfilled'
-            ? appointmentsResult.value.appointments
-            : [];
-
-        setClients(nextClients);
-        setAppointments(sortAppointments(nextAppointments));
-
-        const clientFromUrl = searchParams.get('client');
-        setSelectedClientId(
-          clientFromUrl ||
-            getClientId(nextClients[0] ?? {}) ||
-            ''
-        );
-
-        const firstFailure =
-          clientsResult.status === 'rejected'
-            ? clientsResult.reason
-            : appointmentsResult.status === 'rejected'
-              ? appointmentsResult.reason
-              : null;
-
-        if (firstFailure instanceof Error) {
-          setError(firstFailure.message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+    const clientFromUrl = searchParams.get('client');
+    setSelectedClientId((current) => {
+      if (clientFromUrl) {
+        return clientFromUrl;
       }
-    };
-
-    void loadData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, user?.id]);
+      if (current) {
+        return current;
+      }
+      return getClientId(clients[0] ?? {}) || '';
+    });
+  }, [clients, searchParams]);
 
   const clientsById = useMemo(() => {
     const map = new Map<string, TherapistClientRow>();
@@ -185,7 +150,13 @@ export function TherapistAppointments() {
       });
 
       if (response.appointment) {
-        setAppointments((prev) => sortAppointments([...prev, response.appointment]));
+        queryClient.setQueryData(
+          therapistAppointmentsQueryOptions(user.id).queryKey,
+          (current: { success?: boolean; appointments?: AppointmentRow[] } | undefined) => ({
+            success: true,
+            appointments: sortAppointments([...(current?.appointments ?? []), response.appointment]),
+          })
+        );
       }
 
       setAppointmentDate('');
@@ -208,13 +179,7 @@ export function TherapistAppointments() {
     try {
       setBusyAppointmentId(appointmentId);
       await cancelTherapistAppointment(user.id, appointmentId, 'Cancelled by therapist');
-      setAppointments((prev) =>
-        prev.map((appointment) =>
-          Number(appointment.id) === appointmentId
-            ? { ...appointment, status: 'cancelled' }
-            : appointment
-        )
-      );
+      queryClient.invalidateQueries({ queryKey: therapistAppointmentsQueryOptions(user.id).queryKey });
     } catch (cancelError) {
       setError(cancelError instanceof Error ? cancelError.message : 'Khong huy duoc lich hen');
     } finally {
@@ -229,13 +194,7 @@ export function TherapistAppointments() {
     try {
       setBusyAppointmentId(appointmentId);
       await completeTherapistAppointment(user.id, appointmentId);
-      setAppointments((prev) =>
-        prev.map((appointment) =>
-          Number(appointment.id) === appointmentId
-            ? { ...appointment, status: 'completed' }
-            : appointment
-        )
-      );
+      queryClient.invalidateQueries({ queryKey: therapistAppointmentsQueryOptions(user.id).queryKey });
     } catch (completeError) {
       setError(
         completeError instanceof Error
@@ -264,11 +223,16 @@ export function TherapistAppointments() {
         )}
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          {error}
-        </div>
-      )}
+        {(error || clientsQuery.error || appointmentsQuery.error) && (
+          <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            {error ??
+              (clientsQuery.error instanceof Error
+                ? clientsQuery.error.message
+                : appointmentsQuery.error instanceof Error
+                  ? appointmentsQuery.error.message
+                  : 'Không tải được lịch hẹn')}
+          </div>
+        )}
 
       <div className="grid xl:grid-cols-[360px,1fr] gap-6">
         <div className="glass-panel p-6 rounded-3xl h-fit">

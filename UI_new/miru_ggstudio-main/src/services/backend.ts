@@ -432,13 +432,32 @@ export async function getTherapistAssignments(therapistId: string) {
   return response;
 }
 
+export async function getTherapistClientAssignments(therapistId: string, clientId: string) {
+  const response = await withCache(
+    makeCacheKey(therapistCachePrefix(therapistId), 'client-assignments', clientId),
+    CACHE_TTL.medium,
+    () =>
+      parseApi(
+        api.get(`/api/therapist/clients/${therapistId}/${clientId}/assignments`),
+        TherapistAssignmentsResponseSchema
+      )
+  );
+  if (!response.success) {
+    throw new Error(response.error ?? 'Không tải được bài tập của thân chủ');
+  }
+  return response;
+}
+
 export async function createTherapistAssignment(
   therapistId: string,
   payload: {
     client_id: string;
     title: string;
     description: string;
+    type?: string;
+    priority?: string;
     due_date?: string;
+    checklist_items?: Array<{ id?: string; label: string }>;
   }
 ) {
   const response = await parseApi(
@@ -446,10 +465,11 @@ export async function createTherapistAssignment(
     TherapistAssignmentMutationResponseSchema
   );
   if (!response.success) {
-    throw new Error(response.error ?? 'Khong tao duoc bai tap');
+    throw new Error(response.error ?? 'Không tạo được bài tập');
   }
   invalidateCacheByPrefix(
     makeCacheKey(therapistCachePrefix(therapistId), 'assignments'),
+    makeCacheKey(therapistCachePrefix(therapistId), 'client-assignments', payload.client_id),
     makeCacheKey(therapistCachePrefix(therapistId), 'clients'),
     makeCacheKey(therapistCachePrefix(therapistId), 'client-summary', payload.client_id),
     makeCacheKey(clientCachePrefix(payload.client_id), 'assignments')
@@ -506,6 +526,66 @@ export async function getClientAssignments(clientId: string) {
   );
 }
 
+export async function updateTherapistAssignmentProgress(
+  assignmentId: number,
+  payload: {
+    checked_item_ids?: string[];
+    completion_notes?: string;
+  }
+) {
+  const response = await parseApi(
+    api.patch(`/api/therapist/assignments/${assignmentId}/progress`, payload),
+    TherapistAssignmentMutationResponseSchema
+  );
+  if (!response.success) {
+    throw new Error(response.error ?? 'Không cập nhật được tiến độ bài tập');
+  }
+  const therapistId = response.assignment?.therapist_id;
+  const clientId = response.assignment?.client_id;
+  invalidateCacheByPrefix(
+    therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'assignments') : 'therapist',
+    therapistId && clientId
+      ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
+      : 'therapist',
+    clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
+    therapistId && clientId
+      ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))
+      : 'therapist'
+  );
+  return response;
+}
+
+export async function uploadAssignmentAttachments(assignmentId: number, files: File[]) {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  const response = await parseApi(
+    api.post(`/api/therapist/assignments/${assignmentId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+    TherapistAssignmentMutationResponseSchema
+  );
+  if (!response.success) {
+    throw new Error(response.error ?? 'Không tải được tệp bài tập');
+  }
+  const therapistId = response.assignment?.therapist_id;
+  const clientId = response.assignment?.client_id;
+  invalidateCacheByPrefix(
+    therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'assignments') : 'therapist',
+    therapistId && clientId
+      ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
+      : 'therapist',
+    clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
+    therapistId && clientId
+      ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))
+      : 'therapist'
+  );
+  return response;
+}
+
 export async function completeTherapistAssignment(assignmentId: number, completionNotes?: string) {
   const response = await parseApi(
     api.post(`/api/therapist/assignments/${assignmentId}/complete`, {
@@ -514,12 +594,15 @@ export async function completeTherapistAssignment(assignmentId: number, completi
     TherapistAssignmentMutationResponseSchema
   );
   if (!response.success) {
-    throw new Error(response.error ?? 'Khong cap nhat duoc bai tap');
+    throw new Error(response.error ?? 'Không cập nhật được bài tập');
   }
   const therapistId = response.assignment?.therapist_id;
   const clientId = response.assignment?.client_id;
   invalidateCacheByPrefix(
     therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'assignments') : 'therapist',
+    therapistId && clientId
+      ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
+      : 'therapist',
     clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))

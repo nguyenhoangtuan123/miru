@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   AlertTriangle,
   CheckCircle,
   ClipboardList,
+  IdCard,
   LoaderCircle,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
-  getTherapistAssignments,
-  getTherapistClients,
-  getTherapistCrises,
 } from '../../services/backend';
+import {
+  therapistAssignmentsQueryOptions,
+  therapistClientsQueryOptions,
+  therapistCrisesQueryOptions,
+} from '../../queries/appQueries';
 
 type TherapistClientRow = Record<string, unknown>;
 type TherapistAssignmentRow = Record<string, unknown>;
@@ -80,72 +85,27 @@ function getCrisisClientName(crisis: TherapistCrisisRow) {
 
 export function TherapistDashboard() {
   const { user } = useAuth();
-  const [clients, setClients] = useState<TherapistClientRow[]>([]);
-  const [assignments, setAssignments] = useState<TherapistAssignmentRow[]>([]);
-  const [crises, setCrises] = useState<TherapistCrisisRow[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const therapistId = user?.id ?? '';
+  const clientsQuery = useQuery({
+    ...therapistClientsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const assignmentsQuery = useQuery({
+    ...therapistAssignmentsQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
+  const crisesQuery = useQuery({
+    ...therapistCrisesQueryOptions(therapistId),
+    enabled: Boolean(user?.id),
+  });
 
-  useEffect(() => {
-    if (!user?.id) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadDashboard = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const [clientsResult, assignmentsResult, crisesResult] =
-          await Promise.allSettled([
-            getTherapistClients(user.id),
-            getTherapistAssignments(user.id),
-            getTherapistCrises(user.id),
-          ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        if (clientsResult.status === 'fulfilled') {
-          setClients(clientsResult.value.clients);
-        }
-
-        if (assignmentsResult.status === 'fulfilled') {
-          setAssignments(assignmentsResult.value.assignments);
-        }
-
-        if (crisesResult.status === 'fulfilled') {
-          setCrises(crisesResult.value.crises);
-        }
-
-        const firstFailure =
-          clientsResult.status === 'rejected'
-            ? clientsResult.reason
-            : assignmentsResult.status === 'rejected'
-              ? assignmentsResult.reason
-              : crisesResult.status === 'rejected'
-                ? crisesResult.reason
-                : null;
-
-        if (firstFailure instanceof Error) {
-          setError(firstFailure.message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
+  const assignments = (assignmentsQuery.data?.assignments ?? []) as TherapistAssignmentRow[];
+  const crises = (crisesQuery.data?.crises ?? []) as TherapistCrisisRow[];
+  const isLoading =
+    clientsQuery.isLoading || assignmentsQuery.isLoading || crisesQuery.isLoading;
+  const error =
+    clientsQuery.error ?? assignmentsQuery.error ?? crisesQuery.error;
 
   const stats = [
     {
@@ -201,9 +161,41 @@ export function TherapistDashboard() {
 
       {error && (
         <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          {error}
+          {error instanceof Error ? error.message : 'Không tải được dashboard therapist'}
         </div>
       )}
+
+      <div className="mb-8 grid gap-4 md:grid-cols-2">
+        <Link
+          to="/therapist/profile"
+          className="glass-panel flex items-start gap-4 rounded-[28px] border border-white/10 p-6 transition-transform duration-200 hover:-translate-y-1"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-miru-primary/18 text-miru-primary">
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Ho so cong khai</h2>
+            <p className="mt-2 text-sm leading-7 text-white/60">
+              Cap nhat phan gioi thieu, chuyen mon, kenh lien he va chung chi de hien thi tren danh ba cong khai.
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          to="/therapist/client-profiles"
+          className="glass-panel flex items-start gap-4 rounded-[28px] border border-white/10 p-6 transition-transform duration-200 hover:-translate-y-1"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-400/14 text-sky-200">
+            <IdCard size={22} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Ho so rieng tu than chu</h2>
+            <p className="mt-2 text-sm leading-7 text-white/60">
+              Xem phan gioi thieu va gallery ma than chu da chon chia se sau khi pairing active.
+            </p>
+          </div>
+        </Link>
+      </div>
 
       {crises.length > 0 && (
         <motion.div
