@@ -136,6 +136,11 @@ export function Settings() {
   const therapist = pairing?.therapist && typeof pairing.therapist === 'object'
     ? (pairing.therapist as Record<string, unknown>)
     : null;
+  const therapistVerificationStatus = user?.therapist_status ?? 'not_submitted';
+  const needsTherapistVerification =
+    user?.role === 'therapist' && !user?.can_access_therapist_portal;
+  const therapistVerificationHref =
+    therapistVerificationStatus === 'pending' ? '/therapist/review-status' : '/therapist/apply';
 
   const settingsGroups = [
     {
@@ -190,6 +195,41 @@ export function Settings() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 mb-8">
+          {needsTherapistVerification && (
+            <div className="glass-panel p-5 md:col-span-2">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-400/14 flex items-center justify-center text-emerald-200 shrink-0">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">
+                    {therapistVerificationStatus === 'pending'
+                      ? 'Hồ sơ xác thực đang chờ duyệt'
+                      : therapistVerificationStatus === 'rejected'
+                        ? 'Hồ sơ xác thực cần bổ sung'
+                        : 'Xác thực tài khoản nhà trị liệu'}
+                  </h3>
+                  <p className="text-sm text-white/60 mt-1">
+                    {therapistVerificationStatus === 'pending'
+                      ? 'Bạn đã nộp hồ sơ. Mở trang trạng thái để theo dõi xét duyệt trước khi dùng khu therapist.'
+                      : therapistVerificationStatus === 'rejected'
+                        ? 'Hồ sơ trước đó chưa đạt. Mở lại biểu mẫu để bổ sung minh chứng nghề nghiệp và gửi duyệt lại.'
+                        : 'Tài khoản therapist cần nộp minh chứng nghề nghiệp trước khi vào khu therapist và dùng các công cụ dành cho nhà trị liệu.'}
+                  </p>
+                  <Link
+                    to={therapistVerificationHref}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                  >
+                    {therapistVerificationStatus === 'pending'
+                      ? 'Xem trạng thái xét duyệt'
+                      : 'Mở hồ sơ xác thực'}
+                    <ChevronRight size={16} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="glass-panel p-5">
             <div className="text-sm uppercase tracking-[0.25em] text-white/40 mb-2">
               Cam kết sử dụng

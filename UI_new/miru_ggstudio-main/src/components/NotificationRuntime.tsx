@@ -45,7 +45,7 @@ export function NotificationRuntime() {
 
     const poll = async () => {
       try {
-        if (user.role === 'therapist') {
+        if (user.role === 'therapist' && user.can_access_therapist_portal) {
           const [conversationsResponse, crisesResponse] = await Promise.all([
             getTherapistConversations(user.id),
             getTherapistCrises(user.id),
@@ -90,6 +90,9 @@ export function NotificationRuntime() {
 
           therapistUnreadRef.current = unreadCount;
           therapistCrisisIdsRef.current = crisisIds;
+        } else if (user.role === 'therapist') {
+          therapistUnreadRef.current = 0;
+          therapistCrisisIdsRef.current = new Set();
         } else {
           const pairingResponse = await getClientTherapist(user.id);
           if (cancelled) {
