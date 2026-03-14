@@ -112,21 +112,22 @@ export function TherapistMessages() {
   const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const therapistId = user?.id ?? '';
+  const canUseTherapistQueries = Boolean(user?.id && user.can_access_therapist_portal);
   const clientsQuery = useQuery({
     ...therapistClientsQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
   const conversationsQuery = useQuery({
     ...therapistConversationsQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
   const crisesQuery = useQuery({
     ...therapistCrisesQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
   const messagesQuery = useQuery({
     ...therapistMessagesQueryOptions(therapistId, activeClientId ?? ''),
-    enabled: Boolean(user?.id && activeClientId),
+    enabled: Boolean(canUseTherapistQueries && activeClientId),
   });
   const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
   const conversations = (conversationsQuery.data?.conversations ?? []) as TherapistConversationRow[];
@@ -154,7 +155,7 @@ export function TherapistMessages() {
   }, [clients, conversations, searchParams]);
 
   useEffect(() => {
-    if (!user?.id || !activeClientId || !messagesQuery.data?.messages) {
+    if (!canUseTherapistQueries || !user?.id || !activeClientId || !messagesQuery.data?.messages) {
       return;
     }
 
@@ -171,7 +172,7 @@ export function TherapistMessages() {
           ) ?? [],
       })
     );
-  }, [activeClientId, messagesQuery.data?.messages, queryClient, user?.id]);
+  }, [activeClientId, canUseTherapistQueries, messagesQuery.data?.messages, queryClient, user?.id]);
 
   const conversationMap = useMemo(() => {
     const map = new Map<string, TherapistConversationRow>();

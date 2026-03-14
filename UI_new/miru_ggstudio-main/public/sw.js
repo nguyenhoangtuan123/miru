@@ -28,6 +28,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
+  const isHttpRequest = requestUrl.protocol === 'http:' || requestUrl.protocol === 'https:';
   const isSameOrigin = requestUrl.origin === self.location.origin;
   const isDevAsset =
     isSameOrigin &&
@@ -36,7 +37,7 @@ self.addEventListener('fetch', (event) => {
       requestUrl.pathname.startsWith('/@vite/') ||
       requestUrl.searchParams.has('t'));
 
-  if (isDevAsset) {
+  if (!isHttpRequest || !isSameOrigin || isDevAsset) {
     return;
   }
 

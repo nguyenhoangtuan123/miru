@@ -86,17 +86,18 @@ function getCrisisClientName(crisis: TherapistCrisisRow) {
 export function TherapistDashboard() {
   const { user } = useAuth();
   const therapistId = user?.id ?? '';
+  const canUseTherapistQueries = Boolean(user?.id && user.can_access_therapist_portal);
   const clientsQuery = useQuery({
     ...therapistClientsQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
   const assignmentsQuery = useQuery({
     ...therapistAssignmentsQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
   const crisesQuery = useQuery({
     ...therapistCrisesQueryOptions(therapistId),
-    enabled: Boolean(user?.id),
+    enabled: canUseTherapistQueries,
   });
 
   const clients = (clientsQuery.data?.clients ?? []) as TherapistClientRow[];
