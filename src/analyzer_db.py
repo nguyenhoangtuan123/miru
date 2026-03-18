@@ -30,7 +30,9 @@ class AnalyzerDatabase:
                 'ai_summary': analysis.get('summary', ''),
                 'ai_title': analysis.get('title', 'Phiên trò chuyện')
             }
-            
+            if analysis.get('facts_content') is not None:
+                data['facts_content'] = analysis.get('facts_content')
+
             response = self.db.supabase.table('analyzed_sessions')\
                 .upsert(data, on_conflict='session_id')\
                 .execute()

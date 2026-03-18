@@ -59,6 +59,19 @@ _memory_instance = None
 _session_facts_locks: Dict[str, threading.RLock] = {}
 _session_facts_locks_guard = threading.Lock()
 
+DEFAULT_SESSION_FACTS_TEMPLATE = """[THE HOOK]
+- Chưa xác định nguyên nhân gốc rễ.
+
+[EMOTIONAL ARC]
+- [Bắt đầu]: Trạng thái bình thường.
+
+[KEY DECISIONS & INSIGHTS]
+- Chưa có quyết định quan trọng.
+
+[UNSPOKEN CONTEXT]
+- Chưa có suy luận tâm lý.
+"""
+
 
 def get_mem0_config() -> dict:
     """
@@ -197,6 +210,41 @@ class MemoryService:
                 lock = threading.RLock()
                 _session_facts_locks[normalized_session_id] = lock
         return lock
+
+    @staticmethod
+    def _session_id_for_db(session_id: Any) -> int | str:
+        normalized_session_id = MemoryService._normalize_session_id(session_id)
+        return int(normalized_session_id) if normalized_session_id.isdigit() else normalized_session_id
+
+    @staticmethod
+    def _get_db_manager():
+        from database import DatabaseManager
+
+        return DatabaseManager()
+
+    def _get_session_facts_from_db(self, session_id: Any) -> Optional[str]:
+        try:
+            return self._get_db_manager().get_analyzed_session_facts(self._session_id_for_db(session_id))
+        except Exception as exc:
+            mem0_logger.warning(f"Failed to read session facts from DB for {session_id}: {exc}")
+            return None
+
+    def _save_session_facts_to_db(self, session_id: Any, user_id: str, facts_content: str) -> bool:
+        try:
+            return self._get_db_manager().upsert_session_facts(
+                self._session_id_for_db(session_id),
+                user_id,
+                facts_content,
+            )
+        except Exception as exc:
+            mem0_logger.warning(f"Failed to write session facts to DB for {session_id}: {exc}")
+            return False
+
+    def _mirror_session_facts_file(self, session_id: Any, content: str) -> None:
+        session_dir = self.ensure_session_dir(session_id)
+        facts_path = os.path.join(session_dir, "facts.txt")
+        with open(facts_path, "w", encoding="utf-8") as f:
+            f.write(content)
 
     def _memory_belongs_to_user(self, user_id: str, memory_id: str) -> bool:
         if self.memory is None:
@@ -376,6 +424,10 @@ class MemoryService:
         session_dir = self.ensure_session_dir(session_id)
         facts_path = os.path.join(session_dir, "facts.txt")
         
+        db_content = self._get_session_facts_from_db(session_id)
+        if isinstance(db_content, str) and db_content.strip():
+            return db_content
+
         # New 4-part structure template
         default_template = """[THE HOOK]
 - Chưa xác định nguyên nhân gốc rễ.
@@ -568,9 +620,12 @@ Quy tắc:
                             modified = True
                 
                 if modified:
-                    with open(facts_path, "w", encoding="utf-8") as f:
-                        f.write(content)
-                    print(f"[OK] Facts updated for session {session_id} (Dedup-safe)")
+                    db_saved = self._save_session_facts_to_db(session_id, user_id, content) if user_id else False
+                    self._mirror_session_facts_file(session_id, content)
+                    if db_saved:
+                        print(f"[OK] Facts updated in DB for session {session_id} (Dedup-safe)")
+                    else:
+                        print(f"[WARN] Facts DB sync failed for session {session_id}, kept local mirror")
                 else:
                     print(f"[SKIP] No new facts to add for session {session_id}")
                     
@@ -700,10 +755,12 @@ OUTPUT FORMAT:
             with open(backup_path, "a", encoding="utf-8") as f:
                 f.write(f"\n\n=== BACKUP {session_id} ===\n{content}\n")
             
-            with open(facts_path, "w", encoding="utf-8") as f:
-                f.write(content)
-                
-            print(f"[OK] Memory consolidation complete for session {session_id}")
+            self._mirror_session_facts_file(session_id, content)
+            db_saved = self._save_session_facts_to_db(session_id, user_id, content)
+            if db_saved:
+                print(f"[OK] Memory consolidation complete for session {session_id}")
+            else:
+                print(f"[WARN] Memory consolidation saved locally but DB sync failed for session {session_id}")
             
             # Đẩy vào Mem0
             if self.memory:

@@ -475,12 +475,48 @@ class DatabaseManager:
                 'ai_title': analysis_data.get('ai_title'),
                 'analyzed_at': datetime.now(timezone.utc).isoformat()
             }
+
+            facts_content = analysis_data.get('facts_content')
+            if facts_content is not None:
+                data['facts_content'] = facts_content
             
             # Upsert based on session_id (unique constraint)
             self.supabase.table('analyzed_sessions').upsert(data, on_conflict='session_id').execute()
             return True
         except Exception as e:
             print(f"Error saving analyzed session: {e}")
+            return False
+
+    def get_analyzed_session_facts(self, session_id: int | str):
+        """Lấy facts_content của một session từ analyzed_sessions."""
+        try:
+            response = (
+                self.supabase.table('analyzed_sessions')
+                .select('facts_content')
+                .eq('session_id', session_id)
+                .limit(1)
+                .execute()
+            )
+            if response.data:
+                return response.data[0].get('facts_content')
+            return None
+        except Exception as e:
+            print(f"Error getting analyzed session facts: {e}")
+            return None
+
+    def upsert_session_facts(self, session_id: int | str, user_id: str, facts_content: str):
+        """Tạo/cập nhật short-term facts của session trong analyzed_sessions."""
+        try:
+            data = {
+                'session_id': session_id,
+                'user_id': user_id,
+                'facts_content': facts_content,
+                'analyzed_at': datetime.now(timezone.utc).isoformat(),
+            }
+            self.supabase.table('analyzed_sessions').upsert(data, on_conflict='session_id').execute()
+            return True
+        except Exception as e:
+            print(f"Error upserting session facts: {e}")
             return False
 
     def get_emotion_timeline(self, user_id: str, days: int = 7):

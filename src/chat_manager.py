@@ -4,6 +4,7 @@ Không sửa database.py, chỉ sử dụng DatabaseManager
 """
 
 from database import DatabaseManager
+from memory_service import DEFAULT_SESSION_FACTS_TEMPLATE
 from datetime import datetime, timezone
 import uuid
 
@@ -112,6 +113,7 @@ class ChatManager:
             
             if response.data:
                 session_id = response.data[0]['id']
+                self.db_manager.upsert_session_facts(session_id, user_db_id, DEFAULT_SESSION_FACTS_TEMPLATE)
                 print(f"[SUCCESS] Created new session {session_id} for user {user_id}")
                 return {
                     "success": True,
