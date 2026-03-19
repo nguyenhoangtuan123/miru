@@ -34,6 +34,7 @@ import { saveJournalEntry } from '../services/backend';
 import type { JournalEntry, MomentItem } from '../services/contracts';
 import { TherapistDirectoryCard } from '../components/profiles/TherapistDirectoryCard';
 import { type TherapistPublicProfileCard } from '../services/profiles';
+import { ClientDashboard } from './home/ClientDashboard';
 import {
   checkinStatusQueryOptions,
   journalEntriesQueryOptions,
@@ -461,7 +462,7 @@ export function Home() {
   });
 
   if (user) {
-    return <Dashboard />;
+    return <ClientDashboard />;
   }
 
   const publicTherapists = (publicTherapistsQuery.data?.therapists ?? []) as TherapistPublicProfileCard[];

@@ -1,4 +1,4 @@
-import { Home, MessageCircle, BrainCircuit, Settings, Stethoscope } from 'lucide-react';
+import { Home, MessageCircle, BrainCircuit, Settings, Stethoscope, ClipboardList } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '../lib/utils';
@@ -43,6 +43,12 @@ export function BottomNav() {
     { icon: Stethoscope, label: 'Trị liệu', path: '/therapy' },
     { icon: Settings, label: 'Cài đặt', path: '/settings' },
   ];
+  const resolvedNavItems = [
+    navItems[0],
+    navItems[1],
+    { icon: ClipboardList, label: 'Đánh giá', path: '/assessments' },
+    ...navItems.slice(2),
+  ];
 
   function handlePrefetch(path: string) {
     void prefetchClientRouteData(queryClient, path, user?.id);
@@ -58,7 +64,7 @@ export function BottomNav() {
         )}
       >
         <div className="glass-panel mx-4 mb-4 px-6 py-3 flex justify-between items-center rounded-full shadow-lg">
-          {navItems.map((item) => {
+          {resolvedNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || 
                             (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -85,7 +91,7 @@ export function BottomNav() {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 flex-col items-center py-8 z-50 glass-panel border-r border-white/10">
         <div className="flex-1 flex flex-col gap-6">
-          {navItems.map((item) => {
+          {resolvedNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || 
                             (item.path !== '/' && location.pathname.startsWith(item.path));
