@@ -16,6 +16,7 @@ import {
   getTherapistClients,
   getTherapistConversations,
   getTherapistCrises,
+  getTherapistMorningBoard,
   getTherapistMessages,
 } from '../services/backend';
 import {
@@ -48,6 +49,8 @@ import {
   getTherapistTreatmentProgram,
 } from '../services/treatmentPrograms';
 import { getClientSummary } from '../services/backend';
+import { getMyIntakeProfile } from '../services/intake';
+import { getMyTrajectorySummary } from '../services/trajectory';
 
 export const queryKeys = {
   consent: {
@@ -108,6 +111,12 @@ export const queryKeys = {
     clientCurrent: () => ['treatment-programs', 'client', 'current'] as const,
     therapistClient: (clientId: string) => ['treatment-programs', 'therapist', 'client', clientId] as const,
   },
+  intake: {
+    me: () => ['intake', 'me'] as const,
+  },
+  trajectory: {
+    summary: () => ['trajectory', 'summary'] as const,
+  },
   clientTherapist: {
     detail: (clientId: string) => ['client-therapist', clientId] as const,
     messages: (clientId: string, limit: number) =>
@@ -118,6 +127,7 @@ export const queryKeys = {
       ['client-therapist', clientId, 'assignments'] as const,
   },
   therapist: {
+    morningBoard: (therapistId: string) => ['therapist', therapistId, 'morning-board'] as const,
     clients: (therapistId: string) => ['therapist', therapistId, 'clients'] as const,
     assignments: (therapistId: string) => ['therapist', therapistId, 'assignments'] as const,
     crises: (therapistId: string) => ['therapist', therapistId, 'crises'] as const,
@@ -272,6 +282,15 @@ export function therapistClientsQueryOptions(therapistId: string) {
   return queryOptions({
     queryKey: queryKeys.therapist.clients(therapistId),
     queryFn: () => getTherapistClients(therapistId),
+  });
+}
+
+export function therapistMorningBoardQueryOptions(therapistId: string) {
+  return queryOptions({
+    queryKey: queryKeys.therapist.morningBoard(therapistId),
+    queryFn: () => getTherapistMorningBoard(therapistId),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -430,6 +449,24 @@ export function myCurrentTreatmentProgramQueryOptions() {
   });
 }
 
+export function myIntakeProfileQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.intake.me(),
+    queryFn: getMyIntakeProfile,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
+export function myTrajectorySummaryQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.trajectory.summary(),
+    queryFn: getMyTrajectorySummary,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
 export function therapistTreatmentProgramQueryOptions(clientId: string) {
   return queryOptions({
     queryKey: queryKeys.treatmentPrograms.therapistClient(clientId),
@@ -453,6 +490,8 @@ export async function prefetchClientRouteData(
       tasks.push(queryClient.prefetchQuery(momentsQueryOptions(userId, 7)));
       tasks.push(queryClient.prefetchQuery(checkinStatusQueryOptions(userId)));
       tasks.push(queryClient.prefetchQuery(proactiveMessageQueryOptions(userId)));
+      tasks.push(queryClient.prefetchQuery(myIntakeProfileQueryOptions()));
+      tasks.push(queryClient.prefetchQuery(myTrajectorySummaryQueryOptions()));
     }
   }
 
@@ -500,6 +539,7 @@ export async function prefetchTherapistRouteData(
   const tasks: Array<Promise<unknown>> = [];
 
   if (path === '/therapist') {
+    tasks.push(queryClient.prefetchQuery(therapistMorningBoardQueryOptions(therapistId)));
     tasks.push(queryClient.prefetchQuery(therapistClientsQueryOptions(therapistId)));
     tasks.push(queryClient.prefetchQuery(therapistAssignmentsQueryOptions(therapistId)));
     tasks.push(queryClient.prefetchQuery(therapistCrisesQueryOptions(therapistId)));
