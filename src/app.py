@@ -5,6 +5,7 @@ Provides REST API and WebSocket endpoints for the Progressive Web App
 """
 
 import os
+import re
 import socket
 from urllib.parse import urlparse
 from datetime import datetime, timezone
@@ -210,18 +211,67 @@ app = FastAPI(
 
 # CORS - Allow frontend to connect
 # Production: Chỉ định exact origins từ env, fallback localhost cho dev
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8008,http://127.0.0.1:8008",
-    ).split(",")
-    if origin.strip()
-]
+def _normalize_origin(origin: str) -> str:
+    return origin.strip().strip('"').strip("'").rstrip("/")
+
+
+def _parse_allowed_origins(raw_value: str | None) -> list[str]:
+    if not raw_value:
+        return []
+
+    origins: list[str] = []
+    for candidate in re.split(r"[\n,;]+", raw_value):
+        normalized = _normalize_origin(candidate)
+        if normalized and normalized not in origins:
+            origins.append(normalized)
+    return origins
+
+
+def _build_allowed_origins() -> list[str]:
+    origins: list[str] = []
+
+    def _extend(values: list[str]) -> None:
+        for value in values:
+            if value not in origins:
+                origins.append(value)
+
+    for raw_value in (
+        os.getenv("ALLOWED_ORIGINS"),
+        os.getenv("FRONTEND_URL"),
+        os.getenv("FRONTEND_APP_URL"),
+        os.getenv("PUBLIC_APP_URL"),
+        os.getenv("VITE_FRONTEND_URL"),
+    ):
+        _extend(_parse_allowed_origins(raw_value))
+
+    _extend(
+        [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8008",
+            "http://127.0.0.1:8008",
+            "https://miruai.vercel.app",
+            "https://miruggstudio-main.vercel.app",
+        ]
+    )
+
+    return origins
+
+
+ALLOWED_ORIGINS = _build_allowed_origins()
+ALLOWED_ORIGIN_REGEX = os.getenv(
+    "ALLOWED_ORIGIN_REGEX",
+    r"^https://miruggstudio-main(?:-[a-z0-9-]+(?:-ducduong12123s-projects)?)?\.vercel\.app$",
+).strip()
+
+print(f"[CORS] Allowed origins: {ALLOWED_ORIGINS}")
+if ALLOWED_ORIGIN_REGEX:
+    print(f"[CORS] Allowed origin regex: {ALLOWED_ORIGIN_REGEX}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX or None,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
