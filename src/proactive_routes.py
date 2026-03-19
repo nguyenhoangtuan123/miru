@@ -3,10 +3,11 @@
 API Routes cho Proactive AI
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Any
 from datetime import datetime, timezone
+from auth_middleware import require_auth_for_user
 from proactive_service import get_proactive_service
 
 
@@ -26,7 +27,7 @@ class GoalCreate(BaseModel):
 
 
 @router.post("/check")
-async def get_proactive_notifications(request: CheckInRequest):
+async def get_proactive_notifications(request: CheckInRequest, http_request: Request):
     """
     Lấy proactive notifications cho user.
     Sử dụng Main Chat Agent để sinh nội dung có ngữ cảnh.
@@ -36,6 +37,7 @@ async def get_proactive_notifications(request: CheckInRequest):
         from proactive_service import get_proactive_service
         from services import chat_manager
         
+        await require_auth_for_user(http_request, request.user_id)
         service = get_proactive_service()
         
         # 1. Parse last_active
@@ -83,6 +85,8 @@ Generate a proactive, warm, and short check-in message for the user.
                 
                 # Get session ID provided by frontend, or None
                 session_id = request.session_id
+                if session_id and not chat_manager.session_belongs_to_user(session_id, request.user_id):
+                    raise HTTPException(status_code=403, detail="Access denied")
                 
                 # 4. Run Main Agent
                 agent_result = await run_agent(
@@ -119,6 +123,8 @@ Generate a proactive, warm, and short check-in message for the user.
             "success": True,
             "notifications": notifications
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Proactive API] Error: {e}")
         import traceback
@@ -127,9 +133,10 @@ Generate a proactive, warm, and short check-in message for the user.
 
 
 @router.get("/daily-message/{user_id}")
-async def get_daily_message(user_id: str):
+async def get_daily_message(user_id: str, request: Request):
     """Lấy daily check-in message"""
     try:
+        await require_auth_for_user(request, user_id)
         from memory_service import get_memory_service
         
         service = get_proactive_service()
@@ -148,6 +155,8 @@ async def get_daily_message(user_id: str):
             "success": True,
             "message": message
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Proactive API] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

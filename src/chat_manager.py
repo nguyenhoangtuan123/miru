@@ -6,6 +6,8 @@ Không sửa database.py, chỉ sử dụng DatabaseManager
 from database import DatabaseManager
 from memory_service import DEFAULT_SESSION_FACTS_TEMPLATE
 from datetime import datetime, timezone
+from utils import LOCAL_TZ
+import json
 import uuid
 
 
@@ -38,6 +40,147 @@ class ChatManager:
         
         # If message is longer, truncate
         return cleaned_message[:47] + "..."
+
+    def _parse_session_metadata(self, summary_text: str):
+        try:
+            metadata = json.loads(summary_text)
+        except (TypeError, json.JSONDecodeError):
+            return None
+
+        if not isinstance(metadata, dict):
+            return None
+
+        if metadata.get("_record_type") == "chat_session":
+            return metadata
+
+        metadata_keys = {"title", "created_at", "status", "message_count"}
+        if metadata_keys.issubset(set(metadata.keys())):
+            return metadata
+        return None
+
+    def _get_latest_chat_session_row(self, user_db_id: str):
+        try:
+            response = (
+                self.db_manager.supabase.table("session_summaries")
+                .select("id, summary_text, created_at")
+                .eq("user_id", user_db_id)
+                .order("created_at", desc=True)
+                .limit(30)
+                .execute()
+            )
+
+            for row in response.data or []:
+                metadata = self._parse_session_metadata(row.get("summary_text"))
+                if not metadata:
+                    continue
+                if metadata.get("status") == "deleted":
+                    continue
+                return row, metadata
+        except Exception as e:
+            print(f"[WARN] Could not load latest chat session row: {str(e)}")
+        return None, None
+
+    def _update_session_metadata(self, session_id: int, metadata: dict):
+        try:
+            self.db_manager.supabase.table("session_summaries").update(
+                {"summary_text": json.dumps(metadata, ensure_ascii=False)}
+            ).eq("id", int(session_id)).execute()
+            return True
+        except Exception as e:
+            print(f"[WARN] Could not update session metadata for {session_id}: {str(e)}")
+            return False
+
+    def _latest_message_matches(self, session_id: int, role: str, content: str) -> bool:
+        try:
+            response = (
+                self.db_manager.supabase.table("chat_messages")
+                .select("role, content")
+                .eq("session_id", int(session_id))
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            row = (response.data or [None])[0]
+            if not row:
+                return False
+            return row.get("role") == role and (row.get("content") or "").strip() == content.strip()
+        except Exception as e:
+            print(f"[WARN] Could not check latest message for session {session_id}: {str(e)}")
+            return False
+
+    def ensure_proactive_message(self, user_id: str, message: str, source: str = "in_app", create_if_missing: bool = True):
+        """Ensure Miru's proactive message appears once in the latest chat thread."""
+        try:
+            clean_message = (message or "").strip()
+            if not clean_message:
+                return {"success": False, "error": "message is empty"}
+
+            user = self.db_manager.get_or_create_user(user_id)
+            user_db_id = user["id"]
+            session_row, metadata = self._get_latest_chat_session_row(user_db_id)
+
+            if not session_row and create_if_missing:
+                created = self.create_new_session(user_id, "Miru hỏi thăm")
+                if not created.get("success"):
+                    return created
+                session_id = int(created["session_id"])
+                metadata = {
+                    "_record_type": "chat_session",
+                    "title": created.get("title", "Miru hỏi thăm"),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "active",
+                    "message_count": 0,
+                }
+            elif session_row:
+                session_id = int(session_row["id"])
+            else:
+                return {"success": True, "inserted": False, "session_id": None}
+
+            now = datetime.now(timezone.utc)
+            proactive_day = now.astimezone(LOCAL_TZ).date().isoformat()
+            metadata = metadata or {
+                "_record_type": "chat_session",
+                "title": "Miru hỏi thăm",
+                "created_at": now.isoformat(),
+                "status": "active",
+                "message_count": 0,
+            }
+
+            if (
+                metadata.get("last_proactive_day") == proactive_day
+                and (metadata.get("last_proactive_message") or "").strip() == clean_message
+            ):
+                return {"success": True, "inserted": False, "session_id": session_id}
+
+            if self._latest_message_matches(session_id, "ai", clean_message):
+                metadata["last_proactive_day"] = proactive_day
+                metadata["last_proactive_message"] = clean_message
+                metadata["last_proactive_at"] = now.isoformat()
+                metadata["last_proactive_source"] = source
+                metadata["updated_at"] = now.isoformat()
+                self._update_session_metadata(session_id, metadata)
+                return {"success": True, "inserted": False, "session_id": session_id}
+
+            save_result = self.save_message(session_id, user_id, "ai", clean_message)
+            if not save_result.get("success"):
+                return save_result
+
+            metadata["last_proactive_day"] = proactive_day
+            metadata["last_proactive_message"] = clean_message
+            metadata["last_proactive_at"] = now.isoformat()
+            metadata["last_proactive_source"] = source
+            metadata["updated_at"] = now.isoformat()
+            self._update_session_metadata(session_id, metadata)
+
+            return {
+                "success": True,
+                "inserted": True,
+                "session_id": session_id,
+                "message_id": save_result.get("message_id"),
+            }
+        except Exception as e:
+            print(f"[ERROR] Error ensuring proactive message: {str(e)}")
+            return {"success": False, "error": str(e)}
     
     def create_session_with_first_message(self, user_id: str, first_message: str, role: str = "user"):
         """

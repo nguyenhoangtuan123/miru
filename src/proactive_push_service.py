@@ -10,6 +10,7 @@ from ai_service import get_ai_service
 from database import DatabaseManager
 from memory_service import PROJECT_ROOT, get_memory_service
 from push_service import get_push_service
+from services import chat_manager
 
 logger = logging.getLogger(__name__)
 
@@ -269,16 +270,29 @@ Chi tra ve noi dung thong diep.
             trajectory_summary,
         )
 
+        target_session_id = session_id
+        try:
+            proactive_sync = chat_manager.ensure_proactive_message(
+                user_id,
+                message,
+                source="push_scheduler",
+                create_if_missing=True,
+            )
+            if proactive_sync.get("success") and proactive_sync.get("session_id") is not None:
+                target_session_id = str(proactive_sync.get("session_id"))
+        except Exception as sync_error:
+            logger.warning("Failed to sync proactive message to chat for %s: %s", user_id, sync_error)
+
         result = get_push_service().send_push_to_user(
             user_id=user_id,
             title="Miru nho ban",
             body=message,
-            url="/therapy",
+            url="/chat",
             tag="proactive-12h",
             extra={
                 "kind": "proactive_checkin",
                 "last_activity": last_activity.isoformat(),
-                "session_id": session_id,
+                "session_id": target_session_id,
             },
         )
         if result.get("success"):

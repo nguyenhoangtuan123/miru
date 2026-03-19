@@ -426,7 +426,7 @@ export function Chat() {
           </div>
         )}
 
-        <div className="flex-1 space-y-6 overflow-y-auto p-4 pb-32 md:p-6 md:pb-24">
+        <div className="flex-1 space-y-6 overflow-y-auto p-4 pb-24 md:p-6 md:pb-24">
           {isLoadingMessages ? (
             <div className="flex h-full items-center justify-center text-white/40">
               <LoaderCircle size={24} className="animate-spin" />
@@ -477,7 +477,10 @@ export function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-miru-bg via-miru-bg to-transparent p-4 pb-24 md:pb-4">
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-miru-bg via-miru-bg to-transparent p-4 md:pb-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+        >
           <form onSubmit={sendMessage} className="relative mx-auto max-w-4xl">
             <input
               type="text"

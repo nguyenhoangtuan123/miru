@@ -7,7 +7,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from schemas import MomentCheckin, DailyMoodCheckin
 from auth_middleware import require_auth, require_auth_for_user, require_user_id
-from services import db_manager, memory_service, groq_client
+from services import chat_manager, db_manager, memory_service, groq_client
 from utils import LOCAL_TZ
 from facts_parser import get_facts_parser
 
@@ -91,12 +91,16 @@ def _load_mood_checkins(db, user_id: str, days: Optional[int] = None, limit: int
 async def list_fact_sessions(request: Request):
     """List all available fact sessions"""
     try:
-        await require_auth(request)
+        current_user_id = await require_user_id(request)
         if not ENABLE_FACTS_DEBUG_ENDPOINTS:
             raise HTTPException(status_code=404, detail="Not found")
         parser = get_facts_parser()
-        sessions = parser.list_sessions()
+        owned_sessions = chat_manager.get_user_sessions(current_user_id, limit=500).get("sessions", [])
+        owned_session_ids = {str(item.get("id")) for item in owned_sessions if item.get("id") is not None}
+        sessions = [session_id for session_id in parser.list_sessions() if session_id in owned_session_ids]
         return {"success": True, "sessions": sessions}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -104,9 +108,11 @@ async def list_fact_sessions(request: Request):
 async def get_facts_insights(session_id: str, request: Request):
     """Get parsed facts for a specific session"""
     try:
-        await require_auth(request)
+        current_user_id = await require_user_id(request)
         if not ENABLE_FACTS_DEBUG_ENDPOINTS:
             raise HTTPException(status_code=404, detail="Not found")
+        if not chat_manager.session_belongs_to_user(session_id, current_user_id):
+            raise HTTPException(status_code=403, detail="Access denied")
         parser = get_facts_parser()
         data = parser.parse_session(session_id)
         if "error" in data:
@@ -532,6 +538,7 @@ async def save_daily_mood_checkin(checkin: DailyMoodCheckin, request: Request):
     Lưu mood check-in hàng ngày với streak tracking.
     """
     try:
+        await require_auth_for_user(request, checkin.user_id)
         from database import DatabaseManager
         from services import get_reminder_config
         import google.generativeai as genai
@@ -645,6 +652,10 @@ async def get_proactive_message(user_id: str, request: Request):
     try:
         await require_auth_for_user(request, user_id)
         message = await generate_proactive_checkin_message(user_id)
+        try:
+            chat_manager.ensure_proactive_message(user_id, message, source="moment_api", create_if_missing=True)
+        except Exception as sync_error:
+            print(f"[Proactive API] Could not sync proactive message to chat: {sync_error}")
         return {"success": True, "message": message}
     except HTTPException:
         raise
