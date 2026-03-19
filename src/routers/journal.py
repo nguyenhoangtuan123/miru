@@ -18,6 +18,12 @@ async def save_journal(entry: JournalEntry, request: Request):
             mood=entry.mood,
             tags=entry.tags
         )
+        try:
+            from trajectory_service import get_trajectory_service
+
+            get_trajectory_service().recompute_snapshot(entry.user_id, trigger="manual")
+        except Exception:
+            pass
         return result
     except HTTPException:
         raise

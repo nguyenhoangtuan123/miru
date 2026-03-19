@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { api, parseApi } from './api';
+import { TrajectorySummarySchema } from './trajectory';
 
 export const SharingAccessLevelSchema = z.enum(['none', 'ai_report', 'direct']);
 
@@ -45,6 +46,7 @@ export const SharedContextOverviewSchema = z
     therapist_id: z.string(),
     consent: TherapistSharingPreferenceSchema,
     groups: z.array(SharedContextGroupSchema).default([]),
+    trajectory_summary: TrajectorySummarySchema.nullable().optional(),
   })
   .passthrough();
 

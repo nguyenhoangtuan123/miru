@@ -67,6 +67,13 @@ class ProactivePushScheduler:
         if not push_service.is_enabled():
             return
 
+        try:
+            from trajectory_service import get_trajectory_service
+
+            get_trajectory_service().recompute_due_snapshots(limit=50)
+        except Exception:
+            pass
+
         for user_id in push_service.get_subscribed_user_ids():
             try:
                 await self._process_user(user_id)
@@ -167,11 +174,40 @@ class ProactivePushScheduler:
         }
         self._save_state(state)
 
-    async def _build_proactive_message(self, user_id: str, last_activity: datetime, short_term_memory: str, long_term_memories: List[str]) -> str:
+    async def _build_proactive_message(
+        self,
+        user_id: str,
+        last_activity: datetime,
+        short_term_memory: str,
+        long_term_memories: List[str],
+        trajectory_summary: Optional[Dict[str, Any]] = None,
+    ) -> str:
         ai_service = get_ai_service()
         inactivity_hours = max(int((datetime.now(timezone.utc) - last_activity).total_seconds() // 3600), INACTIVITY_HOURS)
         long_term_context = "\n".join(f"- {memory}" for memory in long_term_memories[:6]) or "- Chua co memory dai han ro rang."
         short_term_context = short_term_memory or "Chua co facts ngan han gan day."
+        trajectory_context = "Chua co ban tom tat quy dao gan day."
+        tone_hint = "giu giong am ap, tu nhien va goi mo nhe."
+        if isinstance(trajectory_summary, dict) and trajectory_summary:
+            chapter_title = str(trajectory_summary.get("chapter_title") or trajectory_summary.get("trajectory_state") or "").strip()
+            trend_summary = str(trajectory_summary.get("trend_summary") or "").strip()
+            what_changed = str(trajectory_summary.get("what_changed") or "").strip()
+            parts = []
+            if chapter_title:
+                parts.append(f"- Chuong hien tai: {chapter_title}")
+            if trend_summary:
+                parts.append(f"- Miru dang thay: {trend_summary}")
+            if what_changed:
+                parts.append(f"- Dieu da doi: {what_changed}")
+            trajectory_context = "\n".join(parts) if parts else trajectory_context
+
+            state_label = (chapter_title or "").lower()
+            if "quá tải" in state_label or "qua tai" in state_label:
+                tone_hint = "giu nhip rat nhe, it cau hoi, uu tien on dinh va khong tao ap luc."
+            elif "mở lời" in state_label or "mo loi" in state_label:
+                tone_hint = "khuyen khich chia se them mot chut neu user muon, nhung van giu nhip nhe."
+            elif "ổn định" in state_label or "on dinh" in state_label:
+                tone_hint = "cuong co tien bo gan day, nhac user ve nhung dieu dang on hon."
 
         prompt = f"""
 Ban la Miru, dang gui mot push notification chu dong cho user sau {inactivity_hours} gio khong nhan tin.
@@ -181,12 +217,16 @@ Yeu cau:
 - Co tham chieu nhe den boi canh ca nhan neu hop ly.
 - Khong chan doan, khong gay ap luc, khong dai dong.
 - Neu user tung met moi, hay nhac rat nhe rang.
+- {tone_hint}
 
 Short-term memory gan day:
 {short_term_context}
 
 Long-term memory lien quan:
 {long_term_context}
+
+Tom tat quy dao gan day:
+{trajectory_context}
 
 Chi tra ve noi dung thong diep.
 """
@@ -214,7 +254,20 @@ Chi tra ve noi dung thong diep.
 
         short_term_memory = self._get_short_term_memory(session_id)
         long_term_memories = self._get_long_term_memory(user_id)
-        message = await self._build_proactive_message(user_id, last_activity, short_term_memory, long_term_memories)
+        trajectory_summary = None
+        try:
+            from trajectory_service import get_trajectory_service
+
+            trajectory_summary = get_trajectory_service().get_summary(user_id, record_view=False)
+        except Exception:
+            trajectory_summary = None
+        message = await self._build_proactive_message(
+            user_id,
+            last_activity,
+            short_term_memory,
+            long_term_memories,
+            trajectory_summary,
+        )
 
         result = get_push_service().send_push_to_user(
             user_id=user_id,

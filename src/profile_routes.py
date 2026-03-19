@@ -50,6 +50,7 @@ class TherapistContactRequestCreatePayload(BaseModel):
     client_contact_phone: Optional[str] = None
     client_contact_zalo: Optional[str] = None
     service_interest: Optional[str] = None
+    source: Optional[str] = None
 
 
 class TherapistContactRequestHandlePayload(BaseModel):
@@ -101,7 +102,7 @@ async def list_public_therapists(limit: Optional[int] = None):
 
 @router.get("/therapists/public/{therapist_id}")
 async def get_public_therapist_profile(therapist_id: str):
-    profile = get_profile_service().get_public_therapist(therapist_id)
+    profile = get_profile_service().get_public_therapist(therapist_id, track_view=True)
     if not profile:
         raise HTTPException(status_code=404, detail="Public therapist profile not found")
     return {"success": True, "profile": profile}

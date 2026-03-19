@@ -56,7 +56,8 @@ const GROUPS: Array<{
   {
     key: 'insights_access',
     label: 'AI insights',
-    description: 'Các insight và phân tích mức cao được hệ thống rút ra từ dữ liệu của bạn.',
+    description:
+      'Các insight mức cao, bao gồm “Chương hiện tại”, xu hướng gần đây và gợi ý bước tiếp theo của Miru.',
   },
 ];
 
@@ -83,7 +84,9 @@ function PreferenceCard({
           <UserCheck size={20} />
         </div>
         <div>
-          <h2 className="text-xl font-semibold">{preference.therapist_name || preference.therapist_email || 'Nhà trị liệu'}</h2>
+          <h2 className="text-xl font-semibold">
+            {preference.therapist_name || preference.therapist_email || 'Nhà trị liệu'}
+          </h2>
           <p className="text-sm text-white/55">
             Chọn mức chia sẻ riêng cho từng nhóm dữ liệu với therapist này.
           </p>
@@ -169,19 +172,25 @@ export function SharingPage() {
           </div>
           <h1 className="text-3xl font-bold text-white">Kiểm soát dữ liệu bạn chia sẻ với therapist</h1>
           <p className="mt-3 max-w-3xl text-sm text-white/60">
-            Bạn có thể chọn không chia sẻ, chỉ cho therapist xem báo cáo AI tổng quát, hoặc chia sẻ trực tiếp từng nhóm dữ liệu.
-            Quyền mới sẽ có hiệu lực ngay ở lần truy cập tiếp theo.
+            Bạn có thể chọn không chia sẻ, chỉ cho therapist xem báo cáo AI tổng quát, hoặc chia sẻ trực tiếp
+            từng nhóm dữ liệu. Quyền mới sẽ có hiệu lực ngay ở lần truy cập tiếp theo.
           </p>
+          <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 px-4 py-4 text-sm leading-7 text-white/65">
+            Mục <strong>AI insights</strong> có thể bao gồm “Chương hiện tại”, xu hướng gần đây và gợi ý
+            bước tiếp theo mà Miru dùng để đồng hành cùng bạn. Miru không dùng ngôn ngữ chẩn đoán ở đây.
+          </div>
         </div>
 
-        {preferencesQuery.error instanceof Error && (
+        {preferencesQuery.error instanceof Error ? (
           <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             {preferencesQuery.error.message}
           </div>
-        )}
+        ) : null}
 
         {preferencesQuery.isLoading ? (
-          <div className="glass-panel p-8 text-sm text-white/60">Đang tải danh sách therapist đã kết nối...</div>
+          <div className="glass-panel p-8 text-sm text-white/60">
+            Đang tải danh sách therapist đã kết nối...
+          </div>
         ) : preferences.length === 0 ? (
           <div className="glass-panel p-8 text-sm text-white/60">
             Hiện chưa có therapist nào đang kết nối active với bạn, nên chưa có cài đặt chia sẻ để cấu hình.

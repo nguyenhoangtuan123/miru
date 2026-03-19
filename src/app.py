@@ -25,6 +25,8 @@ from proactive_routes import router as proactive_router
 from push_routes import router as push_router
 from therapist_verification_routes import router as therapist_verification_router
 from assessment_routes import router as assessment_router
+from intake_routes import router as intake_router
+from trajectory_routes import router as trajectory_router
 from therapist_sharing_routes import router as therapist_sharing_router
 from treatment_program_routes import router as treatment_program_router
 from therapist_verification_service import get_therapist_verification_service
@@ -236,6 +238,8 @@ app.include_router(push_router)
 app.include_router(consent_router)
 app.include_router(therapist_verification_router)
 app.include_router(assessment_router)
+app.include_router(intake_router)
+app.include_router(trajectory_router)
 app.include_router(therapist_sharing_router)
 app.include_router(treatment_program_router)
 

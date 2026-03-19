@@ -419,6 +419,12 @@ async def save_moment(moment: MomentCheckin, request: Request):
         summary = f"Cảm xúc: {moment.emotion_score}/10. Ngữ cảnh: {tags_str}{note_str}"
         
         result = db_manager.add_session_summary(moment.user_id, summary)
+        try:
+            from trajectory_service import get_trajectory_service
+
+            get_trajectory_service().recompute_snapshot(moment.user_id, trigger="manual")
+        except Exception:
+            pass
         return {"success": True, "message": "Đã lưu khoảnh khắc của bạn", "result": result}
     except HTTPException:
         raise
@@ -539,6 +545,12 @@ async def save_daily_mood_checkin(checkin: DailyMoodCheckin, request: Request):
         summary = f"Mood Check-in: {checkin.emotion_score}/10. Ngữ cảnh: {tags_str}{note_str}"
         
         result = db_manager.add_session_summary(checkin.user_id, summary)
+        try:
+            from trajectory_service import get_trajectory_service
+
+            get_trajectory_service().recompute_snapshot(checkin.user_id, trigger="manual")
+        except Exception:
+            pass
         
         # Tính streak
         streak = await calculate_mood_streak(checkin.user_id, db)

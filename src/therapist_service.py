@@ -234,6 +234,98 @@ class TherapistService:
         except Exception:
             return 0
 
+    def _select_rows_by_column(
+        self,
+        table_name: str,
+        column: str,
+        value: Any,
+        order_column: Optional[str] = "created_at",
+        desc: bool = True,
+        limit: Optional[int] = None,
+        eq_filters: Optional[Dict[str, Any]] = None,
+        in_filters: Optional[Dict[str, List[Any]]] = None,
+    ) -> List[Dict[str, Any]]:
+        def _build_query(include_order: bool):
+            query = self.supabase.table(table_name).select("*").eq(column, value)
+            for key, item in (eq_filters or {}).items():
+                query = query.eq(key, item)
+            for key, values in (in_filters or {}).items():
+                if values:
+                    query = query.in_(key, values)
+            if include_order and order_column:
+                query = query.order(order_column, desc=desc)
+            if isinstance(limit, int) and limit > 0:
+                query = query.limit(limit)
+            return query
+
+        for include_order in (True, False):
+            try:
+                response = _build_query(include_order).execute()
+                return [row for row in (response.data or []) if isinstance(row, dict)]
+            except Exception:
+                continue
+        return []
+
+    def _parse_timestamp(self, value: Any) -> Optional[datetime]:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        normalized = value.strip().replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except Exception:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def _latest_timestamp_from_rows(self, rows: List[Dict[str, Any]], fields: List[str]) -> Optional[datetime]:
+        latest: Optional[datetime] = None
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            for field in fields:
+                parsed = self._parse_timestamp(row.get(field))
+                if parsed and (latest is None or parsed > latest):
+                    latest = parsed
+        return latest
+
+    def _iso_or_none(self, value: Optional[datetime]) -> Optional[str]:
+        if not value:
+            return None
+        return value.astimezone(timezone.utc).isoformat()
+
+    def _sharing_preferences(self, therapist_id: str, client_id: str) -> Dict[str, str]:
+        try:
+            response = (
+                self.supabase.table("therapist_sharing_preferences")
+                .select("*")
+                .eq("therapist_id", therapist_id)
+                .eq("client_id", client_id)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            return {
+                "ai_chat_access": "none",
+                "web_activity_access": "none",
+                "assessment_access": "none",
+                "insights_access": "none",
+            }
+        row = response.data[0] if response.data else {}
+        return {
+            "ai_chat_access": str(row.get("ai_chat_access") or "none"),
+            "web_activity_access": str(row.get("web_activity_access") or "none"),
+            "assessment_access": str(row.get("assessment_access") or "none"),
+            "insights_access": str(row.get("insights_access") or "none"),
+        }
+
+    def _has_deep_share_access(self, therapist_id: str, client_id: str) -> bool:
+        preferences = self._sharing_preferences(therapist_id, client_id)
+        return any(
+            preferences.get(key) in {"ai_report", "direct"}
+            for key in ("ai_chat_access", "web_activity_access", "assessment_access", "insights_access")
+        )
+
     def _attach_client_users(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         users_by_id = self._get_users_by_ids(
             [
@@ -987,7 +1079,23 @@ class TherapistService:
             },
         ]
         updated = self._update_assignment_row(assignment_id, payload_variants)
-        return self._hydrate_assignment(updated) if updated else None
+        hydrated = self._hydrate_assignment(updated) if updated else None
+        client_id = str((hydrated or assignment).get("client_id") or "")
+        if client_id:
+            try:
+                from trajectory_service import get_trajectory_service
+
+                trajectory_service = get_trajectory_service()
+                trajectory_service.log_event(
+                    client_id,
+                    "assignment_completed",
+                    {"assignment_id": assignment_id},
+                    dedupe_seconds=0,
+                )
+                trajectory_service.recompute_snapshot(client_id, trigger="manual")
+            except Exception:
+                pass
+        return hydrated
 
     def add_assignment_submission_attachments(
         self,
@@ -1453,19 +1561,442 @@ class TherapistService:
         )
         return response.data[0] if response.data else None
 
-    def get_client_summary(self, client_id: str) -> Dict[str, int]:
+    def get_client_summary(
+        self,
+        client_id: str,
+        therapist_identifier: Optional[str] = None,
+        client_row: Optional[Dict[str, Any]] = None,
+        open_crises: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        therapist_id = self._resolve_therapist_id(therapist_identifier) if therapist_identifier else None
+        now_value = datetime.now(timezone.utc)
+        client_user = None
+        if isinstance(client_row, dict) and isinstance(client_row.get("users"), dict):
+            client_user = client_row.get("users")
+        if not isinstance(client_user, dict):
+            client_user = self._get_users_by_ids([client_id]).get(
+                client_id,
+                {"id": client_id, "name": client_id, "email": "", "picture": None},
+            )
+
+        assignments = self.get_client_assignments(client_id)
+        completed_assignments = sum(1 for item in assignments if str(item.get("status") or "").lower() == "completed")
+        pending_assignment_rows = [
+            item for item in assignments if str(item.get("status") or "").lower() in {"pending", "in_progress"}
+        ]
+        overdue_assignments = sum(
+            1
+            for item in pending_assignment_rows
+            if (due_dt := self._parse_timestamp(item.get("due_date"))) and due_dt < now_value
+        )
+
+        message_filters = {"therapist_id": therapist_id} if therapist_id else None
+        message_rows = self._select_rows_by_column(
+            "therapist_client_messages",
+            "client_id",
+            client_id,
+            order_column="created_at",
+            desc=True,
+            limit=80,
+            eq_filters=message_filters,
+        )
+        unread_client_messages = sum(
+            1
+            for row in message_rows
+            if str(row.get("sender_type") or "") == "client" and not bool(row.get("is_read"))
+        )
+        latest_client_message_at = self._latest_timestamp_from_rows(
+            [row for row in message_rows if str(row.get("sender_type") or "") == "client"],
+            ["created_at"],
+        )
+        latest_therapist_message_at = self._latest_timestamp_from_rows(
+            [row for row in message_rows if str(row.get("sender_type") or "") == "therapist"],
+            ["created_at", "read_at"],
+        )
+
+        appointments = self.get_appointments(therapist_id, client_id) if therapist_id else self.get_client_appointments(client_id)
+        upcoming_appointments: List[Dict[str, Any]] = []
+        today_appointments: List[Dict[str, Any]] = []
+        for appointment in appointments:
+            appointment_dt = self._parse_timestamp(appointment.get("appointment_date"))
+            if not appointment_dt:
+                continue
+            status = str(appointment.get("status") or "scheduled").lower()
+            if status in {"cancelled", "completed"}:
+                continue
+            if appointment_dt >= now_value:
+                upcoming_appointments.append(appointment)
+            local_appointment_date = appointment_dt.astimezone(LOCAL_TZ).date()
+            if local_appointment_date == now_value.astimezone(LOCAL_TZ).date():
+                today_appointments.append(appointment)
+        next_appointment_at = self._latest_timestamp_from_rows(
+            sorted(
+                upcoming_appointments,
+                key=lambda item: self._parse_timestamp(item.get("appointment_date")) or now_value,
+            )[:1],
+            ["appointment_date"],
+        )
+
+        pending_assessment_rows = [
+            row
+            for row in self._select_rows_by_column(
+                "assessment_assignments",
+                "client_id",
+                client_id,
+                order_column="assigned_at",
+                desc=True,
+                eq_filters={"therapist_id": therapist_id} if therapist_id else None,
+            )
+            if str(row.get("status") or "assigned").lower() not in {"completed", "cancelled"}
+        ]
+
+        active_crises = [
+            row
+            for row in (open_crises or [])
+            if isinstance(row, dict) and str(row.get("client_id") or "") == client_id
+        ]
+        if not active_crises and therapist_id:
+            active_crises = [
+                row
+                for row in self.get_unacknowledged_crises(therapist_id)
+                if isinstance(row, dict) and str(row.get("client_id") or "") == client_id
+            ]
+        open_crisis_count = len(active_crises)
+
+        deep_share_enabled = bool(therapist_id) and self._has_deep_share_access(therapist_id, client_id)
+        analyzed_rows = (
+            self._select_rows_by_column("analyzed_sessions", "user_id", client_id, order_column="analyzed_at", desc=True, limit=3)
+            if deep_share_enabled
+            else []
+        )
+        journal_rows = (
+            self._select_rows_by_column("journal_entries", "user_id", client_id, order_column="created_at", desc=True, limit=3)
+            if deep_share_enabled
+            else []
+        )
+        checkin_rows = (
+            self._select_rows_by_column("moment_checkins", "user_id", client_id, order_column="created_at", desc=True, limit=5)
+            if deep_share_enabled
+            else []
+        )
+        latest_checkin_score = None
+        if checkin_rows:
+            try:
+                latest_checkin_score = float(checkin_rows[0].get("emotion_score"))
+            except Exception:
+                latest_checkin_score = None
+
+        summary_candidates: List[str] = []
+        if analyzed_rows:
+            latest_analysis = analyzed_rows[0]
+            for key in ("ai_summary", "facts_content"):
+                value = latest_analysis.get(key)
+                if isinstance(value, str) and value.strip():
+                    summary_candidates.append(value.strip())
+        if journal_rows:
+            journal_text = journal_rows[0].get("content")
+            if isinstance(journal_text, str) and journal_text.strip():
+                summary_candidates.append(journal_text.strip())
+        combined_text = " ".join(summary_candidates).lower()
+
+        trajectory_summary = None
+        trajectory_share_enabled = False
+        if therapist_id:
+            try:
+                trajectory_share_enabled = (
+                    str(self._sharing_preferences(therapist_id, client_id).get("insights_access") or "none")
+                    in {"ai_report", "direct"}
+                )
+                from trajectory_service import get_trajectory_service
+
+                candidate = get_trajectory_service().get_clinician_summary(client_id, therapist_id)
+                if candidate.get("visible"):
+                    trajectory_summary = candidate
+            except Exception:
+                trajectory_summary = None
+
+        if trajectory_summary:
+            trajectory_state = str(
+                trajectory_summary.get("trajectory_state")
+                or trajectory_summary.get("chapter_title")
+                or "Đang cần theo dõi thêm"
+            )
+            trend_summary = str(
+                trajectory_summary.get("trend_summary")
+                or trajectory_summary.get("reflection_text")
+                or "Miru đã có bản tóm tắt clinician-safe cho ca này."
+            )
+        elif not deep_share_enabled:
+            trajectory_state = "Chưa có dữ liệu chia sẻ sâu"
+            trend_summary = "Thân chủ chưa bật chia sẻ AI hoặc insights. Miru đang hiển thị các tín hiệu vận hành cơ bản."
+        elif open_crisis_count > 0 or (latest_checkin_score is not None and latest_checkin_score <= 3):
+            trajectory_state = "Quá tải gần đây"
+            trend_summary = (summary_candidates[0] if summary_candidates else "Các tín hiệu gần đây cho thấy thân chủ cần được theo dõi sát hơn.")[:220]
+        elif any(keyword in combined_text for keyword in ["né", "tránh", "im lặng", "thu mình", "một mình", "cô lập"]):
+            trajectory_state = "Có dấu hiệu cô lập"
+            trend_summary = (summary_candidates[0] if summary_candidates else "Nội dung gần đây cho thấy xu hướng thu mình hoặc tránh né.")[:220]
+        elif any(keyword in combined_text for keyword in ["mở lời", "chia sẻ", "kết nối", "thổ lộ"]):
+            trajectory_state = "Bắt đầu mở lời"
+            trend_summary = (summary_candidates[0] if summary_candidates else "Thân chủ đang cởi mở hơn trong cách chia sẻ gần đây.")[:220]
+        elif latest_checkin_score is not None and latest_checkin_score >= 7 and completed_assignments > 0 and open_crisis_count == 0:
+            trajectory_state = "Ổn định dần"
+            trend_summary = (summary_candidates[0] if summary_candidates else "Các tín hiệu gần đây cho thấy nhịp ổn định đang tốt hơn trước.")[:220]
+        else:
+            trajectory_state = "Đang cần theo dõi thêm"
+            trend_summary = (summary_candidates[0] if summary_candidates else "Miru đang gom thêm dữ liệu gần đây để làm rõ tiến trình của ca.")[:220]
+
+        if not trajectory_summary:
+            if not trajectory_share_enabled:
+                trajectory_state = "Chưa có quỹ đạo được chia sẻ"
+                trend_summary = "Thân chủ chưa bật chia sẻ AI insights, nên Miru không hiển thị bản quỹ đạo cho therapist."
+            else:
+                trajectory_state = "Chờ thêm dữ liệu quỹ đạo"
+                trend_summary = "Miru chưa có đủ dữ liệu để dựng bản tóm tắt quỹ đạo clinician-safe cho ca này."
+
+        last_client_activity_at = max(
+            [
+                item
+                for item in [
+                    latest_client_message_at,
+                    self._latest_timestamp_from_rows(analyzed_rows, ["analyzed_at", "updated_at", "created_at"]),
+                    self._latest_timestamp_from_rows(journal_rows, ["created_at", "updated_at"]),
+                    self._latest_timestamp_from_rows(checkin_rows, ["created_at", "updated_at"]),
+                    self._latest_timestamp_from_rows(assignments, ["last_progress_at", "completed_at", "updated_at", "created_at"]),
+                    self._latest_timestamp_from_rows(pending_assessment_rows, ["completed_at", "updated_at", "assigned_at", "created_at"]),
+                ]
+                if item is not None
+            ],
+            default=None,
+        )
+        last_therapist_action_at = max(
+            [
+                item
+                for item in [
+                    latest_therapist_message_at,
+                    self._latest_timestamp_from_rows(assignments, ["updated_at", "created_at"]),
+                    self._latest_timestamp_from_rows(appointments, ["updated_at", "created_at"]),
+                    self._latest_timestamp_from_rows(pending_assessment_rows, ["updated_at", "assigned_at", "created_at"]),
+                ]
+                if item is not None
+            ],
+            default=None,
+        )
+
+        pending_items_count = len(pending_assignment_rows) + len(pending_assessment_rows) + unread_client_messages + open_crisis_count
+
+        attention_level = "low"
+        attention_reason = "Ca đang ổn định và chưa có tín hiệu cần can thiệp ngay."
+        suggested_next_action = "Xem summary ca"
+
+        inactivity_days = None
+        if last_client_activity_at:
+            inactivity_days = max((now_value - last_client_activity_at).days, 0)
+
+        if open_crisis_count > 0:
+            attention_level = "high"
+            attention_reason = "Có cảnh báo khủng hoảng chưa được xác nhận."
+            suggested_next_action = "Xác nhận cảnh báo"
+        elif unread_client_messages > 0:
+            attention_level = "high" if unread_client_messages >= 3 else "medium"
+            attention_reason = "Thân chủ vừa nhắn và đang chờ phản hồi."
+            suggested_next_action = "Nhắn follow-up"
+        elif overdue_assignments > 0:
+            attention_level = "medium"
+            attention_reason = "Có bài tập đang quá hạn và chưa được thân chủ hoàn thành."
+            suggested_next_action = "Giao bài tập"
+        elif pending_assessment_rows:
+            attention_level = "medium"
+            attention_reason = "Có thang đo đã giao nhưng thân chủ chưa nộp."
+            suggested_next_action = "Gửi assessment"
+        elif next_appointment_at and next_appointment_at <= now_value + timedelta(hours=24):
+            attention_level = "medium"
+            attention_reason = "Có lịch hẹn diễn ra trong hôm nay hoặc 24 giờ tới."
+            suggested_next_action = "Xem summary ca"
+        elif not deep_share_enabled and therapist_id:
+            attention_level = "medium" if pending_items_count > 0 else "low"
+            attention_reason = "Thân chủ chưa bật chia sẻ dữ liệu sâu cho therapist."
+            suggested_next_action = "Mời cập nhật quyền chia sẻ"
+        elif inactivity_days is not None and inactivity_days >= 3:
+            attention_level = "medium"
+            attention_reason = "Thân chủ đã ít tương tác trong khoảng ba ngày gần đây."
+            suggested_next_action = "Nhắn follow-up"
+
+        total_sessions = self._safe_exact_count("chat_sessions", eq_filters={"user_id": client_id})
+        if total_sessions == 0:
+            total_sessions = self._safe_exact_count("analyzed_sessions", eq_filters={"user_id": client_id})
+
         return {
-            "total_sessions": self._safe_exact_count("chat_sessions", eq_filters={"user_id": client_id}),
-            "completed_assignments": self._safe_exact_count(
-                "assignments",
-                eq_filters={"client_id": client_id, "status": "completed"},
-            ),
-            "pending_assignments": self._safe_exact_count(
-                "assignments",
-                eq_filters={"client_id": client_id},
-                in_filters={"status": ["pending", "in_progress"]},
-            ),
+            "client_id": client_id,
+            "client": client_user,
+            "total_sessions": total_sessions,
+            "completed_assignments": completed_assignments,
+            "pending_assignments": len(pending_assignment_rows),
+            "pending_assessments": len(pending_assessment_rows),
             "crisis_events": self._safe_exact_count("crisis_events", eq_filters={"client_id": client_id}),
+            "open_crisis_count": open_crisis_count,
+            "unread_client_messages": unread_client_messages,
+            "today_appointments_count": len(today_appointments),
+            "pending_items_count": pending_items_count,
+            "attention_level": attention_level,
+            "attention_reason": attention_reason,
+            "trajectory_state": trajectory_state,
+            "trend_summary": trend_summary,
+            "suggested_next_action": suggested_next_action,
+            "last_client_activity_at": self._iso_or_none(last_client_activity_at),
+            "last_therapist_action_at": self._iso_or_none(last_therapist_action_at),
+            "next_appointment_at": self._iso_or_none(next_appointment_at),
+            "share_access_enabled": deep_share_enabled,
+            "trajectory_summary": trajectory_summary,
+        }
+
+    def get_morning_board(self, therapist_identifier: str) -> Dict[str, Any]:
+        therapist_id = self._resolve_therapist_id(therapist_identifier)
+        if not therapist_id:
+            return {
+                "attention_clients": [],
+                "new_contact_requests": [],
+                "today_appointments": [],
+                "pending_assignments": [],
+                "pending_assessments": [],
+                "open_crises": [],
+                "stats": {},
+            }
+
+        clients = self.get_my_clients(therapist_id)
+        open_crises = self.get_unacknowledged_crises(therapist_id)
+        crises_by_client: Dict[str, List[Dict[str, Any]]] = {}
+        for row in open_crises:
+            client_id = str(row.get("client_id") or "")
+            if client_id:
+                crises_by_client.setdefault(client_id, []).append(row)
+
+        attention_clients = []
+        for client in clients:
+            client_id = str(client.get("client_id") or client.get("id") or "")
+            if not client_id:
+                continue
+            attention_clients.append(
+                self.get_client_summary(
+                    client_id,
+                    therapist_id,
+                    client_row=client,
+                    open_crises=crises_by_client.get(client_id, []),
+                )
+            )
+
+        level_rank = {"high": 3, "medium": 2, "low": 1}
+        attention_clients.sort(
+            key=lambda item: (
+                level_rank.get(str(item.get("attention_level")), 0),
+                int(item.get("pending_items_count") or 0),
+                str(item.get("last_client_activity_at") or ""),
+            ),
+            reverse=True,
+        )
+
+        contact_request_rows = self._select_rows_by_column(
+            "therapist_contact_requests",
+            "therapist_id",
+            therapist_id,
+            order_column="updated_at",
+            desc=True,
+            limit=20,
+        )
+        lead_users = self._get_users_by_ids(
+            [str(row.get("client_id")) for row in contact_request_rows if isinstance(row.get("client_id"), str)]
+        )
+        lead_items = []
+        for row in contact_request_rows:
+            funnel_status = str(row.get("funnel_status") or "").strip().lower()
+            legacy_status = str(row.get("status") or "").strip().lower()
+            if not funnel_status:
+                if legacy_status == "approved" and row.get("shared_pairing_code"):
+                    funnel_status = "approved"
+                elif legacy_status == "approved":
+                    funnel_status = "replied"
+                elif legacy_status in {"declined", "archived"}:
+                    funnel_status = "lost"
+                else:
+                    funnel_status = "new"
+            if funnel_status in {"paired", "lost"}:
+                continue
+            client_id = str(row.get("client_id") or "")
+            lead_items.append(
+                {
+                    "id": row.get("id"),
+                    "client_id": client_id,
+                    "client": lead_users.get(client_id, {"id": client_id, "name": client_id, "email": ""}),
+                    "funnel_status": funnel_status,
+                    "source": str(row.get("source") or "directory"),
+                    "message": row.get("message") if isinstance(row.get("message"), str) else "",
+                    "service_interest": row.get("service_interest") if isinstance(row.get("service_interest"), str) else "unsure",
+                    "updated_at": row.get("updated_at"),
+                    "shared_pairing_code": row.get("shared_pairing_code") if isinstance(row.get("shared_pairing_code"), str) else None,
+                }
+            )
+
+        appointments = self.get_appointments(therapist_id)
+        local_today = datetime.now(LOCAL_TZ).date()
+        today_appointments = [
+            appointment
+            for appointment in appointments
+            if (appointment_dt := self._parse_timestamp(appointment.get("appointment_date")))
+            and appointment_dt.astimezone(LOCAL_TZ).date() == local_today
+            and str(appointment.get("status") or "scheduled").lower() not in {"cancelled", "completed"}
+        ]
+
+        pending_assignments = [
+            assignment
+            for assignment in self.get_therapist_assignments(therapist_id)
+            if str(assignment.get("status") or "").lower() in {"pending", "in_progress"}
+        ]
+
+        pending_assessment_rows = [
+            row
+            for row in self._select_rows_by_column(
+                "assessment_assignments",
+                "therapist_id",
+                therapist_id,
+                order_column="assigned_at",
+                desc=True,
+                limit=50,
+            )
+            if str(row.get("status") or "assigned").lower() not in {"completed", "cancelled"}
+        ]
+        pending_assessment_users = self._get_users_by_ids(
+            [str(row.get("client_id")) for row in pending_assessment_rows if isinstance(row.get("client_id"), str)]
+        )
+        pending_assessments = [
+            {
+                **row,
+                "client": pending_assessment_users.get(
+                    str(row.get("client_id") or ""),
+                    {
+                        "id": str(row.get("client_id") or ""),
+                        "name": str(row.get("client_id") or ""),
+                        "email": "",
+                    },
+                ),
+            }
+            for row in pending_assessment_rows
+        ]
+
+        return {
+            "attention_clients": attention_clients,
+            "new_contact_requests": lead_items,
+            "today_appointments": today_appointments,
+            "pending_assignments": pending_assignments,
+            "pending_assessments": pending_assessments,
+            "open_crises": open_crises,
+            "stats": {
+                "total_clients": len(clients),
+                "attention_clients": len([item for item in attention_clients if item.get("attention_level") in {"high", "medium"}]),
+                "new_contact_requests": len(lead_items),
+                "today_appointments": len(today_appointments),
+                "pending_assignments": len(pending_assignments),
+                "pending_assessments": len(pending_assessments),
+                "open_crises": len(open_crises),
+            },
         }
 
 

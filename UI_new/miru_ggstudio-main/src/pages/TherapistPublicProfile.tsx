@@ -1,13 +1,36 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ExternalLink, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import {
+  ExternalLink,
+  Mail,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+} from 'lucide-react';
 import { ContactRequestModal } from '../components/profiles/ContactRequestModal';
 import { TherapistOfferingBadges } from '../components/profiles/TherapistOfferingBadges';
 import { publicTherapistDetailQueryOptions } from '../queries/appQueries';
 import type { TherapistPublicProfileDetail } from '../services/profiles';
 
-function buildContactActions(profile: NonNullable<ReturnType<typeof useTherapistProfile>['profile']>) {
+function useTherapistProfile() {
+  const { therapistId } = useParams<{ therapistId: string }>();
+  const query = useQuery({
+    ...publicTherapistDetailQueryOptions(therapistId ?? ''),
+    enabled: Boolean(therapistId),
+  });
+
+  return {
+    therapistId,
+    profile: (query.data?.profile ?? null) as TherapistPublicProfileDetail | null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : null,
+  };
+}
+
+function buildContactActions(
+  profile: NonNullable<ReturnType<typeof useTherapistProfile>['profile']>
+) {
   return [
     profile.contact_phone
       ? { key: 'phone', label: 'Gọi điện', href: `tel:${profile.contact_phone}`, icon: Phone }
@@ -19,26 +42,22 @@ function buildContactActions(profile: NonNullable<ReturnType<typeof useTherapist
       ? { key: 'zalo', label: 'Zalo', href: profile.contact_zalo_url, icon: MessageCircle }
       : null,
     profile.contact_facebook_url
-      ? { key: 'facebook', label: 'Facebook', href: profile.contact_facebook_url, icon: ExternalLink }
+      ? {
+          key: 'facebook',
+          label: 'Facebook',
+          href: profile.contact_facebook_url,
+          icon: ExternalLink,
+        }
       : null,
     profile.contact_website_url
-      ? { key: 'website', label: 'Website', href: profile.contact_website_url, icon: ExternalLink }
+      ? {
+          key: 'website',
+          label: 'Website',
+          href: profile.contact_website_url,
+          icon: ExternalLink,
+        }
       : null,
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
-}
-
-function useTherapistProfile() {
-  const { therapistId } = useParams<{ therapistId: string }>();
-  const query = useQuery({
-    ...publicTherapistDetailQueryOptions(therapistId ?? ''),
-    enabled: Boolean(therapistId),
-  });
-  return {
-    therapistId,
-    profile: (query.data?.profile ?? null) as TherapistPublicProfileDetail | null,
-    loading: query.isLoading,
-    error: query.error instanceof Error ? query.error.message : null,
-  };
 }
 
 function formatVnd(value: number | null | undefined) {
@@ -48,10 +67,24 @@ function formatVnd(value: number | null | undefined) {
   return new Intl.NumberFormat('vi-VN').format(value);
 }
 
+function formatPricingUnit(value: TherapistPublicProfileDetail['pricing_unit']) {
+  switch (value) {
+    case 'package':
+      return 'gói';
+    case 'custom':
+      return 'thoả thuận';
+    default:
+      return 'phiên';
+  }
+}
+
 export function TherapistPublicProfilePage() {
   const { profile, loading, error } = useTherapistProfile();
   const [contactOpen, setContactOpen] = useState(false);
-  const contactActions = useMemo(() => (profile ? buildContactActions(profile) : []), [profile]);
+  const contactActions = useMemo(
+    () => (profile ? buildContactActions(profile) : []),
+    [profile]
+  );
 
   if (loading) {
     return (
@@ -83,9 +116,12 @@ export function TherapistPublicProfilePage() {
   return (
     <div className="min-h-screen px-4 py-10 md:px-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="glass-panel overflow-hidden rounded-[36px] border border-white/10">
+        <section className="glass-panel overflow-hidden rounded-[36px] border border-white/10">
           <div className="bg-gradient-to-br from-miru-primary/25 via-transparent to-cyan-400/10 p-7 md:p-10">
-            <Link to="/therapists" className="text-sm text-slate-500 transition-colors hover:text-slate-900 dark:text-white/55 dark:hover:text-white">
+            <Link
+              to="/therapists"
+              className="text-sm text-slate-500 transition-colors hover:text-slate-900 dark:text-white/55 dark:hover:text-white"
+            >
               Quay lại danh bạ therapist
             </Link>
 
@@ -104,7 +140,9 @@ export function TherapistPublicProfilePage() {
 
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-4xl font-bold tracking-tight">{profile.display_name}</h1>
+                  <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {profile.display_name}
+                  </h1>
                   {profile.is_verified && (
                     <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
                       <ShieldCheck size={16} />
@@ -114,7 +152,9 @@ export function TherapistPublicProfilePage() {
                 </div>
 
                 {profile.headline && (
-                  <p className="mt-3 max-w-2xl text-lg leading-8 text-slate-700 dark:text-white/75">{profile.headline}</p>
+                  <p className="mt-3 max-w-2xl text-lg leading-8 text-slate-700 dark:text-white/75">
+                    {profile.headline}
+                  </p>
                 )}
 
                 <div className="mt-5">
@@ -145,11 +185,13 @@ export function TherapistPublicProfilePage() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-            <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Giới thiệu</div>
+            <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">
+              Giới thiệu
+            </div>
             <p className="whitespace-pre-wrap text-sm leading-8 text-slate-700 dark:text-white/75 md:text-base">
               {profile.bio || 'Therapist chưa cập nhật phần giới thiệu công khai.'}
             </p>
@@ -178,10 +220,24 @@ export function TherapistPublicProfilePage() {
 
           <aside className="space-y-6">
             <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Chi phí và thanh toán</div>
+              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">
+                Chi phí và thanh toán
+              </div>
               <div className="space-y-3 text-sm text-slate-700 dark:text-white/75">
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                  <div className="text-slate-500 dark:text-white/50">Hình thức hỗ trợ</div>
+                  <div className="text-slate-500 dark:text-white/50">
+                    Trạng thái nhận thân chủ
+                  </div>
+                  <div className="mt-1 font-semibold">
+                    {profile.accepting_new_clients
+                      ? 'Đang nhận thân chủ mới'
+                      : 'Tạm ngừng nhận thân chủ'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                  <div className="text-slate-500 dark:text-white/50">
+                    Hình thức hỗ trợ
+                  </div>
                   <div className="mt-1 font-semibold">
                     {profile.service_mode === 'free'
                       ? 'Miễn phí'
@@ -191,27 +247,30 @@ export function TherapistPublicProfilePage() {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                  <div className="text-slate-500 dark:text-white/50">Giá khởi điểm</div>
+                  <div className="text-slate-500 dark:text-white/50">
+                    Giá khởi điểm
+                  </div>
                   <div className="mt-1 font-semibold">
                     {profile.starting_price_vnd
-                      ? `${formatVnd(profile.starting_price_vnd)}đ / ${profile.pricing_unit === 'session'
-                        ? 'phiên'
-                        : profile.pricing_unit === 'package'
-                          ? 'gói'
-                          : 'thoả thuận'
-                      }`
-                      : 'Therapist sẽ trao đổi thêm khi tiếp nhận'}
+                      ? `${formatVnd(profile.starting_price_vnd)}đ / ${formatPricingUnit(
+                          profile.pricing_unit
+                        )}`
+                      : 'Therapist sẽ trao đổi thêm sau khi tiếp nhận'}
                   </div>
                 </div>
                 {profile.pricing_note && (
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                    <div className="text-slate-500 dark:text-white/50">Ghi chú giá dịch vụ</div>
+                    <div className="text-slate-500 dark:text-white/50">
+                      Ghi chú giá dịch vụ
+                    </div>
                     <div className="mt-1">{profile.pricing_note}</div>
                   </div>
                 )}
                 {profile.public_payment_note && (
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                    <div className="text-slate-500 dark:text-white/50">Ghi chú thanh toán</div>
+                    <div className="text-slate-500 dark:text-white/50">
+                      Ghi chú thanh toán
+                    </div>
                     <div className="mt-1">{profile.public_payment_note}</div>
                   </div>
                 )}
@@ -219,10 +278,13 @@ export function TherapistPublicProfilePage() {
             </section>
 
             <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Liên hệ ngoài app</div>
+              <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">
+                Liên hệ ngoài app
+              </div>
               {contactActions.length === 0 ? (
                 <p className="text-sm leading-7 text-slate-600 dark:text-white/60">
-                  Therapist chưa công khai kênh liên hệ ngoài app. Bạn vẫn có thể dùng nút Liên hệ ngay để gửi yêu cầu trực tiếp.
+                  Therapist chưa công khai kênh liên hệ ngoài app. Bạn vẫn có thể
+                  dùng nút Liên hệ ngay để gửi yêu cầu trực tiếp.
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -240,7 +302,10 @@ export function TherapistPublicProfilePage() {
                           <Icon size={18} className="text-miru-primary" />
                           {action.label}
                         </span>
-                        <ExternalLink size={16} className="text-slate-400 dark:text-white/35" />
+                        <ExternalLink
+                          size={16}
+                          className="text-slate-400 dark:text-white/35"
+                        />
                       </a>
                     );
                   })}
@@ -251,9 +316,13 @@ export function TherapistPublicProfilePage() {
         </div>
 
         <section className="glass-panel rounded-[32px] border border-white/10 p-7">
-          <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Chứng chỉ và bằng cấp</div>
+          <div className="mb-4 text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">
+            Chứng chỉ và bằng cấp
+          </div>
           {profile.certificate_images.length === 0 ? (
-            <p className="text-sm text-slate-600 dark:text-white/60">Therapist chưa thêm ảnh chứng chỉ công khai.</p>
+            <p className="text-sm text-slate-600 dark:text-white/60">
+              Therapist chưa thêm ảnh chứng chỉ công khai.
+            </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {profile.certificate_images.map((asset, index) => (
@@ -271,7 +340,9 @@ export function TherapistPublicProfilePage() {
                       className="h-56 w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-56 items-center justify-center text-sm text-slate-400 dark:text-white/40">Không tải được ảnh</div>
+                    <div className="flex h-56 items-center justify-center text-sm text-slate-400 dark:text-white/40">
+                      Không tải được ảnh
+                    </div>
                   )}
                 </a>
               ))}
@@ -284,6 +355,7 @@ export function TherapistPublicProfilePage() {
         open={contactOpen}
         onClose={() => setContactOpen(false)}
         therapist={profile}
+        source="profile_direct_link"
       />
     </div>
   );

@@ -23,6 +23,8 @@ QUESTIONS_TABLE = "assessment_questions"
 ASSIGNMENTS_TABLE = "assessment_assignments"
 ANSWERS_TABLE = "assessment_answers"
 RESULTS_TABLE = "assessment_results"
+ASSESSMENT_SOURCE_THERAPIST = "therapist_assigned"
+ASSESSMENT_SOURCE_SELF = "self_initiated"
 
 
 class AssessmentSchemaError(RuntimeError):
@@ -267,6 +269,7 @@ class AssessmentService:
                 if isinstance(therapist, dict)
                 else None
             ),
+            "source": row.get("source") or ASSESSMENT_SOURCE_THERAPIST,
             "result": self._serialize_result(result),
         }
 
@@ -315,6 +318,7 @@ class AssessmentService:
             "template_id": template_id,
             "therapist_id": therapist_id,
             "client_id": client_id,
+            "source": ASSESSMENT_SOURCE_THERAPIST,
             "status": "assigned",
             "therapist_note": therapist_note,
             "due_date": due_date,
@@ -334,6 +338,61 @@ class AssessmentService:
         template = self._fetch_templates_map([template_id]).get(template_id)
         client_user = self._fetch_users_map([client_id]).get(client_id)
         return self._serialize_assignment_summary(row, template, None, therapist=therapist, client_user=client_user)
+
+    def create_self_assignment(
+        self,
+        client_id: str,
+        template_id: str,
+    ) -> Dict[str, Any]:
+        self._ensure_schema_and_seeded()
+        normalized_client_id = str(client_id or "").strip()
+        normalized_template_id = str(template_id or "").strip().lower()
+
+        if not normalized_client_id:
+            raise AssessmentValidationError("Client ID is required")
+        if normalized_template_id not in ASSESSMENT_DEFINITIONS:
+            raise AssessmentValidationError("Unsupported assessment template")
+
+        assignment_payload = {
+            "template_id": normalized_template_id,
+            "therapist_id": None,
+            "client_id": normalized_client_id,
+            "source": ASSESSMENT_SOURCE_SELF,
+            "status": "assigned",
+            "therapist_note": None,
+            "due_date": None,
+            "assigned_at": self._now(),
+            "created_at": self._now(),
+            "updated_at": self._now(),
+        }
+
+        try:
+            response = self.supabase.table(ASSIGNMENTS_TABLE).insert(assignment_payload).execute()
+        except Exception as exc:
+            self._raise_schema_error(exc)
+            raise
+        if not response.data:
+            raise AssessmentValidationError("Failed to create self-assessment assignment")
+
+        row = response.data[0]
+        template = self._fetch_templates_map([normalized_template_id]).get(normalized_template_id)
+        client_user = self._fetch_users_map([normalized_client_id]).get(normalized_client_id)
+        serialized = self._serialize_assignment_summary(row, template, None, therapist=None, client_user=client_user)
+        try:
+            from trajectory_service import get_trajectory_service
+
+            get_trajectory_service().log_event(
+                normalized_client_id,
+                "self_test_started",
+                {
+                    "assignment_id": serialized.get("id"),
+                    "template_id": normalized_template_id,
+                },
+                dedupe_seconds=0,
+            )
+        except Exception:
+            pass
+        return serialized
 
     def list_therapist_client_assignments(
         self,
@@ -533,6 +592,52 @@ class AssessmentService:
         client_user = self._fetch_users_map([client_id]).get(client_id)
         return self._serialize_assignment_detail(row, template, questions, answers, result, therapist=therapist, client_user=client_user)
 
+    def list_shared_client_results(
+        self,
+        therapist_user_id: str,
+        client_id: str,
+        email: str = "",
+        name: str = "",
+    ) -> List[Dict[str, Any]]:
+        therapist = self._current_therapist(therapist_user_id, email=email, name=name)
+        therapist_id = str(therapist.get("id"))
+        self._ensure_relationship(therapist_id, client_id)
+
+        try:
+            response = (
+                self.supabase.table(ASSIGNMENTS_TABLE)
+                .select("*")
+                .eq("client_id", client_id)
+                .eq("status", "completed")
+                .order("completed_at", desc=True)
+                .execute()
+            )
+        except Exception as exc:
+            self._raise_schema_error(exc)
+            return []
+
+        rows = [row for row in (response.data or []) if isinstance(row, dict)]
+        results = self._fetch_results_map([str(row.get("id") or "") for row in rows])
+        templates = self._fetch_templates_map([str(row.get("template_id") or "") for row in rows])
+        therapists = self._fetch_therapists_map([str(row.get("therapist_id") or "") for row in rows])
+        client_user = self._fetch_users_map([client_id]).get(client_id)
+
+        serialized = []
+        for row in rows:
+            result = results.get(str(row.get("id") or ""))
+            if not result:
+                continue
+            serialized.append(
+                self._serialize_assignment_summary(
+                    row,
+                    templates.get(str(row.get("template_id") or "")),
+                    result,
+                    therapist=therapists.get(str(row.get("therapist_id") or "")),
+                    client_user=client_user,
+                )
+            )
+        return serialized
+
     def submit_assignment(
         self,
         client_id: str,
@@ -621,6 +726,59 @@ class AssessmentService:
         except Exception as exc:
             self._raise_schema_error(exc)
             raise
+
+        if (row.get("source") or ASSESSMENT_SOURCE_THERAPIST) == ASSESSMENT_SOURCE_SELF:
+            try:
+                from memory_service import get_memory_service
+
+                memory_service = get_memory_service()
+                if memory_service:
+                    template = self._fetch_templates_map([str(row.get("template_id") or "")]).get(
+                        str(row.get("template_id") or "")
+                    )
+                    short_code = str(
+                        (template or {}).get("short_code")
+                        or (template or {}).get("name")
+                        or row.get("template_id")
+                        or "Bài tự đánh giá"
+                    )
+                    note = (
+                        f"Tôi vừa hoàn thành self-test {short_code}. "
+                        f"Mức độ hiện tại: {scoring['severity']}. "
+                        f"Điểm tổng: {scoring['total_score']}. "
+                        f"Miru nên dùng đây như một tín hiệu hỗ trợ, không phải chẩn đoán."
+                    )
+                    memory_service.add_conversation(
+                        client_id,
+                        note,
+                        "Miru đã ghi nhận kết quả tự đánh giá này để hiểu bạn tốt hơn theo thời gian.",
+                        metadata={
+                            "type": "self_assessment",
+                            "template_id": str(row.get("template_id") or ""),
+                            "severity": scoring["severity"],
+                            "total_score": scoring["total_score"],
+                        },
+                    )
+            except Exception:
+                pass
+            try:
+                from trajectory_service import get_trajectory_service
+
+                trajectory_service = get_trajectory_service()
+                trajectory_service.log_event(
+                    client_id,
+                    "self_test_completed",
+                    {
+                        "assignment_id": assignment_id,
+                        "template_id": str(row.get("template_id") or ""),
+                        "severity": scoring["severity"],
+                        "total_score": scoring["total_score"],
+                    },
+                    dedupe_seconds=0,
+                )
+                trajectory_service.recompute_snapshot(client_id, trigger="manual")
+            except Exception:
+                pass
 
         return self.get_my_assignment_detail(client_id, assignment_id)
 

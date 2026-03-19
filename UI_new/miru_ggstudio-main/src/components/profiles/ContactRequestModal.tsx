@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { X, Send } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   createTherapistContactRequest,
@@ -14,45 +14,75 @@ type Props = {
   open: boolean;
   onClose: () => void;
   therapist: TherapistPublicProfileDetail;
+  source?: TherapistContactRequestCreate['source'];
 };
 
-export function ContactRequestModal({ open, onClose, therapist }: Props) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [form, setForm] = useState<TherapistContactRequestCreate>({
+function buildInitialForm(
+  therapist: TherapistPublicProfileDetail,
+  source: TherapistContactRequestCreate['source']
+): TherapistContactRequestCreate {
+  return {
     therapist_id: therapist.therapist_id,
     message: '',
     preferred_contact_method: 'zalo',
     client_contact_phone: '',
     client_contact_zalo: '',
-    service_interest: therapist.service_mode === 'free' ? 'free' : therapist.service_mode === 'paid' ? 'paid' : 'unsure',
-  });
+    service_interest:
+      therapist.service_mode === 'free'
+        ? 'free'
+        : therapist.service_mode === 'paid'
+          ? 'paid'
+          : 'unsure',
+    source,
+  };
+}
+
+export function ContactRequestModal({
+  open,
+  onClose,
+  therapist,
+  source = 'directory',
+}: Props) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [form, setForm] = useState<TherapistContactRequestCreate>(
+    buildInitialForm(therapist, source)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setForm(buildInitialForm(therapist, source));
+    setError(null);
+    setSuccess(null);
+  }, [open, therapist, source]);
+
   const contactHelp = useMemo(() => {
     if (therapist.service_mode === 'free') {
-      return 'Therapist này đang hiển thị chế độ miễn phí. Bạn vẫn có thể nói rõ nhu cầu trong lời nhắn.';
+      return 'Nhà trị liệu này hiện ưu tiên hỗ trợ miễn phí. Bạn cứ mô tả ngắn gọn nhu cầu để therapist đánh giá mức độ phù hợp.';
     }
     if (therapist.service_mode === 'paid') {
-      return 'Therapist này đang làm việc theo hình thức có phí. Hướng dẫn thanh toán thủ công chỉ hiện sau khi yêu cầu được chấp nhận.';
+      return 'Nhà trị liệu này làm việc theo hình thức có phí. Hướng dẫn thanh toán thủ công chỉ xuất hiện sau khi yêu cầu được chấp nhận.';
     }
-    return 'Bạn có thể nói rõ mình mong muốn buổi miễn phí, có phí, hoặc cần therapist tư vấn thêm.';
+    return 'Bạn có thể nêu rõ mình ưu tiên miễn phí, sẵn sàng làm việc có phí, hoặc cần được tư vấn thêm trước khi quyết định.';
   }, [therapist.service_mode]);
 
   if (!open) {
     return null;
   }
 
-  const handleRequireLogin = () => {
+  function handleRequireLogin() {
     navigate('/auth/login', {
       state: { from: { pathname: `/therapists/${therapist.therapist_id}` } },
     });
-  };
+  }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     if (!user) {
       handleRequireLogin();
       return;
@@ -65,26 +95,39 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
       await createTherapistContactRequest({
         ...form,
         therapist_id: therapist.therapist_id,
+        source,
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests.clientMe() });
-      setSuccess('Đã gửi yêu cầu liên hệ. Therapist sẽ thấy yêu cầu này trong hộp thư liên hệ.');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profiles.therapistMe() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.trajectory.summary() });
+      setSuccess(
+        'Đã gửi yêu cầu liên hệ. Therapist sẽ thấy yêu cầu này trong inbox lead và có thể phản hồi hoặc gửi pairing code cho bạn.'
+      );
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Không gửi được yêu cầu liên hệ');
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Không gửi được yêu cầu liên hệ'
+      );
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
       <div className="glass-panel w-full max-w-2xl rounded-[32px] border border-white/10 p-6 md:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">Liên hệ ngay</div>
+            <div className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-white/35">
+              Liên hệ ngay
+            </div>
             <h2 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
               Gửi yêu cầu tới {therapist.display_name}
             </h2>
-            <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/60">{contactHelp}</p>
+            <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/60">
+              {contactHelp}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -114,10 +157,14 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
 
         <div className="mt-6 grid gap-5">
           <label className="grid gap-2">
-            <span className="text-sm text-slate-700 dark:text-white/70">Lời nhắn ngắn</span>
+            <span className="text-sm text-slate-700 dark:text-white/70">
+              Lời nhắn ngắn
+            </span>
             <textarea
               value={form.message}
-              onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, message: event.target.value }))
+              }
               rows={5}
               placeholder="Hãy mô tả ngắn gọn điều bạn đang cần hỗ trợ hoặc kỳ vọng ở buổi đầu."
               className="rounded-[24px] border border-slate-200 bg-white p-4 text-slate-900 placeholder:text-slate-400 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
@@ -126,11 +173,16 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm text-slate-700 dark:text-white/70">Kênh liên hệ mong muốn</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">
+                Kênh liên hệ mong muốn
+              </span>
               <select
                 value={form.preferred_contact_method}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, preferred_contact_method: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    preferred_contact_method: event.target.value,
+                  }))
                 }
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-miru-bg dark:text-white"
               >
@@ -143,13 +195,16 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm text-slate-700 dark:text-white/70">Nhu cầu dịch vụ</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">
+                Nhu cầu dịch vụ
+              </span>
               <select
                 value={form.service_interest}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    service_interest: event.target.value as TherapistContactRequestCreate['service_interest'],
+                    service_interest:
+                      event.target.value as TherapistContactRequestCreate['service_interest'],
                   }))
                 }
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-miru-bg dark:text-white"
@@ -163,19 +218,33 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm text-slate-700 dark:text-white/70">Số điện thoại (tùy chọn)</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">
+                Số điện thoại (tùy chọn)
+              </span>
               <input
                 value={form.client_contact_phone}
-                onChange={(event) => setForm((current) => ({ ...current, client_contact_phone: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    client_contact_phone: event.target.value,
+                  }))
+                }
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm text-slate-700 dark:text-white/70">Zalo (tùy chọn)</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">
+                Zalo (tùy chọn)
+              </span>
               <input
                 value={form.client_contact_zalo}
-                onChange={(event) => setForm((current) => ({ ...current, client_contact_zalo: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    client_contact_zalo: event.target.value,
+                  }))
+                }
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-miru-primary/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white"
               />
             </label>
@@ -195,7 +264,11 @@ export function ContactRequestModal({ open, onClose, therapist }: Props) {
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-miru-primary px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
             <Send size={16} />
-            {user ? (saving ? 'Đang gửi...' : 'Gửi yêu cầu liên hệ') : 'Đăng nhập để gửi yêu cầu'}
+            {user
+              ? saving
+                ? 'Đang gửi...'
+                : 'Gửi yêu cầu liên hệ'
+              : 'Đăng nhập để gửi yêu cầu'}
           </button>
         </div>
       </div>

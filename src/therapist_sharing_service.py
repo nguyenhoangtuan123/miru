@@ -475,7 +475,7 @@ class TherapistSharingService:
         }
 
     def _fetch_assessment_data(self, therapist_user_id: str, client_id: str) -> Dict[str, Any]:
-        assignments = self.assessment_service.list_therapist_client_assignments(therapist_user_id, client_id)
+        assignments = self.assessment_service.list_shared_client_results(therapist_user_id, client_id)
         completed_results = []
         for assignment in assignments:
             result = assignment.get("result")
@@ -486,6 +486,7 @@ class TherapistSharingService:
                     "assignment_id": assignment.get("id"),
                     "template_name": assignment.get("template_name"),
                     "template_short_code": assignment.get("template_short_code"),
+                    "source": assignment.get("source"),
                     "status": assignment.get("status"),
                     "completed_at": assignment.get("completed_at") or result.get("completed_at"),
                     "severity": result.get("severity"),
@@ -573,11 +574,22 @@ class TherapistSharingService:
         preference = self._serialize_preference_row(self._get_preference_row(client_id, therapist_id))
         user_map = self._fetch_user_map([client_id])
         client_user = user_map.get(client_id, {})
+        trajectory_summary = None
+        if preference["insights_access"] in {"ai_report", "direct"}:
+            try:
+                from trajectory_service import get_trajectory_service
+
+                candidate = get_trajectory_service().get_clinician_summary(client_id, therapist_id)
+                if candidate.get("visible"):
+                    trajectory_summary = candidate
+            except Exception:
+                trajectory_summary = None
         return {
             "client_id": client_id,
             "client_name": client_user.get("name"),
             "therapist_id": therapist_id,
             "consent": preference,
+            "trajectory_summary": trajectory_summary,
             "groups": [
                 {"key": "ai_chat", "label": "Chat với AI", "access_level": preference["ai_chat_access"]},
                 {"key": "web_activity", "label": "Hoạt động trên web", "access_level": preference["web_activity_access"]},

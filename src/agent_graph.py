@@ -38,6 +38,7 @@ class AgentState(TypedDict):
     crisis_detected: bool
     memories: str          # Long-term (Mem0)
     session_facts: str     # Short-term (facts.txt)
+    trajectory_context: str
     actions_taken: list
     final_response: str
 
@@ -206,6 +207,16 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
         except Exception as e:
             print(f"   ⚠️ Error loading session facts: {e}")
             state["session_facts"] = ""
+
+        try:
+            from trajectory_service import get_trajectory_service
+
+            trajectory_context = get_trajectory_service().build_chat_context(state["user_id"])
+            state["trajectory_context"] = trajectory_context
+            print("   🧭 Loaded trajectory context")
+        except Exception as e:
+            print(f"   ⚠️ Error loading trajectory context: {e}")
+            state["trajectory_context"] = ""
         
         # === STEP 4: Build final context ===
         final_memories = final_memories[:5]
@@ -244,6 +255,7 @@ async def parallel_init_node(state: AgentState) -> AgentState:
     state["crisis_detected"] = crisis_result["crisis_detected"]
     state["memories"] = memory_result["memories"]
     state["session_facts"] = memory_result["session_facts"]
+    state["trajectory_context"] = memory_result.get("trajectory_context", "")
     
     # Merge actions_taken từ cả 2
     state["actions_taken"] = crisis_result["actions_taken"] + memory_result["actions_taken"]
@@ -308,6 +320,9 @@ Bây giờ là {current_time} ({day_of_week}). Hãy nhận thức về thời gi
 
 ## NHẬT KÝ PHIÊN CHAT (BẮT BUỘC TUÂN THỦ):
 {state['session_facts']}
+
+## QUỸ ĐẠO VÀ BASELINE GẦN ĐÂY:
+{state.get('trajectory_context') or "Chưa có bản phản chiếu quỹ đạo gần đây."}
 
 
 Lưu ý: "Nhật ký phiên chat" ở trên chứa 4 phần quan trọng:
@@ -513,6 +528,7 @@ async def run_agent(user_id: str, user_message: str, session_id: Any = None, con
         "crisis_detected": False,
         "memories": "",
         "session_facts": "",
+        "trajectory_context": "",
         "actions_taken": [],
         "final_response": ""
     }

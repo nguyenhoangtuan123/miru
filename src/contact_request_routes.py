@@ -17,6 +17,7 @@ class TherapistContactRequestCreatePayload(BaseModel):
     client_contact_phone: Optional[str] = None
     client_contact_zalo: Optional[str] = None
     service_interest: Optional[str] = None
+    source: Optional[str] = None
 
 
 async def _require_current_user(request: Request) -> Dict[str, Any]:

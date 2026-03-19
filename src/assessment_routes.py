@@ -24,6 +24,10 @@ class AssessmentAssignmentCreatePayload(BaseModel):
     therapist_note: Optional[str] = None
 
 
+class SelfAssessmentCreatePayload(BaseModel):
+    template_id: str
+
+
 class AssessmentAnswerPayload(BaseModel):
     question_id: str
     answer_value: int = Field(..., ge=0, le=3)
@@ -74,6 +78,19 @@ async def create_assessment_assignment(data: AssessmentAssignmentCreatePayload, 
             data.model_dump(),
             email=str(current_user.get("email") or ""),
             name=str(current_user.get("name") or ""),
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "assignment": assignment}
+
+
+@router.post("/self-assignments")
+async def create_self_assessment_assignment(data: SelfAssessmentCreatePayload, request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        assignment = get_assessment_service().create_self_assignment(
+            current_user["resolved_user_id"],
+            data.template_id,
         )
     except Exception as exc:
         _raise_service_error(exc)

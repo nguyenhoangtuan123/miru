@@ -18,6 +18,7 @@ This repo is not Next.js. Treat the frontend as a Vite SPA.
 - Push/Web Push routes: `src/push_routes.py`
 - Proactive push scheduler: `src/proactive_push_service.py`
 - Public therapist profile routes: `src/profile_routes.py`
+- Therapist contact request routes: `src/contact_request_routes.py`
 - Therapist verification routes: `src/therapist_verification_routes.py`
 - Assessment routes: `src/assessment_routes.py`
 - Therapist sharing routes: `src/therapist_sharing_routes.py`
@@ -55,9 +56,11 @@ Important files:
 - `UI_new/miru_ggstudio-main/public/sw.js`
 - `UI_new/miru_ggstudio-main/src/pages/Chat.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/Therapists.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/TherapistPublicProfile.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/Sharing.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/Assessments.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/therapist/Apply.tsx`
+- `UI_new/miru_ggstudio-main/src/pages/therapist/ContactRequests.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/therapist/ClientContext.tsx`
 - `UI_new/miru_ggstudio-main/src/pages/therapist/TreatmentPlan.tsx`
 - `UI_new/miru_ggstudio-main/src/services/profiles.ts`
@@ -73,6 +76,7 @@ Important files:
 - Notification permission in settings now also attempts real Web Push subscription sync
 - Therapist/client event polling notifications still exist, but real Web Push is now the preferred path for background delivery
 - Public therapist directory and therapist public profile pages live in the Vite SPA
+- Public therapist profiles can expose direct contact requests, service mode, pricing, and public workflow steps
 - Therapist onboarding now has a separate apply/review-status flow before full therapist portal access
 - Client data sharing preferences live in `/sharing`
 - Assessment flows now support therapist assignment and client submission for PHQ-9, GAD-7, and DASS-21
@@ -83,6 +87,8 @@ Important files:
 - Active therapist routes live in `src/therapist_routes.py`
 - Active therapist service lives in `src/therapist_service.py`
 - Public therapist profile logic lives in `src/profile_service.py`
+- Therapist contact request creation is exposed from `src/contact_request_routes.py`
+- Therapist inbox handling for contact requests lives in `src/therapist_routes.py` and `src/profile_service.py`
 - Therapist verification logic lives in `src/therapist_verification_service.py`
 - Assessment logic lives in `src/assessment_service.py` and `src/assessment_definitions.py`
 - Therapist data sharing logic lives in `src/therapist_sharing_service.py`
@@ -136,11 +142,14 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 - Therapist generates a pairing code from therapist settings
 - Client connects using the code from client settings
 - If the database schema does not support pending pairing codes, the backend falls back to `pairing_codes.json` in the repo root
+- Public therapist discovery can happen before pairing through public profiles and therapist contact requests
 - Therapist-only flows should continue to check active therapist-client relationships before exposing client context, assessment assignment, or treatment-plan editing
 
 ## Profile / Verification / Treatment Features
 
 - Public therapist profile media is split from therapist verification evidence
+- Public therapist profiles also support service mode, starting price, public workflow steps, and whether contact requests are enabled
+- Client-side contact requests are separate from pairing; therapist can approve, decline, or archive requests from their inbox
 - Therapist verification requires an approved reviewer before therapist portal access is granted
 - Therapist sharing consent is stored separately from general app consent and can expose `none`, `ai_report`, or `direct` access levels
 - Assessment templates are seeded and scored in-app; wording should remain screening-oriented rather than diagnostic
@@ -150,11 +159,14 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 
 - `018_add_profile_features.sql`
 - `019_add_push_subscriptions.sql`
+- `020_add_contact_requests_and_public_offering.sql`
 - `020_add_therapist_verification.sql`
 - `021_backfill_existing_public_therapists_as_approved.sql`
 - `022_add_assessments.sql`
 - `023_add_therapist_sharing_preferences.sql`
 - `024_add_treatment_programs.sql`
+
+Note: there are currently two migrations with the `020_` prefix. Treat both as required when syncing a fresh environment.
 
 ## Current Constraints
 
@@ -169,6 +181,7 @@ If these are missing, push APIs should fail gracefully and proactive push will n
 
 - Prefer editing files in `src/` for backend changes
 - Prefer editing files in `UI_new/miru_ggstudio-main/src/` for frontend changes
+- If a file grows too long, too dense, or too hard to reason about, split it into smaller files/components instead of continuing to pile more logic into one place
 - Do not reintroduce legacy frontend folders or PWA static mounts
 - Vercel deploys for the SPA should be run from `UI_new/miru_ggstudio-main/`
 - SPA rewrites for Vercel are defined in `UI_new/miru_ggstudio-main/vercel.json`

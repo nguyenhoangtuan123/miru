@@ -28,6 +28,7 @@ export const AssessmentAssignmentSummarySchema = z
   .object({
     id: z.string(),
     template_id: z.string(),
+    source: z.enum(['therapist_assigned', 'self_initiated']).default('therapist_assigned'),
     template_name: z.string().nullable().optional(),
     template_short_code: z.string().nullable().optional(),
     status: z.string(),
@@ -100,6 +101,7 @@ export const AssessmentAssignmentSummaryResponseSchema = z.object({
 
 export type AssessmentTemplate = z.infer<typeof AssessmentTemplateSchema>;
 export type AssessmentResult = z.infer<typeof AssessmentResultSchema>;
+export type AssessmentSource = z.infer<typeof AssessmentAssignmentSummarySchema>['source'];
 export type AssessmentAssignmentSummary = z.infer<typeof AssessmentAssignmentSummarySchema>;
 export type AssessmentAssignmentDetail = z.infer<typeof AssessmentAssignmentDetailSchema>;
 
@@ -114,6 +116,13 @@ export async function createAssessmentAssignment(payload: {
   therapist_note?: string | null;
 }) {
   return parseApi(api.post('/api/assessments/assignments', payload), AssessmentAssignmentSummaryResponseSchema);
+}
+
+export async function createSelfAssessmentAssignment(payload: { template_id: string }) {
+  return parseApi(
+    api.post('/api/assessments/self-assignments', payload),
+    AssessmentAssignmentSummaryResponseSchema
+  );
 }
 
 export async function getTherapistClientAssessments(clientId: string) {

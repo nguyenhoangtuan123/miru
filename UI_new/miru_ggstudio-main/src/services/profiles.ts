@@ -41,6 +41,9 @@ export const TherapistPublicProfileSchema = z
     pricing_note: z.string().nullable().optional(),
     public_payment_note: z.string().nullable().optional(),
     public_workflow_steps: z.array(z.string()).nullish().transform((value) => value ?? []),
+    profile_view_count: z.number().default(0),
+    contact_request_count: z.number().default(0),
+    pair_conversion_count: z.number().default(0),
     can_receive_contact_requests: z.boolean().default(false),
     is_verified: z.boolean().default(false),
     verification_status: z
@@ -135,6 +138,8 @@ export const TherapistContactRequestSchema = z
     therapist_id: z.string(),
     client_id: z.string(),
     status: z.enum(['pending', 'approved', 'declined', 'archived']).default('pending'),
+    funnel_status: z.enum(['new', 'replied', 'approved', 'paired', 'lost']).default('new'),
+    source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral']).default('directory'),
     message: z.string().default(''),
     preferred_contact_method: z.string().nullable().optional(),
     client_contact_phone: z.string().nullable().optional(),
@@ -145,6 +150,8 @@ export const TherapistContactRequestSchema = z
     created_at: z.string().nullable().optional(),
     updated_at: z.string().nullable().optional(),
     handled_at: z.string().nullable().optional(),
+    paired_at: z.string().nullable().optional(),
+    response_time_hours: z.number().nullable().optional(),
     therapist: TherapistPublicProfileSchema.nullable().optional(),
     client: z
       .object({
@@ -175,6 +182,7 @@ export const TherapistContactRequestCreateSchema = z.object({
   client_contact_phone: z.string().trim().max(40).optional().default(''),
   client_contact_zalo: z.string().trim().max(120).optional().default(''),
   service_interest: z.enum(['free', 'paid', 'unsure']).optional().default('unsure'),
+  source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral']).optional().default('directory'),
 });
 
 export const TherapistContactRequestHandleSchema = z.object({
@@ -213,6 +221,9 @@ export type TherapistPublicProfileCard = {
   pricing_note?: string | null;
   public_payment_note?: string | null;
   public_workflow_steps: string[];
+  profile_view_count: number;
+  contact_request_count: number;
+  pair_conversion_count: number;
   can_receive_contact_requests: boolean;
   is_verified: boolean;
   verification_status?: 'not_submitted' | 'pending' | 'approved' | 'rejected' | null;
@@ -280,6 +291,8 @@ export type TherapistContactRequest = {
   therapist_id: string;
   client_id: string;
   status: 'pending' | 'approved' | 'declined' | 'archived';
+  funnel_status: 'new' | 'replied' | 'approved' | 'paired' | 'lost';
+  source: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral';
   message: string;
   preferred_contact_method?: string | null;
   client_contact_phone?: string | null;
@@ -290,6 +303,8 @@ export type TherapistContactRequest = {
   created_at?: string | null;
   updated_at?: string | null;
   handled_at?: string | null;
+  paired_at?: string | null;
+  response_time_hours?: number | null;
   therapist?: TherapistPublicProfileCard | null;
   client?: {
     id: string;
@@ -306,6 +321,7 @@ export type TherapistContactRequestCreate = {
   client_contact_phone: string;
   client_contact_zalo: string;
   service_interest: 'free' | 'paid' | 'unsure';
+  source?: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral';
 };
 
 export type TherapistContactRequestHandle = {

@@ -176,12 +176,25 @@ async def get_my_clients(therapist_id: str, request: Request):
     return {"success": True, "clients": service.get_my_clients(therapist_id)}
 
 
+@router.get("/morning-board/{therapist_id}")
+async def get_morning_board(therapist_id: str, request: Request):
+    service, resolved_therapist_id = await _require_therapist_access(request, therapist_id)
+    return {"success": True, "board": service.get_morning_board(resolved_therapist_id)}
+
+
 @router.post("/clients/{therapist_id}/pair")
 async def pair_with_client(therapist_id: str, data: PairClient, request: Request):
-    service, _ = await _require_therapist_access(request, therapist_id)
+    service, resolved_therapist_id = await _require_therapist_access(request, therapist_id)
     pairing = service.pair_client(therapist_id, data.client_id, data.pairing_code)
     if not pairing:
         raise HTTPException(status_code=400, detail="Failed to pair client")
+    get_profile_service().mark_contact_request_paired(resolved_therapist_id, data.client_id)
+    try:
+        from trajectory_service import get_trajectory_service
+
+        get_trajectory_service().recompute_snapshot(data.client_id, trigger="manual")
+    except Exception:
+        pass
     return {"success": True, "pairing": pairing}
 
 
@@ -221,7 +234,7 @@ async def create_pairing_code(therapist_id: str, request: Request):
 async def get_client_summary(therapist_id: str, client_id: str, request: Request):
     service, resolved_therapist_id = await _require_therapist_access(request, therapist_id)
     _ensure_relationship(service, resolved_therapist_id, client_id)
-    return {"success": True, "summary": service.get_client_summary(client_id)}
+    return {"success": True, "summary": service.get_client_summary(client_id, resolved_therapist_id)}
 
 
 @router.get("/contact-requests")
@@ -568,6 +581,15 @@ async def connect_client_to_therapist(client_id: str, data: PairingCodeConnect, 
     pairing = service.connect_client_by_code(client_id, data.pairing_code)
     if not pairing:
         raise HTTPException(status_code=400, detail="Invalid or expired pairing code")
+    therapist_id = pairing.get("therapist_id") if isinstance(pairing, dict) else None
+    if isinstance(therapist_id, str):
+        get_profile_service().mark_contact_request_paired(therapist_id, client_id)
+    try:
+        from trajectory_service import get_trajectory_service
+
+        get_trajectory_service().recompute_snapshot(client_id, trigger="manual")
+    except Exception:
+        pass
     return {"success": True, "pairing": pairing}
 
 

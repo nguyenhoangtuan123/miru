@@ -36,6 +36,7 @@ import {
   TherapistCrisisMutationResponseSchema,
   TherapistCrisesResponseSchema,
   TherapistInfoResponseSchema,
+  TherapistMorningBoardResponseSchema,
   TherapistMessageMutationResponseSchema,
   TherapistMessagesResponseSchema,
   TherapistPairingResponseSchema,
@@ -416,6 +417,22 @@ export async function getTherapistClients(therapistId: string) {
   return response;
 }
 
+export async function getTherapistMorningBoard(therapistId: string) {
+  const response = await withCache(
+    makeCacheKey(therapistCachePrefix(therapistId), 'morning-board'),
+    CACHE_TTL.short,
+    () =>
+      parseApi(
+        api.get(`/api/therapist/morning-board/${therapistId}`),
+        TherapistMorningBoardResponseSchema
+      )
+  );
+  if (!response.success) {
+    throw new Error(response.error ?? 'Không tải được bảng theo dõi ca sáng');
+  }
+  return response;
+}
+
 export async function getTherapistAssignments(therapistId: string) {
   const response = await withCache(
     makeCacheKey(therapistCachePrefix(therapistId), 'assignments'),
@@ -471,6 +488,7 @@ export async function createTherapistAssignment(
     makeCacheKey(therapistCachePrefix(therapistId), 'assignments'),
     makeCacheKey(therapistCachePrefix(therapistId), 'client-assignments', payload.client_id),
     makeCacheKey(therapistCachePrefix(therapistId), 'clients'),
+    makeCacheKey(therapistCachePrefix(therapistId), 'morning-board'),
     makeCacheKey(therapistCachePrefix(therapistId), 'client-summary', payload.client_id),
     makeCacheKey(clientCachePrefix(payload.client_id), 'assignments')
   );
@@ -507,6 +525,7 @@ export async function acknowledgeTherapistCrisis(crisisId: number, notes?: strin
     typeof response.crisis?.client_id === 'string' ? response.crisis.client_id : undefined;
   invalidateCacheByPrefix(
     therapistId ? makeCacheKey(therapistCachePrefix(therapistId), 'crises') : 'therapist',
+    therapistId ? makeCacheKey(therapistCachePrefix(therapistId), 'morning-board') : 'therapist',
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(therapistId), 'client-summary', clientId)
       : 'therapist'
@@ -547,6 +566,7 @@ export async function updateTherapistAssignmentProgress(
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
       : 'therapist',
+    therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'morning-board') : 'therapist',
     clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))
@@ -578,6 +598,7 @@ export async function uploadAssignmentAttachments(assignmentId: number, files: F
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
       : 'therapist',
+    therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'morning-board') : 'therapist',
     clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))
@@ -603,6 +624,7 @@ export async function completeTherapistAssignment(assignmentId: number, completi
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-assignments', String(clientId))
       : 'therapist',
+    therapistId ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'morning-board') : 'therapist',
     clientId ? makeCacheKey(clientCachePrefix(String(clientId)), 'assignments') : 'client',
     therapistId && clientId
       ? makeCacheKey(therapistCachePrefix(String(therapistId)), 'client-summary', String(clientId))
@@ -707,6 +729,7 @@ export async function sendTherapistMessage(
     makeCacheKey(therapistCachePrefix(therapistId), 'messages', clientId),
     makeCacheKey(therapistCachePrefix(therapistId), 'conversations'),
     makeCacheKey(therapistCachePrefix(therapistId), 'unread'),
+    makeCacheKey(therapistCachePrefix(therapistId), 'morning-board'),
     makeCacheKey(clientCachePrefix(clientId), 'messages')
   );
   return response;
@@ -846,6 +869,7 @@ export async function createTherapistAppointment(
   invalidateCacheByPrefix(
     makeCacheKey(therapistCachePrefix(therapistId), 'appointments'),
     makeCacheKey(therapistCachePrefix(therapistId), 'clients'),
+    makeCacheKey(therapistCachePrefix(therapistId), 'morning-board'),
     makeCacheKey(clientCachePrefix(payload.client_id), 'appointments')
   );
   return response;

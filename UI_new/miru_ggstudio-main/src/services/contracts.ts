@@ -400,10 +400,55 @@ export const TherapistClientSummaryResponseSchema = z
     success: z.boolean(),
     summary: z
       .object({
+        client_id: z.string().optional(),
+        client: z.record(z.unknown()).optional(),
         total_sessions: z.number().optional(),
         completed_assignments: z.number().optional(),
         pending_assignments: z.number().optional(),
+        pending_assessments: z.number().optional(),
         crisis_events: z.number().optional(),
+        open_crisis_count: z.number().optional(),
+        unread_client_messages: z.number().optional(),
+        today_appointments_count: z.number().optional(),
+        pending_items_count: z.number().optional(),
+        attention_level: z.enum(['low', 'medium', 'high']).optional(),
+        attention_reason: z.string().optional(),
+        trajectory_state: z.string().optional(),
+        trend_summary: z.string().optional(),
+        suggested_next_action: z.string().optional(),
+        trajectory_summary: z.record(z.unknown()).nullable().optional(),
+        last_client_activity_at: z.string().nullable().optional(),
+        last_therapist_action_at: z.string().nullable().optional(),
+        next_appointment_at: z.string().nullable().optional(),
+        share_access_enabled: z.boolean().optional(),
+      })
+      .optional(),
+    error: z.string().optional(),
+  })
+  .passthrough();
+
+export const TherapistMorningBoardResponseSchema = z
+  .object({
+    success: z.boolean(),
+    board: z
+      .object({
+        attention_clients: z.array(z.record(z.unknown())).default([]),
+        new_contact_requests: z.array(z.record(z.unknown())).default([]),
+        today_appointments: z.array(z.record(z.unknown())).default([]),
+        pending_assignments: z.array(z.record(z.unknown())).default([]),
+        pending_assessments: z.array(z.record(z.unknown())).default([]),
+        open_crises: z.array(z.record(z.unknown())).default([]),
+        stats: z
+          .object({
+            total_clients: z.number().optional(),
+            attention_clients: z.number().optional(),
+            new_contact_requests: z.number().optional(),
+            today_appointments: z.number().optional(),
+            pending_assignments: z.number().optional(),
+            pending_assessments: z.number().optional(),
+            open_crises: z.number().optional(),
+          })
+          .optional(),
       })
       .optional(),
     error: z.string().optional(),
@@ -544,4 +589,6 @@ export type ConsentStatus = z.infer<typeof ConsentStatusSchema>;
 export type TherapistAssignment = z.infer<typeof TherapistAssignmentSchema>;
 export type TherapistAssignmentChecklistItem = z.infer<typeof TherapistAssignmentChecklistItemSchema>;
 export type TherapistAssignmentAttachment = z.infer<typeof TherapistAssignmentAttachmentSchema>;
+export type TherapistClientSummary = z.infer<typeof TherapistClientSummaryResponseSchema>['summary'];
+export type TherapistMorningBoard = z.infer<typeof TherapistMorningBoardResponseSchema>['board'];
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

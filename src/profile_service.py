@@ -24,6 +24,8 @@ PRIVATE_MEDIA_TTL_SECONDS = 60 * 60
 VALID_SERVICE_MODES = {"free", "paid", "both"}
 VALID_PRICING_UNITS = {"session", "package", "custom"}
 VALID_CONTACT_REQUEST_STATUSES = {"pending", "approved", "declined", "archived"}
+VALID_CONTACT_REQUEST_FUNNEL_STATUSES = {"new", "replied", "approved", "paired", "lost"}
+VALID_CONTACT_REQUEST_SOURCES = {"directory", "profile_direct_link", "therapist_invite", "referral"}
 
 
 class ProfileService:
@@ -119,6 +121,16 @@ class ProfileService:
             return value.strip().lower()
         return "pending"
 
+    def _normalize_contact_request_funnel_status(self, value: Any) -> str:
+        if isinstance(value, str) and value.strip().lower() in VALID_CONTACT_REQUEST_FUNNEL_STATUSES:
+            return value.strip().lower()
+        return "new"
+
+    def _normalize_contact_request_source(self, value: Any) -> str:
+        if isinstance(value, str) and value.strip().lower() in VALID_CONTACT_REQUEST_SOURCES:
+            return value.strip().lower()
+        return "directory"
+
     def _normalize_vnd_amount(self, value: Any) -> Optional[int]:
         if value is None or value == "":
             return None
@@ -127,6 +139,25 @@ class ProfileService:
         except Exception:
             return None
         return amount if amount >= 0 else None
+
+    def _safe_non_negative_int(self, value: Any, default: int = 0) -> int:
+        try:
+            normalized = int(value)
+        except Exception:
+            return default
+        return normalized if normalized >= 0 else default
+
+    def _parse_timestamp(self, value: Any) -> Optional[datetime]:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        normalized = value.strip().replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except Exception:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     def _select_single(self, table_name: str, column: str, value: str) -> Optional[Dict[str, Any]]:
         try:
@@ -179,6 +210,37 @@ class ProfileService:
         except Exception:
             pass
         return self._select_single(table_name, key_column, key_value)
+
+    def _insert_with_variants(self, table_name: str, payload_variants: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        for payload in payload_variants:
+            try:
+                response = self.supabase.table(table_name).insert(payload).execute()
+                if response.data:
+                    return response.data[0]
+            except Exception:
+                continue
+        return None
+
+    def _update_with_variants(
+        self,
+        table_name: str,
+        key_column: str,
+        key_value: Any,
+        payload_variants: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        for payload in payload_variants:
+            try:
+                response = (
+                    self.supabase.table(table_name)
+                    .update(payload)
+                    .eq(key_column, key_value)
+                    .execute()
+                )
+                if response.data:
+                    return response.data[0]
+            except Exception:
+                continue
+        return None
 
     def _get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         try:
@@ -236,6 +298,34 @@ class ProfileService:
         if not therapist_id:
             return None
         return self.therapist_service.get_therapist(therapist_id)
+
+    def _count_contact_requests_for_therapist(self, therapist_id: str) -> int:
+        return self.therapist_service._safe_exact_count(
+            THERAPIST_CONTACT_REQUEST_TABLE,
+            eq_filters={"therapist_id": therapist_id},
+        )
+
+    def _count_pair_conversions_for_therapist(self, therapist_id: str) -> int:
+        return self.therapist_service._safe_exact_count(
+            "therapist_clients",
+            eq_filters={"therapist_id": therapist_id, "status": "active"},
+        )
+
+    def _increment_profile_metric(self, therapist_id: str, metric_column: str) -> bool:
+        row = self._select_single(THERAPIST_PUBLIC_PROFILE_TABLE, "therapist_id", therapist_id)
+        if not row:
+            return False
+        current_value = self._safe_non_negative_int(row.get(metric_column), default=0)
+        try:
+            (
+                self.supabase.table(THERAPIST_PUBLIC_PROFILE_TABLE)
+                .update({metric_column: current_value + 1, "updated_at": self._now()})
+                .eq("therapist_id", therapist_id)
+                .execute()
+            )
+            return True
+        except Exception:
+            return False
 
     def _default_billing_profile(self, therapist_id: str) -> Dict[str, Any]:
         return {
@@ -468,6 +558,18 @@ class ProfileService:
                 max_items=5,
                 max_length=160,
             ),
+            "profile_view_count": self._safe_non_negative_int(
+                profile_row.get("profile_view_count") if isinstance(profile_row, dict) else 0,
+                default=0,
+            ),
+            "contact_request_count": self._safe_non_negative_int(
+                profile_row.get("contact_request_count") if isinstance(profile_row, dict) else None,
+                default=self._count_contact_requests_for_therapist(str(therapist.get("id") or "")),
+            ),
+            "pair_conversion_count": self._safe_non_negative_int(
+                profile_row.get("pair_conversion_count") if isinstance(profile_row, dict) else None,
+                default=self._count_pair_conversions_for_therapist(str(therapist.get("id") or "")),
+            ),
             "is_verified": bool(therapist.get("is_verified")),
             "verification_status": therapist.get("verification_status")
             or ("approved" if therapist.get("is_verified") else "not_submitted"),
@@ -551,7 +653,7 @@ class ProfileService:
             return cards[:limit]
         return cards
 
-    def get_public_therapist(self, therapist_id: str) -> Optional[Dict[str, Any]]:
+    def get_public_therapist(self, therapist_id: str, track_view: bool = False) -> Optional[Dict[str, Any]]:
         profile_row = self._select_single(THERAPIST_PUBLIC_PROFILE_TABLE, "therapist_id", therapist_id)
         if not profile_row or not profile_row.get("is_public"):
             return None
@@ -563,6 +665,12 @@ class ProfileService:
         ) or ("approved" if isinstance(therapist, dict) and therapist.get("is_verified") else "not_submitted")
         if not therapist or therapist.get("is_active") is False or verification_status != "approved":
             return None
+        if track_view and self._increment_profile_metric(therapist_id, "profile_view_count"):
+            profile_row = dict(profile_row)
+            profile_row["profile_view_count"] = self._safe_non_negative_int(
+                profile_row.get("profile_view_count"),
+                default=0,
+            ) + 1
         user = self._get_user(therapist.get("user_id")) if isinstance(therapist.get("user_id"), str) else None
         return self._serialize_therapist_profile(therapist, profile_row, user, public_view=True)
 
@@ -839,11 +947,19 @@ class ProfileService:
         therapist_profile: Optional[Dict[str, Any]] = None,
         client_user: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        created_at = self._parse_timestamp(row.get("created_at"))
+        handled_at = self._parse_timestamp(row.get("handled_at"))
+        response_time_hours = None
+        if created_at and handled_at:
+            response_time_hours = round(max((handled_at - created_at).total_seconds(), 0) / 3600, 2)
+
         return {
             "id": row.get("id"),
             "therapist_id": row.get("therapist_id"),
             "client_id": row.get("client_id"),
             "status": self._normalize_contact_request_status(row.get("status")),
+            "funnel_status": self._normalize_contact_request_funnel_status(row.get("funnel_status")),
+            "source": self._normalize_contact_request_source(row.get("source")),
             "message": row.get("message") if isinstance(row.get("message"), str) else "",
             "preferred_contact_method": row.get("preferred_contact_method") if isinstance(row.get("preferred_contact_method"), str) else None,
             "client_contact_phone": row.get("client_contact_phone") if isinstance(row.get("client_contact_phone"), str) else None,
@@ -854,6 +970,8 @@ class ProfileService:
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),
             "handled_at": row.get("handled_at"),
+            "paired_at": row.get("paired_at"),
+            "response_time_hours": response_time_hours,
             "therapist": therapist_profile,
             "client": {
                 "id": client_user.get("id"),
@@ -880,7 +998,7 @@ class ProfileService:
 
     def create_contact_request(self, client_id: str, therapist_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         therapist = self.therapist_service.get_therapist(therapist_id)
-        profile = self.get_public_therapist(therapist_id)
+        profile = self.get_public_therapist(therapist_id, track_view=False)
         if not therapist or not profile or not profile.get("can_receive_contact_requests"):
             raise ValueError("Therapist hiện không nhận yêu cầu liên hệ mới")
 
@@ -905,6 +1023,8 @@ class ProfileService:
             "therapist_id": therapist_id,
             "client_id": client_id,
             "status": "pending",
+            "funnel_status": "new",
+            "source": self._normalize_contact_request_source(payload.get("source")),
             "message": self._normalize_text(payload.get("message"), 1200) or "",
             "preferred_contact_method": self._normalize_text(payload.get("preferred_contact_method"), 40),
             "client_contact_phone": self._normalize_text(payload.get("client_contact_phone"), 40),
@@ -916,8 +1036,35 @@ class ProfileService:
             "updated_at": self._now(),
             "handled_at": None,
         }
-        response = self.supabase.table(THERAPIST_CONTACT_REQUEST_TABLE).insert(insert_payload).execute()
-        row = response.data[0] if response.data else insert_payload
+        row = self._insert_with_variants(
+            THERAPIST_CONTACT_REQUEST_TABLE,
+            [
+                insert_payload,
+                {key: value for key, value in insert_payload.items() if key != "source"},
+                {
+                    key: value
+                    for key, value in insert_payload.items()
+                    if key not in {"source", "funnel_status"}
+                },
+            ],
+        ) or insert_payload
+        self._increment_profile_metric(therapist_id, "contact_request_count")
+        try:
+            from trajectory_service import get_trajectory_service
+
+            trajectory_service = get_trajectory_service()
+            trajectory_service.log_event(
+                client_id,
+                "contact_request_submitted",
+                {
+                    "therapist_id": therapist_id,
+                    "source": insert_payload.get("source"),
+                },
+                dedupe_seconds=0,
+            )
+            trajectory_service.recompute_snapshot(client_id, trigger="manual")
+        except Exception:
+            pass
         return self._serialize_contact_request(row, therapist_profile=profile)
 
     def get_my_contact_requests(self, client_id: str) -> List[Dict[str, Any]]:
@@ -934,7 +1081,10 @@ class ProfileService:
 
         rows = [row for row in (response.data or []) if isinstance(row, dict)]
         therapist_ids = [str(row.get("therapist_id")) for row in rows if isinstance(row.get("therapist_id"), str)]
-        profiles = {therapist_id: self.get_public_therapist(therapist_id) for therapist_id in therapist_ids}
+        profiles = {
+            therapist_id: self.get_public_therapist(therapist_id, track_view=False)
+            for therapist_id in therapist_ids
+        }
         return [self._serialize_contact_request(row, therapist_profile=profiles.get(str(row.get("therapist_id")))) for row in rows]
 
     def get_therapist_contact_requests(self, therapist_user_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -942,28 +1092,34 @@ class ProfileService:
         if not therapist:
             return []
         try:
-            query = (
+            response = (
                 self.supabase.table(THERAPIST_CONTACT_REQUEST_TABLE)
                 .select("*")
                 .eq("therapist_id", therapist["id"])
+                .order("updated_at", desc=True)
+                .execute()
             )
-            normalized_status = self._normalize_contact_request_status(status) if isinstance(status, str) else None
-            if normalized_status:
-                query = query.eq("status", normalized_status)
-            response = query.order("updated_at", desc=True).execute()
         except Exception:
             return []
 
         rows = [row for row in (response.data or []) if isinstance(row, dict)]
         client_users = self._get_users_by_ids([str(row.get("client_id")) for row in rows if isinstance(row.get("client_id"), str)])
-        therapist_profile = self.get_public_therapist(therapist["id"])
-        return [
+        therapist_profile = self.get_public_therapist(therapist["id"], track_view=False)
+        serialized_rows = [
             self._serialize_contact_request(
                 row,
                 therapist_profile=therapist_profile,
                 client_user=client_users.get(str(row.get("client_id"))),
             )
             for row in rows
+        ]
+        normalized_filter = str(status or "").strip().lower()
+        if not normalized_filter or normalized_filter == "all":
+            return serialized_rows
+        return [
+            item
+            for item in serialized_rows
+            if item.get("status") == normalized_filter or item.get("funnel_status") == normalized_filter
         ]
 
     def get_therapist_contact_request_detail(self, therapist_user_id: str, request_id: int | str) -> Optional[Dict[str, Any]]:
@@ -974,7 +1130,7 @@ class ProfileService:
         if not row or row.get("therapist_id") != therapist["id"]:
             return None
         client_user = self._get_user(str(row.get("client_id"))) if isinstance(row.get("client_id"), str) else None
-        therapist_profile = self.get_public_therapist(therapist["id"])
+        therapist_profile = self.get_public_therapist(therapist["id"], track_view=False)
         return self._serialize_contact_request(row, therapist_profile=therapist_profile, client_user=client_user)
 
     def handle_contact_request(
@@ -993,6 +1149,18 @@ class ProfileService:
             return None
 
         normalized_action = "approved" if action == "approve" else "declined" if action == "decline" else "archived"
+        current_funnel_status = self._normalize_contact_request_funnel_status(row.get("funnel_status"))
+        next_funnel_status = (
+            "approved"
+            if normalized_action == "approved" and share_pairing_code
+            else "replied"
+            if normalized_action == "approved"
+            else "lost"
+            if normalized_action == "declined"
+            else current_funnel_status
+            if current_funnel_status in {"approved", "paired"}
+            else "lost"
+        )
         pairing_code = None
         if normalized_action == "approved" and share_pairing_code:
             pairing = self.therapist_service.create_pairing_code(therapist_user_id)
@@ -1001,26 +1169,96 @@ class ProfileService:
 
         payload = {
             "status": normalized_action,
+            "funnel_status": next_funnel_status,
             "therapist_reply": self._normalize_text(therapist_reply, 1200),
             "shared_pairing_code": pairing_code,
             "updated_at": self._now(),
             "handled_at": self._now(),
         }
         try:
-            response = (
-                self.supabase.table(THERAPIST_CONTACT_REQUEST_TABLE)
-                .update(payload)
-                .eq("id", request_id)
-                .execute()
-            )
-            updated = response.data[0] if response.data else self._get_contact_request_row(request_id)
+            updated = self._update_with_variants(
+                THERAPIST_CONTACT_REQUEST_TABLE,
+                "id",
+                request_id,
+                [
+                    payload,
+                    {key: value for key, value in payload.items() if key != "funnel_status"},
+                ],
+            ) or self._get_contact_request_row(request_id)
         except Exception:
             updated = self._get_contact_request_row(request_id)
         if not updated:
             return None
+        client_id = str(updated.get("client_id") or "")
+        if client_id:
+            try:
+                from trajectory_service import get_trajectory_service
+
+                get_trajectory_service().recompute_snapshot(client_id, trigger="manual")
+            except Exception:
+                pass
         client_user = self._get_user(str(updated.get("client_id"))) if isinstance(updated.get("client_id"), str) else None
-        therapist_profile = self.get_public_therapist(therapist["id"])
+        therapist_profile = self.get_public_therapist(therapist["id"], track_view=False)
         return self._serialize_contact_request(updated, therapist_profile=therapist_profile, client_user=client_user)
+
+    def mark_contact_request_paired(self, therapist_id: str, client_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            response = (
+                self.supabase.table(THERAPIST_CONTACT_REQUEST_TABLE)
+                .select("*")
+                .eq("therapist_id", therapist_id)
+                .eq("client_id", client_id)
+                .order("updated_at", desc=True)
+                .limit(10)
+                .execute()
+            )
+        except Exception:
+            return None
+
+        rows = [row for row in (response.data or []) if isinstance(row, dict)]
+        selected = next(
+            (
+                row
+                for row in rows
+                if self._normalize_contact_request_funnel_status(row.get("funnel_status")) in {"approved", "replied", "new"}
+                or self._normalize_contact_request_status(row.get("status")) in {"pending", "approved"}
+            ),
+            None,
+        )
+        if not selected:
+            return None
+        if self._normalize_contact_request_funnel_status(selected.get("funnel_status")) == "paired":
+            return self._serialize_contact_request(selected)
+
+        paired_at = self._now()
+        updated = self._update_with_variants(
+            THERAPIST_CONTACT_REQUEST_TABLE,
+            "id",
+            selected.get("id"),
+            [
+                {
+                    "status": "approved",
+                    "funnel_status": "paired",
+                    "paired_at": paired_at,
+                    "updated_at": paired_at,
+                },
+                {
+                    "status": "approved",
+                    "paired_at": paired_at,
+                    "updated_at": paired_at,
+                },
+            ],
+        ) or self._get_contact_request_row(selected.get("id"))
+        if updated:
+            self._increment_profile_metric(therapist_id, "pair_conversion_count")
+            try:
+                from trajectory_service import get_trajectory_service
+
+                get_trajectory_service().recompute_snapshot(client_id, trigger="manual")
+            except Exception:
+                pass
+            return self._serialize_contact_request(updated)
+        return None
 
     def get_my_client_profile(self, user_id: str, email: str = "", name: str = "", picture: str = "") -> Optional[Dict[str, Any]]:
         user = self._get_user(user_id) or {
