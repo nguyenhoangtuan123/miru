@@ -25,7 +25,7 @@ VALID_SERVICE_MODES = {"free", "paid", "both"}
 VALID_PRICING_UNITS = {"session", "package", "custom"}
 VALID_CONTACT_REQUEST_STATUSES = {"pending", "approved", "declined", "archived"}
 VALID_CONTACT_REQUEST_FUNNEL_STATUSES = {"new", "replied", "approved", "paired", "lost"}
-VALID_CONTACT_REQUEST_SOURCES = {"directory", "profile_direct_link", "therapist_invite", "referral"}
+VALID_CONTACT_REQUEST_SOURCES = {"directory", "profile_direct_link", "therapist_invite", "referral", "article"}
 
 
 class ProfileService:
@@ -960,6 +960,7 @@ class ProfileService:
             "status": self._normalize_contact_request_status(row.get("status")),
             "funnel_status": self._normalize_contact_request_funnel_status(row.get("funnel_status")),
             "source": self._normalize_contact_request_source(row.get("source")),
+            "source_article_slug": row.get("source_article_slug") if isinstance(row.get("source_article_slug"), str) else None,
             "message": row.get("message") if isinstance(row.get("message"), str) else "",
             "preferred_contact_method": row.get("preferred_contact_method") if isinstance(row.get("preferred_contact_method"), str) else None,
             "client_contact_phone": row.get("client_contact_phone") if isinstance(row.get("client_contact_phone"), str) else None,
@@ -1025,6 +1026,7 @@ class ProfileService:
             "status": "pending",
             "funnel_status": "new",
             "source": self._normalize_contact_request_source(payload.get("source")),
+            "source_article_slug": self._normalize_text(payload.get("source_article_slug"), 240),
             "message": self._normalize_text(payload.get("message"), 1200) or "",
             "preferred_contact_method": self._normalize_text(payload.get("preferred_contact_method"), 40),
             "client_contact_phone": self._normalize_text(payload.get("client_contact_phone"), 40),
@@ -1040,11 +1042,11 @@ class ProfileService:
             THERAPIST_CONTACT_REQUEST_TABLE,
             [
                 insert_payload,
-                {key: value for key, value in insert_payload.items() if key != "source"},
+                {key: value for key, value in insert_payload.items() if key not in {"source", "source_article_slug"}},
                 {
                     key: value
                     for key, value in insert_payload.items()
-                    if key not in {"source", "funnel_status"}
+                    if key not in {"source", "source_article_slug", "funnel_status"}
                 },
             ],
         ) or insert_payload

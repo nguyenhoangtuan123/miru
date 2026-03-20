@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Send, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,11 +15,13 @@ type Props = {
   onClose: () => void;
   therapist: TherapistPublicProfileDetail;
   source?: TherapistContactRequestCreate['source'];
+  sourceArticleSlug?: string;
 };
 
 function buildInitialForm(
   therapist: TherapistPublicProfileDetail,
-  source: TherapistContactRequestCreate['source']
+  source: TherapistContactRequestCreate['source'],
+  sourceArticleSlug?: string
 ): TherapistContactRequestCreate {
   return {
     therapist_id: therapist.therapist_id,
@@ -34,6 +36,7 @@ function buildInitialForm(
           ? 'paid'
           : 'unsure',
     source,
+    source_article_slug: sourceArticleSlug ?? '',
   };
 }
 
@@ -42,12 +45,14 @@ export function ContactRequestModal({
   onClose,
   therapist,
   source = 'directory',
+  sourceArticleSlug,
 }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [form, setForm] = useState<TherapistContactRequestCreate>(
-    buildInitialForm(therapist, source)
+    buildInitialForm(therapist, source, sourceArticleSlug)
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +62,10 @@ export function ContactRequestModal({
     if (!open) {
       return;
     }
-    setForm(buildInitialForm(therapist, source));
+    setForm(buildInitialForm(therapist, source, sourceArticleSlug));
     setError(null);
     setSuccess(null);
-  }, [open, therapist, source]);
+  }, [open, therapist, source, sourceArticleSlug]);
 
   const contactHelp = useMemo(() => {
     if (therapist.service_mode === 'free') {
@@ -78,7 +83,7 @@ export function ContactRequestModal({
 
   function handleRequireLogin() {
     navigate('/auth/login', {
-      state: { from: { pathname: `/therapists/${therapist.therapist_id}` } },
+      state: { from: { pathname: `${location.pathname}${location.search}` } },
     });
   }
 
@@ -96,6 +101,7 @@ export function ContactRequestModal({
         ...form,
         therapist_id: therapist.therapist_id,
         source,
+        source_article_slug: sourceArticleSlug ?? form.source_article_slug ?? '',
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests.clientMe() });
       await queryClient.invalidateQueries({ queryKey: queryKeys.profiles.therapistMe() });

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ExternalLink,
   Mail,
@@ -81,6 +81,14 @@ function formatPricingUnit(value: TherapistPublicProfileDetail['pricing_unit']) 
 export function TherapistPublicProfilePage() {
   const { profile, loading, error } = useTherapistProfile();
   const [contactOpen, setContactOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const modalSource =
+    searchParams.get('source') === 'article'
+      ? 'article'
+      : searchParams.get('source') === 'profile_direct_link'
+        ? 'profile_direct_link'
+        : 'profile_direct_link';
+  const sourceArticleSlug = searchParams.get('article') || undefined;
   const contactActions = useMemo(
     () => (profile ? buildContactActions(profile) : []),
     [profile]
@@ -355,7 +363,8 @@ export function TherapistPublicProfilePage() {
         open={contactOpen}
         onClose={() => setContactOpen(false)}
         therapist={profile}
-        source="profile_direct_link"
+        source={modalSource}
+        sourceArticleSlug={sourceArticleSlug}
       />
     </div>
   );

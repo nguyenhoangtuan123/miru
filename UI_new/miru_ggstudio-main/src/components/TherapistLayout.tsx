@@ -1,5 +1,6 @@
 import {
   Calendar,
+  FileText,
   Inbox,
   LayoutDashboard,
   MessageCircle,
@@ -22,6 +23,7 @@ export function TherapistLayout() {
     { icon: LayoutDashboard, label: 'Tổng quan', path: '/therapist' },
     { icon: Users, label: 'Thân chủ', path: '/therapist/clients' },
     { icon: Sparkles, label: 'Hồ sơ', path: '/therapist/profile' },
+    { icon: FileText, label: 'Bài viết', path: '/therapist/articles' },
     { icon: Calendar, label: 'Lịch hẹn', path: '/therapist/appointments' },
     { icon: MessageCircle, label: 'Tin nhắn', path: '/therapist/messages' },
     { icon: Inbox, label: 'Yêu cầu', path: '/therapist/contact-requests' },

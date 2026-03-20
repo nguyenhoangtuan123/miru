@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, Stethoscope, User } from 'lucide-react';
 
@@ -12,9 +12,12 @@ type LocationState = {
 export function Login() {
   const { login } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
 
-  const clientNextPath = state?.from?.pathname || '/chat';
+  const requestedNextPath = searchParams.get('next');
+  const requestedIntent = searchParams.get('intent');
+  const clientNextPath = requestedNextPath || state?.from?.pathname || '/chat';
   const therapistNextPath = state?.from?.pathname?.startsWith('/therapist')
     ? state.from.pathname
     : '/therapist';
@@ -44,7 +47,9 @@ export function Login() {
             className="w-full bg-white text-black hover:bg-gray-100 transition-colors py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3"
           >
             <User size={20} />
-            Đăng nhập với tư cách Người dùng
+            {requestedIntent === 'client'
+              ? 'Tiếp tục với tư cách Người dùng'
+              : 'Đăng nhập với tư cách Người dùng'}
           </button>
 
           <button

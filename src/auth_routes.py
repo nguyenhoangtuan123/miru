@@ -27,7 +27,12 @@ load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+APP_FRONTEND_URL = (
+    os.getenv("APP_FRONTEND_URL")
+    or os.getenv("NEXT_PUBLIC_APP_URL")
+    or os.getenv("FRONTEND_URL")
+    or "http://localhost:3000"
+)
 GOOGLE_OAUTH_CLOCK_SKEW_SECONDS = int(os.getenv("GOOGLE_OAUTH_CLOCK_SKEW_SECONDS", "10"))
 GOOGLE_OAUTH_PROMPT = os.getenv("GOOGLE_OAUTH_PROMPT", "select_account")
 
@@ -64,7 +69,7 @@ def append_token(url: str, token: str) -> str:
 
 
 def build_frontend_redirect(path: str) -> str:
-    frontend_base = FRONTEND_URL.rstrip("/")
+    frontend_base = APP_FRONTEND_URL.rstrip("/")
     if not frontend_base:
         return path
     return f"{frontend_base}{path}"

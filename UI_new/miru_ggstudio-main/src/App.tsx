@@ -14,6 +14,7 @@ import { TherapistOnboardingLayout } from './components/TherapistOnboardingLayou
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { AuthCallback } from './pages/AuthCallback';
+import { PublicReturn } from './pages/PublicReturn';
 import { Consent } from './pages/Consent';
 import { Chat } from './pages/Chat';
 import { Memories } from './pages/Memories';
@@ -40,10 +41,12 @@ import { TherapistSettings } from './pages/therapist/Settings';
 import { TherapistApplyPage } from './pages/therapist/Apply';
 import { TherapistReviewStatusPage } from './pages/therapist/ReviewStatus';
 import { AdminTherapistReviewsPage } from './pages/admin/TherapistReviews';
+import { AdminArticlesPage } from './pages/admin/Articles';
 import { TherapistClientAssessmentsPage } from './pages/therapist/ClientAssessments';
 import { TherapistAssessmentResultPage } from './pages/therapist/AssessmentResult';
 import { TherapistClientContextPage } from './pages/therapist/ClientContext';
 import { TherapistTreatmentPlanPage } from './pages/therapist/TreatmentPlan';
+import { TherapistArticlesPage } from './pages/therapist/Articles';
 
 export default function App() {
   return (
@@ -60,6 +63,7 @@ export default function App() {
                   <Route path="/therapists/:therapistId" element={<TherapistPublicProfilePage />} />
                   <Route path="/auth/login" element={<Login />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/public-return" element={<PublicReturn />} />
 
                   <Route
                     element={
@@ -85,6 +89,15 @@ export default function App() {
                   element={
                     <AdminGuard>
                       <AdminTherapistReviewsPage />
+                    </AdminGuard>
+                  }
+                />
+
+                <Route
+                  path="/admin/articles"
+                  element={
+                    <AdminGuard>
+                      <AdminArticlesPage />
                     </AdminGuard>
                   }
                 />
@@ -120,6 +133,7 @@ export default function App() {
                     element={<TherapistAssessmentResultPage />}
                   />
                   <Route path="profile" element={<TherapistProfilePage />} />
+                  <Route path="articles" element={<TherapistArticlesPage />} />
                   <Route path="client-profiles" element={<TherapistClientProfilesPage />} />
                   <Route path="client-profiles/:clientId" element={<TherapistClientProfileDetailPage />} />
                   <Route path="appointments" element={<TherapistAppointments />} />

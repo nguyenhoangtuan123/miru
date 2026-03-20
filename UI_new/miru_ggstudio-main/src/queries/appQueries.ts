@@ -37,6 +37,13 @@ import {
   getTherapistClientAssessments,
 } from '../services/assessments';
 import {
+  getAdminArticleReviews,
+  getMyTherapistArticleAnalytics,
+  getMyTherapistArticles,
+  getPublicArticle,
+  getPublicArticles,
+} from '../services/articles';
+import {
   getMyTherapistSharingPreferences,
   getTherapistSharedActivities,
   getTherapistSharedAssessments,
@@ -98,6 +105,14 @@ export const queryKeys = {
       ['assessments', 'therapist', therapistId, 'client', clientId] as const,
     therapistAssignmentDetail: (therapistId: string, clientId: string, assignmentId: string) =>
       ['assessments', 'therapist', therapistId, 'client', clientId, assignmentId] as const,
+  },
+  articles: {
+    public: (limit?: number) => ['articles', 'public', limit ?? 'all'] as const,
+    publicDetail: (slug: string) => ['articles', 'public', 'detail', slug] as const,
+    therapistMe: () => ['articles', 'therapist', 'me'] as const,
+    therapistAnalytics: () => ['articles', 'therapist', 'analytics'] as const,
+    therapistDetail: (articleId: string | number) => ['articles', 'therapist', String(articleId)] as const,
+    adminReview: () => ['articles', 'admin', 'review'] as const,
   },
   therapistSharing: {
     myPreferences: () => ['therapist-sharing', 'client', 'me'] as const,
@@ -386,6 +401,47 @@ export function therapistAssessmentDetailQueryOptions(
   });
 }
 
+export function publicArticlesQueryOptions(limit?: number) {
+  return queryOptions({
+    queryKey: queryKeys.articles.public(limit),
+    queryFn: () => getPublicArticles(limit),
+  });
+}
+
+export function publicArticleQueryOptions(slug: string) {
+  return queryOptions({
+    queryKey: queryKeys.articles.publicDetail(slug),
+    queryFn: () => getPublicArticle(slug),
+  });
+}
+
+export function myTherapistArticlesQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.articles.therapistMe(),
+    queryFn: getMyTherapistArticles,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+export function myTherapistArticleAnalyticsQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.articles.therapistAnalytics(),
+    queryFn: getMyTherapistArticleAnalytics,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+export function adminArticleReviewQueryOptions() {
+  return queryOptions({
+    queryKey: queryKeys.articles.adminReview(),
+    queryFn: getAdminArticleReviews,
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
 export function myTherapistSharingPreferencesQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.therapistSharing.myPreferences(),
@@ -563,6 +619,11 @@ export async function prefetchTherapistRouteData(
   if (path === '/therapist/profile') {
     tasks.push(queryClient.prefetchQuery(therapistProfileQueryOptions()));
     tasks.push(queryClient.prefetchQuery(therapistBillingProfileQueryOptions()));
+  }
+
+  if (path === '/therapist/articles') {
+    tasks.push(queryClient.prefetchQuery(myTherapistArticlesQueryOptions()));
+    tasks.push(queryClient.prefetchQuery(myTherapistArticleAnalyticsQueryOptions()));
   }
 
   if (path === '/therapist/contact-requests') {

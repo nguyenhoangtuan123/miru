@@ -139,7 +139,8 @@ export const TherapistContactRequestSchema = z
     client_id: z.string(),
     status: z.enum(['pending', 'approved', 'declined', 'archived']).default('pending'),
     funnel_status: z.enum(['new', 'replied', 'approved', 'paired', 'lost']).default('new'),
-    source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral']).default('directory'),
+    source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral', 'article']).default('directory'),
+    source_article_slug: z.string().nullable().optional(),
     message: z.string().default(''),
     preferred_contact_method: z.string().nullable().optional(),
     client_contact_phone: z.string().nullable().optional(),
@@ -182,7 +183,8 @@ export const TherapistContactRequestCreateSchema = z.object({
   client_contact_phone: z.string().trim().max(40).optional().default(''),
   client_contact_zalo: z.string().trim().max(120).optional().default(''),
   service_interest: z.enum(['free', 'paid', 'unsure']).optional().default('unsure'),
-  source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral']).optional().default('directory'),
+  source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral', 'article']).optional().default('directory'),
+  source_article_slug: z.string().trim().max(240).optional().default(''),
 });
 
 export const TherapistContactRequestHandleSchema = z.object({
@@ -292,7 +294,8 @@ export type TherapistContactRequest = {
   client_id: string;
   status: 'pending' | 'approved' | 'declined' | 'archived';
   funnel_status: 'new' | 'replied' | 'approved' | 'paired' | 'lost';
-  source: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral';
+  source: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral' | 'article';
+  source_article_slug?: string | null;
   message: string;
   preferred_contact_method?: string | null;
   client_contact_phone?: string | null;
@@ -321,7 +324,8 @@ export type TherapistContactRequestCreate = {
   client_contact_phone: string;
   client_contact_zalo: string;
   service_interest: 'free' | 'paid' | 'unsure';
-  source?: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral';
+  source?: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral' | 'article';
+  source_article_slug?: string;
 };
 
 export type TherapistContactRequestHandle = {

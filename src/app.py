@@ -26,6 +26,8 @@ from proactive_routes import router as proactive_router
 from push_routes import router as push_router
 from therapist_verification_routes import router as therapist_verification_router
 from assessment_routes import router as assessment_router
+from article_routes import router as article_router
+from public_content_routes import router as public_content_router
 from intake_routes import router as intake_router
 from trajectory_routes import router as trajectory_router
 from therapist_sharing_routes import router as therapist_sharing_router
@@ -247,10 +249,13 @@ def _build_allowed_origins() -> list[str]:
     _extend(
         [
             "http://localhost:3000",
+            "http://localhost:3001",
             "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
             "http://localhost:8008",
             "http://127.0.0.1:8008",
             "https://miruai.vercel.app",
+            "https://app.miruai.vercel.app",
             "https://miruggstudio-main.vercel.app",
         ]
     )
@@ -288,6 +293,8 @@ app.include_router(push_router)
 app.include_router(consent_router)
 app.include_router(therapist_verification_router)
 app.include_router(assessment_router)
+app.include_router(article_router)
+app.include_router(public_content_router)
 app.include_router(intake_router)
 app.include_router(trajectory_router)
 app.include_router(therapist_sharing_router)
