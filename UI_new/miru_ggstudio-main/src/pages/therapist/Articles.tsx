@@ -1,40 +1,47 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowUpRight,
   Eye,
   FileText,
+  MessageSquareQuote,
   MousePointerClick,
   PenSquare,
   Sparkles,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   archiveTherapistArticle,
+  answerTherapistArticleQuestion,
   createTherapistArticle,
+  getMyTherapistArticleQuestions,
+  hideTherapistArticleQuestion,
+  publishTherapistArticleQuestion,
   submitTherapistArticle,
   updateTherapistArticle,
   type Article,
   type ArticleForm,
+  type ArticleQuestion,
+  type ArticleQuestionStatus,
 } from '../../services/articles';
 import {
   queryKeys,
   myTherapistArticleAnalyticsQueryOptions,
   myTherapistArticlesQueryOptions,
 } from '../../queries/appQueries';
+import { PUBLIC_SITE_URL } from '../../services/api';
+import { createArticleDraft, formatArticleDate, getArticleStatusMeta } from '../articles/articleUtils';
 import { ArticleEditorPanel } from './articles/ArticleEditorPanel';
 import { ArticleAnalyticsPanel } from './articles/ArticleAnalyticsPanel';
 import { ArticleListPanel } from './articles/ArticleListPanel';
-import { createArticleDraft } from '../articles/articleUtils';
+import { QuestionInboxPanel } from './articles/QuestionInboxPanel';
 import {
   buildTherapistArticleAnalyticsIndex,
   findArticleAnalytics,
   formatAnalyticsMetric,
   summarizeTherapistArticleAnalytics,
 } from './articles/articleAnalytics';
-
-const emptyDraft = createArticleDraft();
 
 function buildStats(articles: Article[]) {
   const stats = {
@@ -56,7 +63,7 @@ function buildStats(articles: Article[]) {
   return stats;
 }
 
-function ArticleSummaryCard({
+function OverviewCard({
   icon: Icon,
   label,
   value,
@@ -65,16 +72,29 @@ function ArticleSummaryCard({
   icon: LucideIcon;
   label: string;
   value: string | number;
-  hint?: string;
+  hint: string;
 }) {
   return (
-    <div className="glass-panel rounded-[24px] border border-white/10 p-5">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-miru-primary/10 text-miru-primary">
-        <Icon size={18} />
+    <div className="glass-panel rounded-[24px] border border-white/10 px-5 py-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/40">{label}</div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-miru-primary/15 text-miru-primary">
+          <Icon size={18} />
+        </div>
       </div>
-      <div className="text-sm text-white/50">{label}</div>
-      <div className="mt-2 text-3xl font-bold text-white">{value}</div>
-      {hint ? <div className="mt-2 text-xs leading-6 text-white/40">{hint}</div> : null}
+      <div className="mt-4 font-['Plus_Jakarta_Sans'] text-4xl font-bold tracking-tight text-white">
+        {value}
+      </div>
+      <div className="mt-2 text-sm leading-7 text-white/50">{hint}</div>
+    </div>
+  );
+}
+
+function HeaderPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm backdrop-blur">
+      <span className="mr-2 text-white/40">{label}</span>
+      <span className="font-medium text-white/80">{value}</span>
     </div>
   );
 }
@@ -82,11 +102,18 @@ function ArticleSummaryCard({
 export function TherapistArticlesPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const communityLibraryUrl = `${PUBLIC_SITE_URL}/bai-viet`;
   const articlesQuery = useQuery(myTherapistArticlesQueryOptions());
   const analyticsQuery = useQuery(myTherapistArticleAnalyticsQueryOptions());
+  const [questionFilter, setQuestionFilter] = useState<ArticleQuestionStatus | 'all'>('all');
+  const questionsQuery = useQuery({
+    queryKey: ['articles', 'therapist', 'questions', questionFilter] as const,
+    queryFn: () => getMyTherapistArticleQuestions(questionFilter),
+    staleTime: 30 * 1000,
+  });
   const articles = (articlesQuery.data?.articles ?? []) as Article[];
   const [selectedArticleId, setSelectedArticleId] = useState<string | number | null>(null);
-  const [draft, setDraft] = useState<ArticleForm>(emptyDraft);
+  const [draft, setDraft] = useState<ArticleForm>(createArticleDraft());
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -127,11 +154,32 @@ export function TherapistArticlesPage() {
     () => summarizeTherapistArticleAnalytics(articles, analyticsIndex),
     [articles, analyticsIndex]
   );
+  const questionItems = (questionsQuery.data?.questions ?? []) as ArticleQuestion[];
+  const questionSummary = useMemo(
+    () => ({
+      total: questionItems.length,
+      answered: questionItems.filter((question) =>
+        ['answered', 'published'].includes(
+          (question.answer_state ?? question.status ?? 'pending_review') as string
+        )
+      ).length,
+    }),
+    [questionItems]
+  );
   const selectedAnalytics = useMemo(
     () => (selectedArticle ? findArticleAnalytics(selectedArticle, analyticsIndex) : null),
     [analyticsIndex, selectedArticle]
   );
+  const selectedArticleUrl =
+    selectedArticle?.slug && selectedArticle.status === 'published'
+      ? `${PUBLIC_SITE_URL}/bai-viet/${selectedArticle.slug}`
+      : null;
   const hasArticles = articles.length > 0;
+  const selectedStatusMeta = selectedArticle
+    ? getArticleStatusMeta(selectedArticle.status)
+    : getArticleStatusMeta('draft');
+  const selectedTitle =
+    selectedArticle?.title?.trim() || draft.title.trim() || 'Untitled article';
 
   function setDraftField<K extends keyof ArticleForm>(key: K, value: ArticleForm[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -140,7 +188,7 @@ export function TherapistArticlesPage() {
   function startNewArticle() {
     setSelectedArticleId(null);
     setIsCreatingNew(true);
-    setDraft(emptyDraft);
+    setDraft(createArticleDraft());
     setMessage(null);
     setError(null);
   }
@@ -148,7 +196,42 @@ export function TherapistArticlesPage() {
   async function refreshArticles() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.articles.therapistMe() });
     await queryClient.invalidateQueries({ queryKey: queryKeys.articles.therapistAnalytics() });
+    await queryClient.invalidateQueries({ queryKey: ['articles', 'therapist', 'questions'] });
   }
+
+  const answerQuestionMutation = useMutation({
+    mutationFn: async ({ question, answerText }: { question: ArticleQuestion; answerText: string }) =>
+      answerTherapistArticleQuestion(question.id, answerText),
+    onSuccess: async () => {
+      await refreshArticles();
+      setMessage('Đã lưu trả lời cho câu hỏi cộng đồng.');
+    },
+    onError: (answerError) => {
+      setError(answerError instanceof Error ? answerError.message : 'Không lưu được câu trả lời');
+    },
+  });
+
+  const publishQuestionMutation = useMutation({
+    mutationFn: async (question: ArticleQuestion) => publishTherapistArticleQuestion(question.id),
+    onSuccess: async () => {
+      await refreshArticles();
+      setMessage('Đã đăng câu hỏi công khai.');
+    },
+    onError: (publishError) => {
+      setError(publishError instanceof Error ? publishError.message : 'Không đăng công khai được câu hỏi');
+    },
+  });
+
+  const hideQuestionMutation = useMutation({
+    mutationFn: async (question: ArticleQuestion) => hideTherapistArticleQuestion(question.id),
+    onSuccess: async () => {
+      await refreshArticles();
+      setMessage('Đã ẩn câu hỏi khỏi community.');
+    },
+    onError: (hideError) => {
+      setError(hideError instanceof Error ? hideError.message : 'Không ẩn được câu hỏi');
+    },
+  });
 
   async function saveArticle() {
     try {
@@ -179,11 +262,7 @@ export function TherapistArticlesPage() {
         setDraft(createArticleDraft(nextArticle));
       }
 
-      setMessage(
-        selectedArticle
-          ? 'Đã lưu thay đổi cho bài viết.'
-          : 'Đã tạo bản nháp mới.'
-      );
+      setMessage(selectedArticle ? 'Đã lưu thay đổi cho bài viết.' : 'Đã tạo bản nháp mới.');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Không lưu được bài viết');
     } finally {
@@ -248,98 +327,142 @@ export function TherapistArticlesPage() {
   const analyticsAvailable = Boolean(analyticsQuery.data?.available || analyticsIndex.hasAnyMetrics);
 
   return (
-    <div className="min-h-screen bg-miru-bg px-4 py-8 text-white md:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen px-4 py-8 md:px-8 md:py-10">
+      <div className="mx-auto max-w-[1600px] space-y-6">
         <section className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
               <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.35em] text-white/35">
                 <PenSquare size={14} />
-                Therapist content
+                Community Studio
               </div>
-              <h1 className="mt-3 text-3xl font-bold md:text-4xl">Bài viết chia sẻ kiến thức</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-white/65">
-                Quản lý bài viết ở một nơi: tạo nháp, chỉnh sửa nội dung, theo dõi trạng thái duyệt
-                và lưu trữ khi cần.
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h1 className="font-['Plus_Jakarta_Sans'] text-3xl font-bold tracking-tight text-white md:text-[40px]">
+                  Sanctuary Editor
+                </h1>
+                <div className="hidden h-5 w-px bg-white/15 md:block" />
+                <span className="max-w-[28rem] truncate text-sm text-white/50">{selectedTitle}</span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <HeaderPill label="Trạng thái" value={selectedStatusMeta.label} />
+                <HeaderPill
+                  label="Cập nhật"
+                  value={
+                    selectedArticle ? formatArticleDate(selectedArticle.updated_at, 'Chưa lưu') : 'Bản nháp mới'
+                  }
+                />
+                <HeaderPill label="Đăng nhập" value={user?.name || user?.email || 'Therapist'} />
+              </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-              Đang đăng nhập: {user?.name || user?.email}
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={communityLibraryUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 backdrop-blur transition hover:bg-white/10 hover:text-white"
+              >
+                <span>Mở Community</span>
+                <ArrowUpRight size={16} />
+              </a>
+
+              {selectedArticleUrl ? (
+                <a
+                  href={selectedArticleUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-miru-primary/30 bg-miru-primary/10 px-4 py-2 text-sm font-semibold text-miru-primary backdrop-blur transition hover:bg-miru-primary/20"
+                >
+                  <span>Xem bài đang live</span>
+                  <ArrowUpRight size={16} />
+                </a>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => void saveArticle()}
+                disabled={saving}
+                className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur transition hover:bg-white/10 disabled:opacity-60"
+              >
+                {saving ? 'Đang lưu...' : selectedArticle ? 'Lưu thay đổi' : 'Lưu nháp'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void submitReview()}
+                disabled={submitting || !selectedArticle}
+                className="rounded-full bg-miru-primary px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(127,13,242,0.25)] transition hover:bg-miru-primary/85 disabled:opacity-60"
+              >
+                {submitting ? 'Đang gửi...' : 'Gửi duyệt'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void archiveArticle()}
+                disabled={archiving || !selectedArticle}
+                className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/60 transition hover:bg-white/10 disabled:opacity-60"
+              >
+                {archiving ? 'Đang lưu trữ...' : 'Lưu trữ'}
+              </button>
             </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <ArticleSummaryCard icon={FileText} label="Tổng bài" value={stats.total} />
-            <ArticleSummaryCard icon={Sparkles} label="Nháp" value={stats.draft} />
-            <ArticleSummaryCard icon={Sparkles} label="Chờ duyệt" value={stats.pending_review} />
-            <ArticleSummaryCard icon={Sparkles} label="Đã đăng" value={stats.published} />
-            <ArticleSummaryCard icon={Sparkles} label="Từ chối" value={stats.rejected} />
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-[0.3em] text-white/35">Hiệu quả nội dung</div>
-            <div className="text-xs text-white/45">
-              Chỉ hiện số tổng hợp. Không lộ danh tính người đọc.
-            </div>
-          </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <ArticleSummaryCard
-              icon={Eye}
-              label="Lượt đọc"
-              value={analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalViews) : '—'}
-              hint={`${formatAnalyticsMetric(analyticsSummary.totalEngagedReads)} lượt đọc sâu`}
-            />
-            <ArticleSummaryCard
-              icon={MousePointerClick}
-              label="Click sang hồ sơ"
-              value={
-                analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalProfileClicks) : '—'
-              }
-              hint="Đo mức quan tâm sau khi đọc bài"
-            />
-            <ArticleSummaryCard
-              icon={Sparkles}
-              label="Yêu cầu liên hệ"
-              value={
-                analyticsAvailable
-                  ? formatAnalyticsMetric(analyticsSummary.totalContactRequests)
-                  : '—'
-              }
-              hint="Lead phát sinh trực tiếp từ nội dung"
-            />
-            <ArticleSummaryCard
-              icon={Users}
-              label="Pairing"
-              value={
-                analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalPairings) : '—'
-              }
-              hint={`${analyticsSummary.publishedTrackedCount} bài published đã có tín hiệu`}
-            />
           </div>
         </section>
 
-        {message && (
-          <div className="rounded-[24px] border border-emerald-200/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            {message}
-          </div>
-        )}
+        <div className="space-y-4">
+          {message ? (
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-200">
+              {message}
+            </div>
+          ) : null}
 
-        {error && (
-          <div className="rounded-[24px] border border-amber-200/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            {error}
-          </div>
-        )}
+          {error ? (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200">
+              {error}
+            </div>
+          ) : null}
 
-        {queryError && (
-          <div className="rounded-[24px] border border-red-200/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {queryError}
-          </div>
-        )}
+          {queryError ? (
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
+              {queryError}
+            </div>
+          ) : null}
+        </div>
 
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <OverviewCard
+            icon={FileText}
+            label="Tổng bài"
+            value={stats.total}
+            hint={`${stats.draft} nháp, ${stats.pending_review} chờ duyệt`}
+          />
+          <OverviewCard
+            icon={Sparkles}
+            label="Published"
+            value={stats.published}
+            hint={`${stats.rejected} bài cần chỉnh sửa thêm`}
+          />
+          <OverviewCard
+            icon={Eye}
+            label="Đọc sâu"
+            value={analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalEngagedReads) : '—'}
+            hint="Số lượt đọc đủ dài để thành tín hiệu chất lượng"
+          />
+          <OverviewCard
+            icon={MousePointerClick}
+            label="Click hồ sơ"
+            value={analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalProfileClicks) : '—'}
+            hint="Người đọc đi tiếp từ bài sang hồ sơ therapist"
+          />
+          <OverviewCard
+            icon={MessageSquareQuote}
+            label="Q&A"
+            value={analyticsAvailable ? formatAnalyticsMetric(analyticsSummary.totalQuestions) : questionSummary.total}
+            hint={`${questionSummary.answered} câu hỏi đã có phản hồi`}
+          />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)_380px]">
+          <div className="space-y-4 xl:sticky xl:top-[7.2rem] xl:self-start">
             <ArticleListPanel
               articles={articles}
               analyticsIndex={analyticsIndex}
@@ -355,42 +478,63 @@ export function TherapistArticlesPage() {
               refreshing={articlesQuery.isFetching}
             />
 
-            <div className="glass-panel rounded-[28px] border border-white/10 p-5 text-sm leading-7 text-white/60">
-              <div className="mb-2 text-xs uppercase tracking-[0.3em] text-white/35">Lưu ý</div>
-              Khi bài đang ở trạng thái <strong>chờ duyệt</strong> hoặc <strong>đã đăng</strong>, việc
-              lưu lại nội dung có thể đưa bài quay về <strong>nháp</strong> nếu backend áp dụng quy tắc
-              đó. Hãy gửi duyệt lại sau khi chỉnh xong.
+            <div className="glass-panel rounded-[24px] border border-white/10 px-5 py-5 text-sm leading-7 text-white/50">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/35">
+                Studio note
+              </div>
+              <p className="mt-3">
+                Khi bài đang ở trạng thái <strong className="text-white/80">chờ duyệt</strong> hoặc{' '}
+                <strong className="text-white/80">đã đăng</strong>, việc lưu lại nội dung có thể đưa bài quay về{' '}
+                <strong className="text-white/80">nháp</strong> nếu backend áp dụng quy tắc đó.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-4">
             <ArticleEditorPanel
               draft={draft}
               currentArticle={selectedArticle}
               onChange={setDraftField}
-              onSave={() => void saveArticle()}
-              onSubmitReview={() => void submitReview()}
-              onArchive={() => void archiveArticle()}
-              saving={saving}
-              submitting={submitting}
-              archiving={archiving}
             />
 
+            {!loading && !hasArticles ? (
+              <div className="rounded-[24px] border border-dashed border-white/10 px-6 py-10 text-center text-white/50">
+                Chưa có bài viết nào trong portal. Bấm <strong className="text-white">Bài mới</strong> để bắt đầu.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-4 xl:sticky xl:top-[7.2rem] xl:self-start">
             <ArticleAnalyticsPanel
               article={selectedArticle}
+              draft={draft}
+              onChange={setDraftField}
               analytics={selectedAnalytics}
               analyticsAvailable={analyticsAvailable}
               loading={analyticsQuery.isLoading && !analyticsQuery.data}
               error={analyticsError}
             />
-          </div>
-        </section>
 
-        {!loading && !hasArticles && (
-          <div className="glass-panel rounded-[28px] border border-white/10 px-6 py-12 text-center text-white/55">
-            Chưa có bài viết nào trong portal. Bấm <strong>Bài mới</strong> để bắt đầu.
+            <QuestionInboxPanel
+              questions={questionItems}
+              filter={questionFilter}
+              onFilterChange={(value) => setQuestionFilter(value)}
+              onRefresh={() => void refreshArticles()}
+              onAnswer={async (question, answerText) => {
+                await answerQuestionMutation.mutateAsync({ question, answerText });
+              }}
+              onPublish={async (question) => {
+                await publishQuestionMutation.mutateAsync(question);
+              }}
+              onHide={async (question) => {
+                await hideQuestionMutation.mutateAsync(question);
+              }}
+              loading={questionsQuery.isLoading}
+              error={questionsQuery.error instanceof Error ? questionsQuery.error.message : null}
+              available={Boolean(questionsQuery.data?.available ?? questionsQuery.data?.questions?.length)}
+            />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

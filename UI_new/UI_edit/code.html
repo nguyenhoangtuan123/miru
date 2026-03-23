@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sanctuary Editor | Professional Therapist Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#5c5872",
+                        "surface": "#f6f6fb",
+                        "on-secondary": "#f7f0ff",
+                        "primary-fixed": "#c185ff",
+                        "primary-container": "#c185ff",
+                        "surface-bright": "#f6f6fb",
+                        "on-tertiary-fixed-variant": "#5c5872",
+                        "inverse-primary": "#b56eff",
+                        "on-background": "#2d2f33",
+                        "error-container": "#f74b6d",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed-variant": "#56497c",
+                        "surface-container-low": "#f0f0f6",
+                        "secondary-fixed": "#d9caff",
+                        "tertiary-fixed-dim": "#d6d1ef",
+                        "primary-dim": "#7400c9",
+                        "surface-dim": "#d2d4db",
+                        "primary": "#811cd9",
+                        "inverse-surface": "#0c0e12",
+                        "surface-container-highest": "#dbdde3",
+                        "on-tertiary-container": "#524f68",
+                        "tertiary-fixed": "#e5dffe",
+                        "surface-container": "#e7e8ee",
+                        "secondary": "#615387",
+                        "outline-variant": "#acadb1",
+                        "tertiary-dim": "#504d66",
+                        "tertiary-container": "#e5dffe",
+                        "on-tertiary": "#f5f0ff",
+                        "surface-container-high": "#e1e2e8",
+                        "on-secondary-fixed": "#392c5d",
+                        "on-primary-fixed": "#000000",
+                        "secondary-dim": "#55487a",
+                        "surface-tint": "#811cd9",
+                        "on-secondary-container": "#4c3f72",
+                        "on-tertiary-fixed": "#403c55",
+                        "on-surface-variant": "#5a5b60",
+                        "on-error-container": "#510017",
+                        "on-primary-fixed-variant": "#420078",
+                        "secondary-fixed-dim": "#cbbbf6",
+                        "inverse-on-surface": "#9c9da1",
+                        "surface-variant": "#dbdde3",
+                        "secondary-container": "#d9caff",
+                        "background": "#f6f6fb",
+                        "error-dim": "#a70138",
+                        "on-surface": "#2d2f33",
+                        "primary-fixed-dim": "#b772ff",
+                        "on-error": "#ffefef",
+                        "on-primary-container": "#350062",
+                        "outline": "#75777b",
+                        "error": "#b41340",
+                        "on-primary": "#fbefff"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .writing-canvas::selection {
+            background: #c185ff;
+            color: #350062;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #dbdde3;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-hidden h-screen flex">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 gap-2 bg-[#f6f6fb] dark:bg-slate-950 h-screen w-64 border-r-0 z-50">
+<div class="mb-8 px-4">
+<span class="text-xl font-bold text-[#811cd9] dark:text-[#c185ff] tracking-tight font-headline">Dr. Aris</span>
+<p class="text-xs text-on-surface-variant font-label">Clinical Psychologist</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#f0f0f6] dark:hover:bg-slate-800 rounded-lg transition-all font-['Plus_Jakarta_Sans'] font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#f0f0f6] dark:hover:bg-slate-800 rounded-lg transition-all font-['Plus_Jakarta_Sans'] font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+                Patients
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#f0f0f6] dark:hover:bg-slate-800 rounded-lg transition-all font-['Plus_Jakarta_Sans'] font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+                Sessions
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#ffffff] dark:bg-slate-800 text-[#811cd9] dark:text-[#c185ff] rounded-lg shadow-sm font-bold font-['Plus_Jakarta_Sans'] text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+                Library
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#f0f0f6] dark:hover:bg-slate-800 rounded-lg transition-all font-['Plus_Jakarta_Sans'] font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<button class="mt-auto mx-2 bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 px-4 rounded-full font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+            New Session
+        </button>
+</aside>
+<!-- Main Workspace Wrapper -->
+<main class="ml-64 flex flex-col flex-1 h-screen relative">
+<!-- TopAppBar (Authority: JSON) -->
+<header class="sticky top-0 z-40 flex items-center justify-between px-8 w-full h-16 bg-[#f6f6fb]/80 dark:bg-slate-950/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<span class="text-lg font-semibold text-slate-900 dark:text-slate-100 font-headline">Sanctuary Editor</span>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<span class="text-sm text-on-surface-variant font-label">Untitled Article</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-5 py-2 rounded-full text-primary font-bold text-sm hover:bg-surface-container-high transition-all">
+                    Preview
+                </button>
+<button class="px-6 py-2 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95">
+                    Publish
+                </button>
+<div class="flex items-center gap-2 ml-4">
+<span class="material-symbols-outlined p-2 hover:bg-surface-container-low rounded-full cursor-pointer text-on-surface-variant" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined p-2 hover:bg-surface-container-low rounded-full cursor-pointer text-on-surface-variant" data-icon="help_outline">help_outline</span>
+</div>
+</div>
+</header>
+<!-- Editor Layout Grid -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Workspace: The Writing Canvas -->
+<section class="flex-1 overflow-y-auto px-16 py-12 custom-scrollbar bg-surface-container-low/30">
+<div class="max-w-3xl mx-auto space-y-12">
+<!-- Title Input -->
+<div class="space-y-4">
+<input class="w-full bg-transparent border-none p-0 text-5xl font-extrabold font-headline placeholder:text-surface-variant focus:ring-0 text-on-surface tracking-tight leading-tight" placeholder="Enter article title..." type="text"/>
+<div class="flex items-center gap-4 text-on-surface-variant text-sm font-label">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span> 12 min read</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm" data-icon="history">history</span> Draft saved 2m ago</span>
+</div>
+</div>
+<!-- Editor Toolbar (Floating-esque) -->
+<div class="sticky top-4 z-30 bg-surface-container-lowest/90 backdrop-blur shadow-sm p-1 rounded-full border border-surface-container flex items-center justify-center gap-1 max-w-fit">
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="format_bold">format_bold</span></button>
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="format_italic">format_italic</span></button>
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span></button>
+<div class="w-[1px] h-4 bg-outline-variant/30 mx-1"></div>
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="link">link</span></button>
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span></button>
+<button class="p-2 hover:bg-surface-container-low rounded-full text-on-surface-variant transition-colors"><span class="material-symbols-outlined" data-icon="format_quote">format_quote</span></button>
+<div class="w-[1px] h-4 bg-outline-variant/30 mx-1"></div>
+<button class="p-2 hover:bg-primary-container/20 text-primary rounded-full transition-colors flex items-center gap-1 px-3">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-xs font-bold font-label">Magic Edit</span>
+</button>
+</div>
+<!-- Content Area -->
+<div class="writing-canvas prose prose-lg prose-slate max-w-none focus:outline-none">
+<p class="text-on-surface-variant text-xl leading-relaxed mb-6 font-body">
+                            The landscape of cognitive therapy is evolving. As practitioners, we must find the balance between established methodologies and the emerging need for digital empathy...
+                        </p>
+<p class="text-on-surface-variant text-xl leading-relaxed mb-6 font-body">
+                            Start typing your masterpiece here. Focus on the human element. The Sanctuary Editor handles the rest.
+                        </p>
+</div>
+</div>
+</section>
+<!-- Right Workspace: AI & Settings Panels -->
+<aside class="w-96 flex flex-col border-l border-surface-container bg-surface-container-low">
+<!-- Tab Headers -->
+<div class="flex p-4 gap-2 bg-surface-container-low">
+<button class="flex-1 py-2 px-3 bg-surface-container-lowest rounded-lg text-primary font-bold text-xs flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-base" data-icon="auto_awesome">auto_awesome</span> AI Assistant
+                    </button>
+<button class="flex-1 py-2 px-3 text-on-surface-variant font-medium text-xs flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors rounded-lg">
+<span class="material-symbols-outlined text-base" data-icon="tune">tune</span> Settings
+                    </button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+<!-- AI Insight Assistant Section -->
+<div class="space-y-4">
+<div class="p-5 bg-gradient-to-br from-primary-container/20 to-surface-container-lowest rounded-xl border border-primary/10">
+<div class="flex items-center gap-2 mb-3">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<h3 class="font-headline font-bold text-sm text-on-primary-container uppercase tracking-widest">AI Summary</h3>
+</div>
+<p class="text-sm text-on-tertiary-container leading-relaxed">
+                                This article explores the intersection of traditional therapy and digital tools, emphasizing the role of "Quiet Authority" in professional writing.
+                            </p>
+</div>
+<!-- Quick Exercises -->
+<div class="space-y-2">
+<h4 class="px-2 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-tighter">Quick Exercises</h4>
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-surface-container/50 hover:border-primary-fixed transition-all cursor-pointer">
+<p class="text-sm font-semibold mb-1">Mirroring Reflection</p>
+<p class="text-xs text-on-surface-variant">Ask the reader to list three digital stressors they've felt this week.</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-surface-container/50 hover:border-primary-fixed transition-all cursor-pointer">
+<p class="text-sm font-semibold mb-1">The Digital Sabbatical</p>
+<p class="text-xs text-on-surface-variant">A guided prompt for practitioners to disconnect for 24 hours.</p>
+</div>
+</div>
+<!-- Smart Tags -->
+<div class="space-y-3">
+<h4 class="px-2 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-tighter">Suggested Tags</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-[11px] font-bold">Mental Health</span>
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-[11px] font-bold">Digital Wellness</span>
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-[11px] font-bold">Future of Therapy</span>
+<button class="px-3 py-1 border border-dashed border-outline rounded-full text-[11px] text-on-surface-variant hover:border-primary transition-colors">+ Add New</button>
+</div>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container-highest"></div>
+<!-- SEO & Visibility Section -->
+<div class="space-y-5">
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface ml-1">Category</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-xl text-sm p-3 focus:ring-2 focus:ring-primary-fixed/20">
+<option>Mental Health</option>
+<option>Relationships</option>
+<option>Clinical Practice</option>
+<option>Self-Care</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface ml-1">Cover Image</label>
+<div class="aspect-video w-full rounded-xl bg-surface-container overflow-hidden group relative cursor-pointer">
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-on-primary" data-icon="upload">upload</span>
+</div>
+<img class="w-full h-full object-cover" data-alt="Abstract calming landscape with soft purples and lavenders" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNsYOUh2rjfu36_2mrM5xFJqJ37zD3S36TfUGFjH4hGmmoNjPZRittXI4iW-Av6LMYA_Ap4riq8U6v6hy5whxEzwaw-ktbQWyN0IvECGc9RrSe9140u9ywpc6KP9D73XmQXdUNOGhKMuz9Q7j4gekl7Cww6Rhc5FTTr9rTpPmwhHkklmP0sozXfGlKXAjybxQlAgqf6fusWKX66nML6LE3_hd-hK5X_7aVyc3gAuH-ThkXle6oSSQx3FAvG3rmX_Zw8nCJo8yacyth"/>
+</div>
+</div>
+<div class="pt-4 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold">Visibility</span>
+<span class="text-[11px] text-on-surface-variant">Public to all readers</span>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative p-1 cursor-pointer">
+<div class="w-4 h-4 bg-on-primary rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Stats -->
+<div class="p-4 bg-surface-container-high/40 flex items-center justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-widest border-t border-surface-container">
+<span>Words: 142</span>
+<span>Characters: 852</span>
+</div>
+</aside>
+</div>
+</main>
+<!-- Success Message (Toast) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl z-50 transform translate-y-20 opacity-0 pointer-events-none">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span>
+<span class="text-sm font-medium">Article draft saved successfully</span>
+</div>
+</body></html>

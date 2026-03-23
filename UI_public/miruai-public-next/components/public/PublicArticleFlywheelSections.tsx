@@ -49,7 +49,7 @@ export function PublicArticleFlywheelSections({
       }
 
       const nextReasonTags = [...articlesResult.reason_tags, ...therapistsResult.reason_tags].filter(
-        (tag, index, array) => array.indexOf(tag) === index
+        (tag, index, array) => array.indexOf(tag) === index,
       );
       if (nextReasonTags.length > 0) {
         setReasonTags(nextReasonTags);
@@ -58,7 +58,7 @@ export function PublicArticleFlywheelSections({
       setHasPersonalizedResults(
         articlesResult.recommended_articles.length > 0 ||
           therapistsResult.recommended_therapists.length > 0 ||
-          nextReasonTags.length > 0
+          nextReasonTags.length > 0,
       );
     }
 

@@ -141,6 +141,7 @@ export const TherapistContactRequestSchema = z
     funnel_status: z.enum(['new', 'replied', 'approved', 'paired', 'lost']).default('new'),
     source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral', 'article']).default('directory'),
     source_article_slug: z.string().nullable().optional(),
+    entry_intent: z.enum(['message', 'therapy']).default('therapy'),
     message: z.string().default(''),
     preferred_contact_method: z.string().nullable().optional(),
     client_contact_phone: z.string().nullable().optional(),
@@ -185,6 +186,7 @@ export const TherapistContactRequestCreateSchema = z.object({
   service_interest: z.enum(['free', 'paid', 'unsure']).optional().default('unsure'),
   source: z.enum(['directory', 'profile_direct_link', 'therapist_invite', 'referral', 'article']).optional().default('directory'),
   source_article_slug: z.string().trim().max(240).optional().default(''),
+  entry_intent: z.enum(['message', 'therapy']).optional().default('therapy'),
 });
 
 export const TherapistContactRequestHandleSchema = z.object({
@@ -296,6 +298,7 @@ export type TherapistContactRequest = {
   funnel_status: 'new' | 'replied' | 'approved' | 'paired' | 'lost';
   source: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral' | 'article';
   source_article_slug?: string | null;
+  entry_intent: 'message' | 'therapy';
   message: string;
   preferred_contact_method?: string | null;
   client_contact_phone?: string | null;
@@ -326,6 +329,7 @@ export type TherapistContactRequestCreate = {
   service_interest: 'free' | 'paid' | 'unsure';
   source?: 'directory' | 'profile_direct_link' | 'therapist_invite' | 'referral' | 'article';
   source_article_slug?: string;
+  entry_intent?: 'message' | 'therapy';
 };
 
 export type TherapistContactRequestHandle = {

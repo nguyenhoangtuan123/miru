@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dr. Aris | Digital Sanctuary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#4c3f72",
+              "surface-container-low": "#f0f0f6",
+              "primary-container": "#c185ff",
+              "surface-tint": "#811cd9",
+              "primary": "#811cd9",
+              "surface-container-highest": "#dbdde3",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary": "#f7f0ff",
+              "on-primary": "#fbefff",
+              "on-tertiary-container": "#524f68",
+              "secondary": "#615387",
+              "inverse-surface": "#0c0e12",
+              "inverse-primary": "#b56eff",
+              "secondary-fixed": "#d9caff",
+              "on-error": "#ffefef",
+              "on-secondary-fixed-variant": "#56497c",
+              "primary-fixed-dim": "#b772ff",
+              "on-primary-container": "#350062",
+              "secondary-dim": "#55487a",
+              "surface-variant": "#dbdde3",
+              "on-tertiary-fixed": "#403c55",
+              "error-dim": "#a70138",
+              "surface-container-high": "#e1e2e8",
+              "surface-bright": "#f6f6fb",
+              "outline": "#75777b",
+              "on-tertiary": "#f5f0ff",
+              "tertiary-fixed-dim": "#d6d1ef",
+              "secondary-container": "#d9caff",
+              "error-container": "#f74b6d",
+              "on-secondary-fixed": "#392c5d",
+              "tertiary": "#5c5872",
+              "outline-variant": "#acadb1",
+              "on-error-container": "#510017",
+              "error": "#b41340",
+              "tertiary-container": "#e5dffe",
+              "background": "#f6f6fb",
+              "surface-container": "#e7e8ee",
+              "tertiary-fixed": "#e5dffe",
+              "tertiary-dim": "#504d66",
+              "inverse-on-surface": "#9c9da1",
+              "secondary-fixed-dim": "#cbbbf6",
+              "surface": "#f6f6fb",
+              "on-primary-fixed": "#000000",
+              "on-surface-variant": "#5a5b60",
+              "on-primary-fixed-variant": "#420078",
+              "primary-fixed": "#c185ff",
+              "on-surface": "#2d2f33",
+              "surface-dim": "#d2d4db",
+              "on-background": "#2d2f33",
+              "on-tertiary-fixed-variant": "#5c5872",
+              "primary-fixed-dim": "#b772ff",
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #811cd9 0%, #c185ff 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        .spring-ease {
+            transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar Implementation -->
+<nav class="fixed top-0 w-full z-50 bg-[#f6f6fb]/80 backdrop-blur-xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] flex justify-between items-center px-8 h-20">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold tracking-tighter text-[#811cd9] font-headline">Digital Sanctuary</span>
+<div class="hidden md:flex gap-6 font-headline font-medium text-sm tracking-tight items-center">
+<a class="text-[#811cd9] border-b-2 border-[#811cd9] pb-1" href="#">Public Profile</a>
+<a class="text-[#5a5b60] hover:text-[#811cd9] transition-colors duration-300" href="#">Articles</a>
+<a class="text-[#5a5b60] hover:text-[#811cd9] transition-colors duration-300" href="#">Specialties</a>
+<a class="text-[#5a5b60] hover:text-[#811cd9] transition-colors duration-300" href="#">Contact</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="Practitioner headshot" class="w-full h-full object-cover" data-alt="Close up of a professional male doctor smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTs6aYyaJD_smjy-NSRjryH1uc25AvGK9Omqz54T5LYYIl2IW5GWw-llR7mGr26CVp9vYantSgUEa5NIWuw79AFX3ZOEyJyMiKha9BJeDhhM-56L359ake_RBolvuah38GUG8UQiSNeCVo14k3iIWZeUmiI0eBiMO_DAvWqg7izTrmNw1Zx7NA41nC72AGzpJncYvQ33XVddBdtxh0LPSOT-oei4NN8lQpVthEhGW73l6abvjj74ylbhAH4-Z82KXjnlzY7n2ZnIZM"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar Implementation (Management Layer) -->
+<aside class="hidden lg:flex flex-col py-8 h-screen w-72 fixed left-0 top-0 z-40 bg-[#f0f0f6] font-['Manrope'] text-sm mt-20">
+<div class="px-8 mb-10">
+<div class="flex items-center gap-3 mb-2">
+<div class="p-2 bg-primary-container/20 rounded-lg text-primary">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-[#2d2f33] leading-none">Pro Console</h3>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mt-1">Clinical Excellence</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-[#5a5b60] pl-10 py-3 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">dashboard</span> Dashboard
+            </div>
+<div class="text-[#5a5b60] pl-10 py-3 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">folder_shared</span> Patient Records
+            </div>
+<div class="text-[#5a5b60] pl-10 py-3 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">description</span> Clinical Notes
+            </div>
+<div class="text-[#5a5b60] pl-10 py-3 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span> Schedule
+            </div>
+<div class="text-[#5a5b60] pl-10 py-3 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">insights</span> Analytics
+            </div>
+</nav>
+<div class="mt-auto px-6 space-y-4">
+<button class="w-full bg-gradient-primary text-white py-4 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">play_circle</span> Start Session
+            </button>
+<div class="border-t border-surface-container-high pt-4">
+<div class="text-[#5a5b60] px-4 py-2 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3 rounded-lg">
+<span class="material-symbols-outlined text-[20px]">help</span> Help Center
+                </div>
+<div class="text-[#5a5b60] px-4 py-2 hover:bg-white/50 transition-all cursor-pointer flex items-center gap-3 rounded-lg">
+<span class="material-symbols-outlined text-[20px]">logout</span> Log Out
+                </div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="lg:ml-72 pt-20 min-h-screen">
+<!-- Hero Section -->
+<section class="relative px-8 md:px-16 py-12 md:py-20 overflow-hidden">
+<!-- Animated Mesh Background Substitute -->
+<div class="absolute inset-0 -z-10 bg-gradient-to-br from-surface via-primary-container/5 to-surface-bright opacity-60"></div>
+<div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
+<div class="relative w-64 h-64 md:w-80 md:h-80 flex-shrink-0">
+<div class="absolute inset-0 bg-primary-container rounded-[2.5rem] rotate-6 opacity-20"></div>
+<div class="absolute inset-0 bg-secondary-fixed rounded-[2.5rem] -rotate-3 opacity-20"></div>
+<div class="relative w-full h-full rounded-[2.5rem] overflow-hidden shadow-2xl">
+<img alt="Dr. Aris Professional Headshot" class="w-full h-full object-cover" data-alt="Dr. Aris smiling warmly in a clinical setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNQu-aOz8kjx6Duvft6F8kW8Qehwo_CulK_--8UR1hMV_AyAoj1VDhD2k2jzFlnbqrjx_2DIlWglSonTLjcaZXCq6cuXhUNuMFAH1FP7Xoml3258nkYIEnNZzxgalZSJHwQN5A-yI-w-DKxeURuKAt_K3hzXt3VIKokYx3QD6rpQAocn_xDbcTfGK4CJK1DHd8pcYduwPhiSzgaBKem2UusCf38ZUcvc-G-TYCNVw5m4okMooFbN9UpS4WOkqJl6MDZ0_7n6MLh7Dj"/>
+</div>
+</div>
+<div class="flex-1 text-center md:text-left">
+<span class="px-4 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-full text-xs font-bold tracking-widest uppercase mb-6 inline-block">Clinical Psychologist</span>
+<h1 class="text-5xl md:text-7xl font-headline font-extrabold text-on-surface tracking-tighter mb-4">Dr. Aris</h1>
+<p class="text-xl md:text-2xl font-body text-on-surface-variant max-w-2xl leading-relaxed mb-10">
+                        Pioneering the intersection of clinical excellence and digital tranquility for high-performance minds.
+                    </p>
+<div class="flex flex-wrap gap-4 justify-center md:justify-start">
+<button class="px-10 py-4 bg-gradient-primary text-white rounded-full font-bold text-lg shadow-xl shadow-primary/30 hover:shadow-2xl spring-ease transition-all active:scale-95">
+                            Book Session
+                        </button>
+<button class="px-10 py-4 bg-white text-primary border-2 border-primary/10 rounded-full font-bold text-lg hover:bg-primary-container/10 spring-ease transition-all">
+                            Connect
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats & Impact Bento Grid -->
+<section class="px-8 md:px-16 mb-20">
+<div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white/50 flex flex-col items-center text-center">
+<span class="text-4xl font-headline font-extrabold text-primary mb-2">12+</span>
+<span class="text-on-surface-variant font-label text-sm uppercase tracking-widest">Years of Experience</span>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white/50 flex flex-col items-center text-center">
+<span class="text-4xl font-headline font-extrabold text-primary mb-2">850+</span>
+<span class="text-on-surface-variant font-label text-sm uppercase tracking-widest">Patients Helped</span>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white/50 flex flex-col items-center text-center">
+<span class="text-4xl font-headline font-extrabold text-primary mb-2">45</span>
+<span class="text-on-surface-variant font-label text-sm uppercase tracking-widest">Articles Published</span>
+</div>
+</div>
+</section>
+<!-- Philosophy & Bio Section -->
+<section class="px-8 md:px-16 mb-20">
+<div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
+<div class="lg:w-2/3">
+<h2 class="text-3xl font-headline font-bold text-on-surface mb-8 flex items-center gap-3">
+<span class="h-1 w-12 bg-primary rounded-full"></span>
+                        Philosophy of Care
+                    </h2>
+<div class="space-y-6 text-lg text-on-surface-variant leading-relaxed font-body">
+<p>
+                            At the core of my practice is the belief that every person deserves a <span class="text-primary font-semibold">Digital Sanctuary</span>—a mental space shielded from the cacophony of modern distractions. My approach blends rigorous Cognitive Behavioral Therapy (CBT) with modern Mindfulness-Based Stress Reduction (MBSR) techniques.
+                        </p>
+<p>
+                            I specialize in helping digital-native professionals navigate the complexities of identity, burnout, and anxiety in a hyper-connected world. By decoding behavioral patterns, we work together to build emotional resilience that transcends the therapy room.
+                        </p>
+</div>
+</div>
+<div class="lg:w-1/3 w-full">
+<div class="bg-surface-container-low p-8 rounded-3xl border border-white">
+<h3 class="text-xl font-headline font-bold mb-6 text-on-surface">Core Specialties</h3>
+<div class="flex flex-wrap gap-3">
+<span class="px-4 py-2 bg-white rounded-full text-sm font-medium text-primary shadow-sm border border-primary/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sentiment_worried</span> Anxiety Disorders
+                            </span>
+<span class="px-4 py-2 bg-white rounded-full text-sm font-medium text-primary shadow-sm border border-primary/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">psychology</span> CBT
+                            </span>
+<span class="px-4 py-2 bg-white rounded-full text-sm font-medium text-primary shadow-sm border border-primary/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">laptop_mac</span> Digital Wellness
+                            </span>
+<span class="px-4 py-2 bg-white rounded-full text-sm font-medium text-primary shadow-sm border border-primary/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">bolt</span> Burnout Recovery
+                            </span>
+<span class="px-4 py-2 bg-white rounded-full text-sm font-medium text-primary shadow-sm border border-primary/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">self_improvement</span> Mindfulness
+                            </span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Published Articles Grid -->
+<section class="px-8 md:px-16 pb-24">
+<div class="max-w-6xl mx-auto">
+<div class="flex justify-between items-end mb-12">
+<div>
+<h2 class="text-3xl font-headline font-bold text-on-surface mb-2">Insights &amp; Research</h2>
+<p class="text-on-surface-variant">Exploring the mechanics of modern mental health</p>
+</div>
+<button class="text-primary font-bold flex items-center gap-2 hover:translate-x-1 transition-transform">
+                        View All <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Article Card 1 -->
+<div class="group bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white hover:shadow-xl transition-all duration-300">
+<div class="h-48 rounded-2xl mb-6 overflow-hidden">
+<img alt="Article Thumbnail" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Abstract image of light reflecting on glass" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtCWEVaudsLW20FfzsUtYAW_-gK6TyCGLBLq9fwORONGCWHo0x8_DA7lt2F3mzK-afHzxcTyGuRAak3RenJ4HTCj-h886lJqrS9V-TmZwrP99ifbx6nVT1BySOOKa4iXmbiftLBQVtU0uGrrpPoORFn9xqyeSKxNqkbOjWvyZymbiE-KkZ2vTM_Ll03RXrEp6vH6M8xNimiMUzQ25iYFfnut97sGST6nHxpDpe8a5lTnoVbL711YtPaKlHQbX66H05kY3viBFzxdEZ"/>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="px-2 py-1 bg-tertiary-container/40 text-on-tertiary-container rounded-lg text-[10px] font-bold uppercase tracking-wider">Research</span>
+<span class="text-on-surface-variant text-xs font-medium">8 min read</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-4 leading-tight group-hover:text-primary transition-colors">The Architecture of Attention: Reclaiming Focus</h3>
+<p class="text-on-surface-variant text-sm line-clamp-3 mb-6">How neuroplasticity allows us to redesign our digital consumption habits for better focus and lower cortisol levels.</p>
+<a class="inline-flex items-center text-primary font-bold text-sm gap-1 hover:gap-2 transition-all" href="#">
+                            Read Insight <span class="material-symbols-outlined text-sm">north_east</span>
+</a>
+</div>
+<!-- Article Card 2 -->
+<div class="group bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white hover:shadow-xl transition-all duration-300">
+<div class="h-48 rounded-2xl mb-6 overflow-hidden">
+<img alt="Article Thumbnail" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Morning light streaming through a window" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_wMWn9fgFP_kAgqs70FG30RWQgOnmH6uMqGuOm7PQtvkhZUd6Dh00dmOioVUbC3_YE06rpwmDlEMAPKJeBnH5IvkkhZ4DBk1k9X2PQuFcL23dEfsUyHgxh-wveIM8FlWs3LLiSClbD-ictEDXDszz3OkXcxlrzSjKQyOlnqFhrFQm4F61wLWmuDsXqfFRUM6usvZPQwhuF-38lKEnX4MCcc21cSgIH5ql3cSYjR20gsNThOxmYRrPbE5727K_GzzbOL_Ow4thBq-4"/>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="px-2 py-1 bg-tertiary-container/40 text-on-tertiary-container rounded-lg text-[10px] font-bold uppercase tracking-wider">Therapy</span>
+<span class="text-on-surface-variant text-xs font-medium">12 min read</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-4 leading-tight group-hover:text-primary transition-colors">Cognitive Reframing for Remote Leadership</h3>
+<p class="text-on-surface-variant text-sm line-clamp-3 mb-6">Managing empathy fatigue while maintaining high organizational performance in a virtual clinical context.</p>
+<a class="inline-flex items-center text-primary font-bold text-sm gap-1 hover:gap-2 transition-all" href="#">
+                            Read Insight <span class="material-symbols-outlined text-sm">north_east</span>
+</a>
+</div>
+<!-- Article Card 3 -->
+<div class="group bg-surface-container-lowest p-6 rounded-3xl shadow-[0_4px_24px_rgba(86,73,124,0.04)] border border-white hover:shadow-xl transition-all duration-300">
+<div class="h-48 rounded-2xl mb-6 overflow-hidden">
+<img alt="Article Thumbnail" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Zen stones balanced on top of each other" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBF9J29tTe_7wr1oRHqq0vLmBDIK5j1Wxg6sXcXUMhqRqtDTD9XfJq6J7wgDWMlSLR0TNqX7UM33HAJbTAbYIpuezqy-LSFhJpF-9rlS0FX2YeTvl87o_6Vka_CgewdLictBw7iLE-wKwgNejyuBLchiU_mwsFWmdDWr345joXTsz-O46_8jtiLZIrvA3yo_3t564r1Ifd0JPeuEdmNOe7qIwU59lJSIsv_D0noMxWQyaQhln8lgpr-v_pu-c7tLzyTyly-v0oLcxfw"/>
+</div>
+<div class="flex items-center gap-2 mb-4">
+<span class="px-2 py-1 bg-tertiary-container/40 text-on-tertiary-container rounded-lg text-[10px] font-bold uppercase tracking-wider">Mindfulness</span>
+<span class="text-on-surface-variant text-xs font-medium">5 min read</span>
+</div>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-4 leading-tight group-hover:text-primary transition-colors">Zen in the Machine: A Practical Guide</h3>
+<p class="text-on-surface-variant text-sm line-clamp-3 mb-6">Integrating micro-meditations into the high-frequency trading and software engineering workflows.</p>
+<a class="inline-flex items-center text-primary font-bold text-sm gap-1 hover:gap-2 transition-all" href="#">
+                            Read Insight <span class="material-symbols-outlined text-sm">north_east</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button (Contextual for Booking) -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-gradient-primary rounded-full shadow-2xl flex items-center justify-center text-white spring-ease active:scale-90 hover:scale-110 z-50">
+<span class="material-symbols-outlined text-3xl">chat_bubble</span>
+</button>
+</body></html>

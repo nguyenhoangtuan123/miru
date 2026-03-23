@@ -31,6 +31,13 @@ proactive_push_state.json
 temp_facts_*.txt
 nul
 user_consents.json
+output/
+tmp/
+UI_public/miruai-public-next/.next-dev/
+UI_public/miruai-public-next/.next/
+UI_new/miru_ggstudio-main/.next/
+UI_new/miru_ggstudio-main/.vercel/
+UI_public/miruai-public-next/.vercel/
 
 # Local side projects / experiments
 computer_vision/

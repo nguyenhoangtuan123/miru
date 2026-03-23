@@ -9,7 +9,7 @@ type TherapistsPageProps = {
 };
 
 export const metadata = {
-  title: "Danh bạ therapist"
+  title: "Danh bạ therapist",
 };
 
 export default async function TherapistsPage({ searchParams }: TherapistsPageProps) {
@@ -20,7 +20,7 @@ export default async function TherapistsPage({ searchParams }: TherapistsPagePro
     therapists,
     keyword,
     (therapist) =>
-      `${therapist.display_name} ${therapist.headline || ""} ${therapist.bio || ""} ${therapist.specializations.join(" ")}`
+      `${therapist.display_name} ${therapist.headline || ""} ${therapist.bio || ""} ${therapist.specializations.join(" ")}`,
   );
 
   return (
@@ -52,7 +52,7 @@ export default async function TherapistsPage({ searchParams }: TherapistsPagePro
         </div>
       ) : (
         <div className="surface-card empty-card">
-          Không tìm thấy therapist phù hợp với từ khoá hiện tại.
+          Không tìm thấy therapist phù hợp với từ khóa hiện tại.
         </div>
       )}
     </div>

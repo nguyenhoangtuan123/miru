@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const alt = "Miru public site";
 export const size = {
   width: 1200,
-  height: 630
+  height: 630,
 };
 
 export default function OpenGraphImage() {
@@ -17,7 +17,7 @@ export default function OpenGraphImage() {
           padding: 56,
           backgroundColor: "#f6f6fb",
           color: "#2d2f33",
-          fontFamily: "Arial, sans-serif"
+          fontFamily: "Arial, sans-serif",
         }}
       >
         <div
@@ -30,7 +30,7 @@ export default function OpenGraphImage() {
             borderRadius: 42,
             padding: 44,
             background: "rgba(255,255,255,0.82)",
-            border: "1px solid rgba(129,28,217,0.08)"
+            border: "1px solid rgba(129,28,217,0.08)",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -40,7 +40,7 @@ export default function OpenGraphImage() {
                   fontSize: 58,
                   fontWeight: 800,
                   letterSpacing: "-0.06em",
-                  color: "#811cd9"
+                  color: "#811cd9",
                 }}
               >
                 Miru
@@ -61,7 +61,7 @@ export default function OpenGraphImage() {
                 background: "linear-gradient(135deg, #811cd9 0%, #c185ff 100%)",
                 color: "white",
                 fontSize: 46,
-                fontWeight: 800
+                fontWeight: 800,
               }}
             >
               AI
@@ -80,6 +80,6 @@ export default function OpenGraphImage() {
         </div>
       </div>
     ),
-    size
+    size,
   );
 }

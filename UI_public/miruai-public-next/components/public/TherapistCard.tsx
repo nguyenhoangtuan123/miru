@@ -55,7 +55,7 @@ export function TherapistCard({ therapist }: TherapistCardProps) {
 
       <div className="article-meta" style={{ marginTop: "auto" }}>
         <span>{therapist.accepting_new_clients ? "Đang nhận thân chủ" : "Tạm kín lịch"}</span>
-        <span>•</span>
+        <span>&bull;</span>
         <span>{therapist.contact_request_count} yêu cầu liên hệ</span>
       </div>
     </Link>

@@ -1,0 +1,282 @@
+/* ─── TipTap WYSIWYG editor styles ─────────────────────────────────────────── */
+
+/*
+ * The .ProseMirror class is TipTap's editor content root.
+ * These styles make the rendered rich text look good on our dark theme.
+ */
+
+.editor-content .ProseMirror {
+    outline: none;
+    min-height: 440px;
+    font-size: 1.0625rem;
+    /* 17px */
+    line-height: 1.9;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* ─── Placeholder ─── */
+
+.editor-content .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    height: 0;
+}
+
+/* ─── Headings ─── */
+
+.editor-content .ProseMirror h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: rgba(255, 255, 255, 0.95);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.editor-content .ProseMirror h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.editor-content .ProseMirror h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ─── Paragraphs ─── */
+
+.editor-content .ProseMirror p {
+    margin-bottom: 0.75em;
+}
+
+/* ─── Bold / Italic / Underline ─── */
+
+.editor-content .ProseMirror strong {
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.editor-content .ProseMirror em {
+    font-style: italic;
+}
+
+.editor-content .ProseMirror u {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.editor-content .ProseMirror s {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* ─── Links ─── */
+
+.editor-content .ProseMirror a,
+.editor-content .ProseMirror .editor-link {
+    color: #c185ff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.editor-content .ProseMirror a:hover {
+    color: #d9a5ff;
+}
+
+/* ─── Inline code ─── */
+
+.editor-content .ProseMirror code {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+    font-size: 0.875em;
+    color: #e8b4f8;
+}
+
+/* ─── Code block ─── */
+
+.editor-content .ProseMirror pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+}
+
+.editor-content .ProseMirror pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.875rem;
+    line-height: 1.7;
+}
+
+/* ─── Blockquote ─── */
+
+.editor-content .ProseMirror blockquote {
+    border-left: 3px solid rgba(127, 13, 242, 0.5);
+    padding-left: 1.25rem;
+    margin: 1rem 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+/* ─── Lists ─── */
+
+.editor-content .ProseMirror ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.editor-content .ProseMirror ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.editor-content .ProseMirror li {
+    margin-bottom: 0.25rem;
+}
+
+.editor-content .ProseMirror li p {
+    margin-bottom: 0.25rem;
+}
+
+/* ─── Task list ─── */
+
+.editor-content .ProseMirror ul[data-type='taskList'] {
+    list-style: none;
+    padding-left: 0.25rem;
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li label {
+    display: flex;
+    align-items: center;
+    margin-top: 0.35rem;
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li label input[type='checkbox'] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li label input[type='checkbox']:checked {
+    background: rgba(127, 13, 242, 0.6);
+    border-color: rgba(127, 13, 242, 0.8);
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li label input[type='checkbox']:checked::after {
+    content: '✓';
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: white;
+    line-height: 14px;
+}
+
+.editor-content .ProseMirror ul[data-type='taskList'] li[data-checked='true']>div>p {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+/* ─── Horizontal rule ─── */
+
+.editor-content .ProseMirror hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 2rem 0;
+}
+
+/* ─── Images ─── */
+
+.editor-content .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 16px;
+    margin: 1rem 0;
+}
+
+.editor-content .ProseMirror img.ProseMirror-selectednode {
+    outline: 2px solid rgba(127, 13, 242, 0.6);
+    outline-offset: 2px;
+}
+
+/* ─── Table ─── */
+
+.editor-content .ProseMirror table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.editor-content .ProseMirror th,
+.editor-content .ProseMirror td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    min-width: 80px;
+    vertical-align: top;
+}
+
+.editor-content .ProseMirror th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.editor-content .ProseMirror td {
+    background: transparent;
+}
+
+.editor-content .ProseMirror .selectedCell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(127, 13, 242, 0.08);
+    pointer-events: none;
+}
+
+/* ─── Selection ─── */
+
+.editor-content .ProseMirror ::selection {
+    background: rgba(127, 13, 242, 0.3);
+}
+
+/* ─── Focus ring for the editor wrapper ─── */
+
+.editor-content:focus-within {
+    /* subtle glow when focused */
+}

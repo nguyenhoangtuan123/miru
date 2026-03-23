@@ -2,13 +2,20 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ArticleAiCompanion } from "../../../components/public/ArticleAiCompanion";
+import { ArticleCommunityQuestions } from "../../../components/public/ArticleCommunityQuestions";
 import { MarkdownArticle } from "../../../components/public/MarkdownArticle";
-import { PublicLoginUpliftLink } from "../../../components/public/PublicLoginUpliftLink";
 import { PublicArticleFlywheelSections } from "../../../components/public/PublicArticleFlywheelSections";
 import { PublicPageTracker } from "../../../components/public/PublicPageTracker";
+import { PublicTherapistActionLink } from "../../../components/public/PublicTherapistActionLink";
 import { TrackedPublicLink } from "../../../components/public/TrackedPublicLink";
 import { SITE_URL } from "../../../lib/api";
-import { getPublicArticle, getPublicArticles, getPublicTherapist, getPublicTherapists } from "../../../lib/data";
+import {
+  getPublicArticle,
+  getPublicArticleQuestions,
+  getPublicArticles,
+  getPublicTherapist,
+  getPublicTherapists,
+} from "../../../lib/data";
 import { estimateReadingMinutes, formatPrice, formatVietnameseDate, serviceModeLabel } from "../../../lib/format";
 import { deriveArticleTopics, recommendRelatedArticles, recommendTherapistsByArticle } from "../../../lib/topic-intent";
 
@@ -47,16 +54,18 @@ export default async function ArticleDetailPage({ params }: ArticleDetailPagePro
     notFound();
   }
 
-  const [allArticles, therapist, allTherapists] = await Promise.all([
+  const [allArticles, therapist, allTherapists, initialQuestions] = await Promise.all([
     getPublicArticles({ limit: 12 }),
     article.therapist_id ? getPublicTherapist(article.therapist_id) : Promise.resolve(null),
     getPublicTherapists(12),
+    getPublicArticleQuestions(article.slug, 8),
   ]);
 
   const readingMinutes = estimateReadingMinutes(article);
   const topicTags = deriveArticleTopics(article);
   const relatedArticles = recommendRelatedArticles(article, allArticles, 3);
   const recommendedTherapists = recommendTherapistsByArticle(article, allTherapists, 3);
+  const articleUrl = `${SITE_URL}/bai-viet/${article.slug}`;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -139,6 +148,16 @@ export default async function ArticleDetailPage({ params }: ArticleDetailPagePro
               }
             />
           </div>
+
+          <div style={{ marginTop: 30 }}>
+            <ArticleCommunityQuestions
+              articleSlug={article.slug}
+              articleTitle={article.title}
+              topicTags={topicTags}
+              initialQuestions={initialQuestions}
+              therapistId={article.therapist_id || therapist?.therapist_id || undefined}
+            />
+          </div>
         </section>
 
         <aside className="detail-sidebar">
@@ -175,19 +194,45 @@ export default async function ArticleDetailPage({ params }: ArticleDetailPagePro
                     Xem hồ sơ therapist
                   </TrackedPublicLink>
 
-                  <PublicLoginUpliftLink
-                    returnTo={`/therapists/${encodeURIComponent(therapist.therapist_id)}?source=article&article=${encodeURIComponent(article.slug)}`}
-                    className="button-secondary"
-                    event={{
-                      event_type: "article_to_contact_request",
-                      article_slug: article.slug,
-                      therapist_id: therapist.therapist_id,
-                      topic_tags: topicTags,
-                      metadata: { source: "author_card" },
-                    }}
-                  >
-                    Đăng nhập để liên hệ
-                  </PublicLoginUpliftLink>
+                  {therapist.can_receive_contact_requests ? (
+                    <>
+                      <PublicTherapistActionLink
+                        therapistId={therapist.therapist_id}
+                        source="article"
+                        sourceArticleSlug={article.slug}
+                        entryIntent="message"
+                        returnTo={articleUrl}
+                        className="button-secondary"
+                        event={{
+                          event_type: "article_to_contact_request",
+                          article_slug: article.slug,
+                          therapist_id: therapist.therapist_id,
+                          topic_tags: topicTags,
+                          metadata: { source: "author_card", entry_intent: "message" },
+                        }}
+                      >
+                        Nhắn riêng therapist
+                      </PublicTherapistActionLink>
+
+                      <PublicTherapistActionLink
+                        therapistId={therapist.therapist_id}
+                        source="article"
+                        sourceArticleSlug={article.slug}
+                        entryIntent="therapy"
+                        returnTo={articleUrl}
+                        className="button-secondary"
+                        event={{
+                          event_type: "article_to_contact_request",
+                          article_slug: article.slug,
+                          therapist_id: therapist.therapist_id,
+                          topic_tags: topicTags,
+                          metadata: { source: "author_card", entry_intent: "therapy" },
+                        }}
+                      >
+                        Đăng ký trị liệu
+                      </PublicTherapistActionLink>
+                    </>
+                  ) : null}
                 </div>
               </>
             ) : null}

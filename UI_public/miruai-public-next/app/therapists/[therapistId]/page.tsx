@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArticleCard } from "../../../components/public/ArticleCard";
-import { PublicLoginUpliftLink } from "../../../components/public/PublicLoginUpliftLink";
 import { PublicPageTracker } from "../../../components/public/PublicPageTracker";
+import { PublicTherapistActionLink } from "../../../components/public/PublicTherapistActionLink";
 import { SITE_URL } from "../../../lib/api";
 import { getPublicArticles, getPublicTherapist, getPublicTherapists } from "../../../lib/data";
 import { formatPrice, serviceModeLabel } from "../../../lib/format";
@@ -43,10 +43,15 @@ export default async function TherapistDetailPage({ params }: TherapistDetailPag
     getPublicArticles({ limit: 6, therapistId }),
     getPublicTherapists(6),
   ]);
-
   const relatedTherapists = otherTherapists
     .filter((item) => item.therapist_id !== therapist.therapist_id)
     .slice(0, 3);
+  const profileUrl = `${SITE_URL}/therapists/${therapist.therapist_id}`;
+  const metricCards = [
+    { label: "Lượt xem hồ sơ", value: therapist.profile_view_count },
+    { label: "Yêu cầu liên hệ", value: therapist.contact_request_count },
+    { label: "Tỷ lệ pair", value: therapist.pair_conversion_count },
+  ];
 
   return (
     <div className="page-gap">
@@ -56,77 +61,130 @@ export default async function TherapistDetailPage({ params }: TherapistDetailPag
         topicTags={therapist.specializations}
       />
 
-      <section className="surface-card detail-section">
-        <div className="therapist-header" style={{ alignItems: "flex-start" }}>
-          <div className="avatar-tile" aria-hidden="true" style={{ width: 96, height: 96, fontSize: 34 }}>
+      <section className="surface-card detail-section" style={{ overflow: "hidden" }}>
+        <div
+          style={{
+            display: "grid",
+            gap: 28,
+            alignItems: "center",
+            gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              minHeight: 280,
+              borderRadius: 32,
+              overflow: "hidden",
+              background:
+                "linear-gradient(145deg, rgba(129, 28, 217, 0.18), rgba(193, 133, 255, 0.08))",
+            }}
+          >
             {therapist.avatar_image?.url ? (
-              <img src={therapist.avatar_image.url} alt={therapist.display_name} />
+              <img
+                src={therapist.avatar_image.url}
+                alt={therapist.display_name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
             ) : (
-              therapist.display_name.charAt(0)
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 72,
+                  fontWeight: 800,
+                  color: "var(--primary)",
+                }}
+              >
+                {therapist.display_name.charAt(0)}
+              </div>
             )}
           </div>
 
-          <div style={{ flex: 1, display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 18 }}>
+            <div className="eyebrow">Miru Community Profile</div>
             <div>
-              <div className="eyebrow">Hồ sơ therapist</div>
-              <h1 className="detail-title" style={{ marginTop: 18 }}>
+              <h1 className="detail-title" style={{ marginTop: 0 }}>
                 {therapist.display_name}
               </h1>
-              <p className="hero-copy" style={{ margin: "12px 0 0", maxWidth: 720 }}>
-                {therapist.headline || therapist.bio || "Therapist đang hoàn thiện thêm hồ sơ công khai trên Miru."}
+              <p className="hero-copy" style={{ margin: "14px 0 0", maxWidth: 720 }}>
+                {therapist.headline ||
+                  therapist.bio ||
+                  "Therapist đang hoàn thiện thêm hồ sơ công khai trên Miru Community."}
               </p>
             </div>
 
             <div className="chip-row">
               <span className="chip">{serviceModeLabel(therapist.service_mode)}</span>
-              <span className="chip">{formatPrice(therapist.starting_price_vnd, therapist.pricing_unit)}</span>
               <span className="chip">
-                {therapist.accepting_new_clients ? "Đang nhận thân chủ mới" : "Tạm chưa nhận thân chủ mới"}
+                {formatPrice(therapist.starting_price_vnd, therapist.pricing_unit)}
               </span>
+              <span className="chip">
+                {therapist.accepting_new_clients ? "Đang nhận thân chủ mới" : "Tạm chưa nhận ca mới"}
+              </span>
+              {therapist.is_verified ? <span className="chip is-active">Đã xác minh</span> : null}
             </div>
 
             <div className="button-row">
-              <PublicLoginUpliftLink
-                returnTo={`/therapists/${encodeURIComponent(therapist.therapist_id)}?source=profile`}
-                className="button-primary"
-                event={{
-                  event_type: "therapist_contact_request_started",
-                  therapist_id: therapist.therapist_id,
-                  topic_tags: therapist.specializations,
-                  metadata: { source: "therapist_profile" },
-                }}
-              >
-                Đăng nhập để liên hệ qua Miru
-              </PublicLoginUpliftLink>
-              <Link href="/bai-viet" className="button-secondary">
-                Xem thêm bài viết
-              </Link>
+              {therapist.can_receive_contact_requests ? (
+                <>
+                  <PublicTherapistActionLink
+                    therapistId={therapist.therapist_id}
+                    source="profile_direct_link"
+                    entryIntent="message"
+                    returnTo={profileUrl}
+                    className="button-primary"
+                    event={{
+                      event_type: "therapist_contact_request_started",
+                      therapist_id: therapist.therapist_id,
+                      topic_tags: therapist.specializations,
+                      metadata: { source: "therapist_profile", entry_intent: "message" },
+                    }}
+                  >
+                    Nhắn riêng therapist
+                  </PublicTherapistActionLink>
+
+                  <PublicTherapistActionLink
+                    therapistId={therapist.therapist_id}
+                    source="profile_direct_link"
+                    entryIntent="therapy"
+                    returnTo={profileUrl}
+                    className="button-secondary"
+                    event={{
+                      event_type: "therapist_contact_request_started",
+                      therapist_id: therapist.therapist_id,
+                      topic_tags: therapist.specializations,
+                      metadata: { source: "therapist_profile", entry_intent: "therapy" },
+                    }}
+                  >
+                    Đăng ký trị liệu
+                  </PublicTherapistActionLink>
+                </>
+              ) : (
+                <div className="chip">Therapist này hiện đang tạm đóng form kết nối công khai.</div>
+              )}
+            </div>
+
+            <div className="metric-grid" style={{ marginTop: 6 }}>
+              {metricCards.map((item) => (
+                <div className="surface-card metric-card" key={item.label}>
+                  <div className="muted-copy">{item.label}</div>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="metric-grid">
-        <div className="surface-card metric-card">
-          <div className="muted-copy">Lượt xem hồ sơ</div>
-          <strong>{therapist.profile_view_count}</strong>
-        </div>
-        <div className="surface-card metric-card">
-          <div className="muted-copy">Yêu cầu liên hệ</div>
-          <strong>{therapist.contact_request_count}</strong>
-        </div>
-        <div className="surface-card metric-card">
-          <div className="muted-copy">Tỷ lệ pair</div>
-          <strong>{therapist.pair_conversion_count}</strong>
         </div>
       </section>
 
       <div className="detail-grid">
         <section className="surface-card detail-section">
           <div className="section-head">
-            <div className="eyebrow">Giới thiệu</div>
+            <div className="eyebrow">Philosophy of care</div>
             <h2 className="section-title" style={{ fontSize: 34 }}>
-              Cách therapist này thường đồng hành
+              Cách therapist này thường đồng hành cùng thân chủ
             </h2>
           </div>
 
@@ -147,11 +205,13 @@ export default async function TherapistDetailPage({ params }: TherapistDetailPag
           {therapist.public_workflow_steps.length > 0 ? (
             <div style={{ display: "grid", gap: 14, marginTop: 28 }}>
               {therapist.public_workflow_steps.map((step, index) => (
-                <div key={`${index}-${step}`} className="surface-card" style={{ padding: 18 }}>
+                <div
+                  key={`${index}-${step}`}
+                  className="surface-card"
+                  style={{ padding: 18, display: "grid", gap: 8 }}
+                >
                   <strong style={{ color: "var(--primary)" }}>Bước {index + 1}</strong>
-                  <div className="section-copy" style={{ marginTop: 8 }}>
-                    {step}
-                  </div>
+                  <div className="section-copy">{step}</div>
                 </div>
               ))}
             </div>
@@ -160,7 +220,13 @@ export default async function TherapistDetailPage({ params }: TherapistDetailPag
 
         <aside className="detail-sidebar">
           <section className="surface-card detail-section">
-            <div className="eyebrow">Bài viết của therapist</div>
+            <div className="section-head">
+              <div className="eyebrow">Insights & Research</div>
+              <h2 className="section-title" style={{ fontSize: 28 }}>
+                Bài viết của therapist
+              </h2>
+            </div>
+
             <div style={{ display: "grid", gap: 18, marginTop: 18 }}>
               {articles.length > 0 ? (
                 articles.map((article) => <ArticleCard key={article.slug} article={article} />)
@@ -177,7 +243,11 @@ export default async function TherapistDetailPage({ params }: TherapistDetailPag
               <div className="eyebrow">Khám phá thêm</div>
               <div style={{ display: "grid", gap: 14, marginTop: 18 }}>
                 {relatedTherapists.map((item) => (
-                  <Link key={item.therapist_id} href={`/therapists/${item.therapist_id}`} className="chip">
+                  <Link
+                    key={item.therapist_id}
+                    href={`/therapists/${item.therapist_id}`}
+                    className="chip"
+                  >
                     {item.display_name}
                   </Link>
                 ))}

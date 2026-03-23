@@ -1,11 +1,18 @@
-import { fetchApi } from "./api";
+import { fetchApi, postApi } from "./api";
 import { getViewerState } from "./public-events";
 import {
   deriveArticleTopics,
   recommendRelatedArticles,
   recommendTherapistsByArticle,
 } from "./topic-intent";
-import type { PublicArticle, PublicTherapist, PublicRecommendationResponse } from "./types";
+import type {
+  ArticleQuestionSubmissionResponse,
+  ArticleQuestionsResponse,
+  PublicArticle,
+  PublicArticleQuestion,
+  PublicRecommendationResponse,
+  PublicTherapist,
+} from "./types";
 
 type ArticlesResponse = {
   success?: boolean;
@@ -26,6 +33,22 @@ type TherapistResponse = {
   success?: boolean;
   profile?: unknown;
 };
+
+const MOJIBAKE_PATTERN = /Ã|Ä|Æ|á»|â€|Â/;
+
+function repairMojibake(value: string) {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
+    return value;
+  }
+
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
+    const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    return decoded || value;
+  } catch {
+    return value;
+  }
+}
 
 const fallbackTherapists: PublicTherapist[] = [
   {
@@ -150,8 +173,149 @@ const fallbackArticles: PublicArticle[] = [
   }
 ];
 
+const COMMUNITY_QUESTION_STORAGE_PREFIX = "miru_public_article_questions";
+
+const fallbackArticleQuestions: Record<string, PublicArticleQuestion[]> = {
+  "nghe-thuat-cua-su-hien-dien-chua-lanh-qua-mindfulness": [
+    {
+      question_id: "demo-question-1",
+      article_slug: "nghe-thuat-cua-su-hien-dien-chua-lanh-qua-mindfulness",
+      public_name: "Mây",
+      question_text: "Làm sao để quay lại hiện tại khi đầu óc cứ chạy rất nhanh?",
+      answer_text:
+        "Miru gợi ý bắt đầu bằng một nhịp rất nhỏ: gọi tên 3 thứ đang nhìn thấy, 2 âm thanh đang nghe và 1 cảm giác trong cơ thể.",
+      answer_by: "ThS. Minh Anh",
+      answer_role: "therapist",
+      status: "answered",
+      created_at: "2026-03-18T10:00:00+07:00",
+      answered_at: "2026-03-18T10:06:00+07:00",
+      updated_at: "2026-03-18T10:06:00+07:00",
+      published_at: "2026-03-18T10:06:00+07:00",
+      topic_tags: ["Mindfulness", "Tự chăm sóc"],
+      therapist_name: "ThS. Minh Anh",
+    },
+    {
+      question_id: "demo-question-2",
+      article_slug: "nghe-thuat-cua-su-hien-dien-chua-lanh-qua-mindfulness",
+      public_name: "An",
+      question_text: "Nếu mình rất khó ngồi yên thì có cần phải thiền lâu không?",
+      answer_text:
+        "Không cần. 1-2 phút quan sát hơi thở đều đặn còn hữu ích hơn một lần ép mình ngồi quá lâu.",
+      answer_by: "Cử nhân Phương Uyên",
+      answer_role: "therapist",
+      status: "published",
+      created_at: "2026-03-18T11:15:00+07:00",
+      answered_at: "2026-03-18T11:32:00+07:00",
+      updated_at: "2026-03-18T11:32:00+07:00",
+      topic_tags: ["Mindfulness"],
+      therapist_name: "Cử nhân Phương Uyên",
+    },
+  ],
+  "thiet-lap-ranh-gioi-lanh-manh-trong-tinh-yeu": [
+    {
+      question_id: "demo-question-3",
+      article_slug: "thiet-lap-ranh-gioi-lanh-manh-trong-tinh-yeu",
+      public_name: "Linh",
+      question_text: "Mình nói ranh giới mà đối phương thấy mình lạnh đi, vậy có sai không?",
+      answer_text:
+        "Ranh giới không làm tình cảm mất đi; thường là nó giúp hai bên nhìn rõ nhu cầu thật hơn.",
+      answer_by: "Cử nhân Phương Uyên",
+      answer_role: "therapist",
+      status: "answered",
+      created_at: "2026-03-16T12:20:00+07:00",
+      answered_at: "2026-03-16T12:25:00+07:00",
+      updated_at: "2026-03-16T12:25:00+07:00",
+      published_at: "2026-03-16T12:25:00+07:00",
+      topic_tags: ["Mối quan hệ", "Ranh giới"],
+      therapist_name: "Cử nhân Phương Uyên",
+    },
+  ],
+  "vuot-qua-cam-giac-minh-khong-du-gioi": [
+    {
+      question_id: "demo-question-4",
+      article_slug: "vuot-qua-cam-giac-minh-khong-du-gioi",
+      public_name: "Nhã",
+      question_text: "Làm gì khi mình cứ so sánh bản thân với người khác mỗi ngày?",
+      answer_text:
+        "Thử chuyển câu hỏi từ 'mình có kém không' sang 'mình đang mệt ở điểm nào' để bớt tự đánh giá.",
+      answer_by: "ThS. Đức Huy",
+      answer_role: "therapist",
+      status: "published",
+      created_at: "2026-03-14T13:45:00+07:00",
+      answered_at: "2026-03-14T13:52:00+07:00",
+      updated_at: "2026-03-14T13:52:00+07:00",
+      published_at: "2026-03-14T13:52:00+07:00",
+      topic_tags: ["Burnout", "Tự đánh giá"],
+      therapist_name: "ThS. Đức Huy",
+    },
+  ],
+};
+
+function questionStorageKey(articleSlug: string) {
+  return `${COMMUNITY_QUESTION_STORAGE_PREFIX}:${articleSlug}`;
+}
+
+function readStoredQuestions(articleSlug: string) {
+  if (typeof window === "undefined") {
+    return [] as PublicArticleQuestion[];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(questionStorageKey(articleSlug));
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map(normalizeQuestion)
+      .filter((item): item is PublicArticleQuestion => Boolean(item));
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredQuestions(articleSlug: string, questions: PublicArticleQuestion[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(questionStorageKey(articleSlug), JSON.stringify(questions));
+  } catch {
+    // Ignore privacy or quota failures.
+  }
+}
+
+function mergeQuestions(
+  articleSlug: string,
+  questions: PublicArticleQuestion[],
+  limit: number,
+) {
+  const stored = readStoredQuestions(articleSlug);
+  const merged = [...questions, ...stored];
+  const deduped = new Map<string, PublicArticleQuestion>();
+
+  merged.forEach((question) => {
+    deduped.set(question.question_id, question);
+  });
+
+  return Array.from(deduped.values())
+    .filter((question) => question.article_slug === articleSlug)
+    .sort((left, right) => {
+      const leftTime = new Date(left.updated_at || left.answered_at || left.created_at).getTime();
+      const rightTime = new Date(right.updated_at || right.answered_at || right.created_at).getTime();
+      return rightTime - leftTime;
+    })
+    .slice(0, limit);
+}
+
 function asText(value: unknown, fallback = "") {
-  return typeof value === "string" ? value : fallback;
+  return typeof value === "string" ? repairMojibake(value) : fallback;
 }
 
 function asNumber(value: unknown, fallback = 0) {
@@ -175,7 +339,9 @@ function normalizeTherapist(raw: unknown): PublicTherapist | null {
     headline: asText(therapist.headline) || null,
     bio: asText(therapist.bio) || null,
     specializations: Array.isArray(therapist.specializations)
-      ? therapist.specializations.filter((item): item is string => typeof item === "string")
+      ? therapist.specializations
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => asText(item))
       : [],
     avatar_image:
       therapist.avatar_image && typeof therapist.avatar_image === "object"
@@ -200,7 +366,9 @@ function normalizeTherapist(raw: unknown): PublicTherapist | null {
         : "session",
     pricing_note: asText(therapist.pricing_note) || null,
     public_workflow_steps: Array.isArray(therapist.public_workflow_steps)
-      ? therapist.public_workflow_steps.filter((item): item is string => typeof item === "string")
+      ? therapist.public_workflow_steps
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => asText(item))
       : [],
     can_receive_contact_requests: therapist.can_receive_contact_requests === true,
     is_verified: therapist.is_verified === true,
@@ -238,7 +406,9 @@ function normalizeArticle(raw: unknown): PublicArticle | null {
     cover_image_url: asText(article.cover_image_url) || null,
     content_markdown: asText(article.content_markdown) || null,
     topic_tags: Array.isArray(article.topic_tags)
-      ? article.topic_tags.filter((item): item is string => typeof item === "string")
+      ? article.topic_tags
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => asText(item))
       : [],
     seo_title: asText(article.seo_title) || null,
     seo_description: asText(article.seo_description) || null,
@@ -247,9 +417,59 @@ function normalizeArticle(raw: unknown): PublicArticle | null {
     therapist:
       article.therapist && typeof article.therapist === "object"
         ? (article.therapist as PublicArticle["therapist"])
-        : null
+      : null
   };
 }
+
+function normalizeQuestion(raw: unknown): PublicArticleQuestion | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const question = raw as Record<string, unknown>;
+  const questionId = asText(question.question_id || question.id);
+  const articleSlug = asText(question.article_slug);
+  const publicName = asText(
+    question.public_name || question.public_display_name || question.display_name || question.author_name
+  );
+  const questionText = asText(question.question_text || question.content || question.text);
+
+  if (!questionId || !articleSlug || !publicName || !questionText) {
+    return null;
+  }
+
+  return {
+    question_id: questionId,
+    article_slug: articleSlug,
+    public_name: publicName,
+    question_text: questionText,
+    status: asText(question.status) || "published",
+    created_at: asText(question.created_at) || new Date().toISOString(),
+    updated_at: asText(question.updated_at) || null,
+    answered_at: asText(question.answered_at) || null,
+    published_at: asText(question.published_at) || null,
+    hidden_at: asText(question.hidden_at) || null,
+    answer_text: asText(question.answer_text) || null,
+    answer_by: asText(question.answer_by) || null,
+    answer_role: asText(question.answer_role) || null,
+    topic_tags: Array.isArray(question.topic_tags)
+      ? question.topic_tags
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => asText(item))
+      : [],
+    therapist_id: asText(question.therapist_id) || null,
+    therapist_name: asText(question.therapist_name) || null,
+    source: asText(question.source) || null,
+  };
+}
+
+const normalizedFallbackTherapists = fallbackTherapists
+  .map(normalizeTherapist)
+  .filter((item): item is PublicTherapist => Boolean(item));
+
+const normalizedFallbackArticles = fallbackArticles
+  .map(normalizeArticle)
+  .filter((item): item is PublicArticle => Boolean(item));
 
 export async function getPublicArticles(options?: { limit?: number; therapistId?: string }) {
   const params = new URLSearchParams();
@@ -268,15 +488,15 @@ export async function getPublicArticles(options?: { limit?: number; therapistId?
     return articles;
   }
   if (options?.therapistId) {
-    return fallbackArticles.filter((item) => item.therapist_id === options.therapistId);
+    return normalizedFallbackArticles.filter((item) => item.therapist_id === options.therapistId);
   }
-  return fallbackArticles;
+  return normalizedFallbackArticles;
 }
 
 export async function getPublicArticle(slug: string) {
   const response = await fetchApi<ArticleResponse>(`/api/articles/${encodeURIComponent(slug)}`);
   const article = normalizeArticle(response?.article);
-  return article || fallbackArticles.find((item) => item.slug === slug) || null;
+  return article || normalizedFallbackArticles.find((item) => item.slug === slug) || null;
 }
 
 export async function getPublicTherapists(limit?: number) {
@@ -286,7 +506,7 @@ export async function getPublicTherapists(limit?: number) {
     response?.therapists
       ?.map(normalizeTherapist)
       .filter((item): item is PublicTherapist => Boolean(item)) || [];
-  return therapists.length > 0 ? therapists : fallbackTherapists;
+  return therapists.length > 0 ? therapists : normalizedFallbackTherapists;
 }
 
 export async function getPublicTherapist(therapistId: string) {
@@ -296,9 +516,78 @@ export async function getPublicTherapist(therapistId: string) {
   const therapist = normalizeTherapist(response?.profile);
   return (
     therapist ||
-    fallbackTherapists.find((item) => item.therapist_id === therapistId) ||
+    normalizedFallbackTherapists.find((item) => item.therapist_id === therapistId) ||
     null
   );
+}
+
+export async function getPublicArticleQuestions(articleSlug: string, limit = 6) {
+  const viewer = getViewerState();
+  const params = new URLSearchParams();
+  params.set("article_slug", articleSlug);
+  params.set("limit", String(limit));
+  params.set("anonymous_id", viewer.anonymous_id);
+  if (viewer.user_id) {
+    params.set("user_id", viewer.user_id);
+  }
+
+  const response = await fetchApi<ArticleQuestionsResponse>(
+    `/api/public/articles/${encodeURIComponent(articleSlug)}/questions?${params.toString()}`
+  );
+  const remoteQuestions = Array.isArray(response?.questions)
+    ? response.questions
+        .map(normalizeQuestion)
+        .filter((item): item is PublicArticleQuestion => Boolean(item))
+    : [];
+
+  const fallbackQuestions = (fallbackArticleQuestions[articleSlug] || [])
+    .map(normalizeQuestion)
+    .filter((item): item is PublicArticleQuestion => Boolean(item));
+  const questions = remoteQuestions.length > 0 ? remoteQuestions : fallbackQuestions;
+  return mergeQuestions(articleSlug, questions, limit);
+}
+
+export async function submitPublicArticleQuestion(
+  articleSlug: string,
+  payload: {
+    public_name: string;
+    question_text: string;
+    topic_tags?: string[];
+  },
+) {
+  const viewer = getViewerState();
+  const response = await postApi<ArticleQuestionSubmissionResponse>(
+    `/api/public/articles/${encodeURIComponent(articleSlug)}/questions`,
+    {
+      anonymous_id: viewer.anonymous_id,
+      session_id: viewer.session_id,
+      user_id: viewer.user_id,
+      public_display_name: payload.public_name,
+      question_text: payload.question_text,
+    },
+  );
+
+  const submittedQuestion =
+    normalizeQuestion(response?.question) ||
+    normalizeQuestion({
+      question_id: `local-question-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      article_slug: articleSlug,
+      public_name: payload.public_name,
+      question_text: payload.question_text,
+      status: "pending_review",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      topic_tags: payload.topic_tags || [],
+      source: "public_article",
+    });
+
+  if (submittedQuestion) {
+    const existing = readStoredQuestions(articleSlug);
+    const nextQuestions = [submittedQuestion, ...existing.filter((item) => item.question_id !== submittedQuestion.question_id)];
+    writeStoredQuestions(articleSlug, nextQuestions);
+  }
+
+  return submittedQuestion;
 }
 
 function parseRecommendationArticlesResponse(raw: unknown) {
@@ -340,10 +629,10 @@ function parseRecommendationTherapistsResponse(raw: unknown) {
 }
 
 export async function getRecommendedPublicArticles(articleSlug: string, limit = 3) {
-  const fallbackCurrentArticle = fallbackArticles.find((article) => article.slug === articleSlug);
+  const fallbackCurrentArticle = normalizedFallbackArticles.find((article) => article.slug === articleSlug);
   if (fallbackCurrentArticle) {
     return {
-      recommended_articles: recommendRelatedArticles(fallbackCurrentArticle, fallbackArticles, limit),
+      recommended_articles: recommendRelatedArticles(fallbackCurrentArticle, normalizedFallbackArticles, limit),
       reason_tags: deriveArticleTopics(fallbackCurrentArticle),
     };
   }
@@ -365,24 +654,24 @@ export async function getRecommendedPublicArticles(articleSlug: string, limit = 
     return parsed;
   }
 
-  const fallbackArticle = fallbackArticles.find((article) => article.slug === articleSlug);
+  const fallbackArticle = normalizedFallbackArticles.find((article) => article.slug === articleSlug);
   if (!fallbackArticle) {
     return parsed;
   }
 
   return {
-    recommended_articles: recommendRelatedArticles(fallbackArticle, fallbackArticles, limit),
+    recommended_articles: recommendRelatedArticles(fallbackArticle, normalizedFallbackArticles, limit),
     reason_tags: deriveArticleTopics(fallbackArticle),
   };
 }
 
 export async function getRecommendedPublicTherapists(articleSlug: string, limit = 3) {
-  const fallbackCurrentArticle = fallbackArticles.find((article) => article.slug === articleSlug);
+  const fallbackCurrentArticle = normalizedFallbackArticles.find((article) => article.slug === articleSlug);
   if (fallbackCurrentArticle) {
     return {
       recommended_therapists: recommendTherapistsByArticle(
         fallbackCurrentArticle,
-        fallbackTherapists,
+        normalizedFallbackTherapists,
         limit,
       ),
       reason_tags: deriveArticleTopics(fallbackCurrentArticle),
@@ -406,7 +695,7 @@ export async function getRecommendedPublicTherapists(articleSlug: string, limit 
     return parsed;
   }
 
-  const fallbackArticle = fallbackArticles.find((article) => article.slug === articleSlug);
+  const fallbackArticle = normalizedFallbackArticles.find((article) => article.slug === articleSlug);
   if (!fallbackArticle) {
     return parsed;
   }
@@ -414,11 +703,11 @@ export async function getRecommendedPublicTherapists(articleSlug: string, limit 
   return {
     recommended_therapists: recommendTherapistsByArticle(
       fallbackArticle,
-      fallbackTherapists,
+      normalizedFallbackTherapists,
       limit,
     ),
     reason_tags: deriveArticleTopics(fallbackArticle),
   };
 }
 
-export { fallbackArticles, fallbackTherapists };
+export { normalizedFallbackArticles as fallbackArticles, normalizedFallbackTherapists as fallbackTherapists };

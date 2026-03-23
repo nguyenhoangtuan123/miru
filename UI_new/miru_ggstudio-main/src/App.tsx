@@ -23,6 +23,7 @@ import { ProfilePage } from './pages/Profile';
 import { SharingPage } from './pages/Sharing';
 import { AssessmentsPage } from './pages/Assessments';
 import { AssessmentTakePage } from './pages/AssessmentTake';
+import { ConnectTherapistPage } from './pages/ConnectTherapist';
 import { TherapistsDirectory } from './pages/Therapists';
 import { TherapistPublicProfilePage } from './pages/TherapistPublicProfile';
 import { Therapy } from './pages/Therapy';
@@ -81,6 +82,7 @@ export default function App() {
                     <Route path="/sharing" element={<SharingPage />} />
                     <Route path="/assessments" element={<AssessmentsPage />} />
                     <Route path="/assessments/:assignmentId" element={<AssessmentTakePage />} />
+                    <Route path="/connect/therapist" element={<ConnectTherapistPage />} />
                   </Route>
                 </Route>
 

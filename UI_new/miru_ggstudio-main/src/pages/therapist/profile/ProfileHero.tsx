@@ -1,6 +1,6 @@
 import { ChangeEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Camera, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, Camera, ShieldCheck } from 'lucide-react';
 import type {
   TherapistPublicProfileDetail,
   TherapistPublicProfileForm,
@@ -16,6 +16,8 @@ type Props = {
   profile: TherapistPublicProfileDetail | null;
   profileForm: TherapistPublicProfileForm | null;
   analyticsCards: AnalyticsCard[];
+  publicProfileUrl: string | null;
+  communityRootUrl: string;
   onAvatarChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -23,6 +25,8 @@ export function ProfileHero({
   profile,
   profileForm,
   analyticsCards,
+  publicProfileUrl,
+  communityRootUrl,
   onAvatarChange,
 }: Props) {
   return (
@@ -64,9 +68,32 @@ export function ProfileHero({
               )}
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 dark:text-white/60">
-              Đây là nơi therapist tối ưu hồ sơ công khai để có thêm thân chủ và
-              tăng tỷ lệ chuyển từ lead sang pairing.
+              Đây là studio để therapist tối ưu mặt tiền công khai trên Miru Community, giữ hồ sơ nhất quán với bài viết, lead và trải nghiệm kết nối riêng tư trong app.
             </p>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a
+                href={communityRootUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10"
+              >
+                <span>Mở Miru Community</span>
+                <ArrowUpRight size={16} />
+              </a>
+
+              {publicProfileUrl ? (
+                <a
+                  href={publicProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-miru-primary/30 bg-miru-primary/10 px-4 py-2 text-sm font-semibold text-miru-primary transition hover:border-miru-primary/45 hover:bg-miru-primary/15"
+                >
+                  <span>Xem profile công khai</span>
+                  <ArrowUpRight size={16} />
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
 

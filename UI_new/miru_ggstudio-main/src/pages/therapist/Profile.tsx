@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, Eye, UserRoundPlus, Users } from 'lucide-react';
+import { buildPublicSiteUrl, buildPublicTherapistUrl } from '../../services/api';
 import {
   deleteMyTherapistMedia,
   getMyTherapistBillingProfile,
@@ -116,6 +117,10 @@ export function TherapistProfilePage() {
     { label: 'Đã pair', value: profile?.pair_conversion_count ?? 0, icon: Users },
     { label: 'Độ hoàn thiện', value: `${checklistPercent}%`, icon: BarChart3 },
   ];
+  const publicProfileUrl = profile?.therapist_id
+    ? buildPublicTherapistUrl(profile.therapist_id)
+    : null;
+  const communityRootUrl = buildPublicSiteUrl('/');
 
   function setProfileField<K extends keyof TherapistPublicProfileForm>(
     key: K,
@@ -253,6 +258,8 @@ export function TherapistProfilePage() {
           profile={profile}
           profileForm={profileForm}
           analyticsCards={analyticsCards}
+          publicProfileUrl={publicProfileUrl}
+          communityRootUrl={communityRootUrl}
           onAvatarChange={(event) => void handleAvatarChange(event)}
         />
 

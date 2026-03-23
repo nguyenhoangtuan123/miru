@@ -4,13 +4,17 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "dev:fresh": "node scripts/clean-next.mjs dev && next dev",
+    "build": "node scripts/clean-next.mjs build && next build",
+    "clean": "node scripts/clean-next.mjs all",
     "start": "next start"
   },
   "dependencies": {
     "next": "15.5.14",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "22.14.0",

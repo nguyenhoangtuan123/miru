@@ -7,7 +7,7 @@ export const ARTICLE_STATUS_META: Record<
   draft: {
     label: 'Nháp',
     className:
-      'border-slate-200 bg-white/80 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/65',
+      'border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-white/65',
     description: 'Chưa gửi duyệt',
   },
   pending_review: {

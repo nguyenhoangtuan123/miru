@@ -7,7 +7,7 @@ export function LandingFeatureGrid() {
         </div>
         <h2 className="section-title">Một vòng đồng hành đủ gần để người dùng quay lại</h2>
         <p className="section-copy">
-          Chúng mình không cố thay therapist. Miru giúp người dùng có điểm tựa nhẹ hàng ngày, còn therapist
+          Chúng mình không cố thay therapist. Miru giúp người dùng có điểm tựa nhẹ hằng ngày, còn therapist
           nhìn được tín hiệu rõ hơn giữa các buổi.
         </p>
       </div>

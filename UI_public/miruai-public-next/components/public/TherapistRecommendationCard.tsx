@@ -2,7 +2,7 @@
 
 import { formatPrice, serviceModeLabel } from "../../lib/format";
 import type { PublicTherapist } from "../../lib/types";
-import { PublicLoginUpliftLink } from "./PublicLoginUpliftLink";
+import { PublicTherapistActionLink } from "./PublicTherapistActionLink";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
 type TherapistRecommendationCardProps = {
@@ -67,19 +67,23 @@ export function TherapistRecommendationCard({
           Xem hồ sơ
         </TrackedPublicLink>
         {therapist.can_receive_contact_requests ? (
-          <PublicLoginUpliftLink
-            returnTo={`/therapists/${encodeURIComponent(therapist.therapist_id)}?source=article&article=${encodeURIComponent(articleSlug)}`}
+          <PublicTherapistActionLink
+            therapistId={therapist.therapist_id}
+            source="article"
+            sourceArticleSlug={articleSlug}
+            entryIntent="message"
+            returnTo={`/bai-viet/${encodeURIComponent(articleSlug)}`}
             className="button-secondary"
             event={{
               event_type: "article_to_contact_request",
               article_slug: articleSlug,
               therapist_id: therapist.therapist_id,
               topic_tags: reasonTags,
-              metadata: { source: "recommended_therapists" },
+              metadata: { source: "recommended_therapists", entry_intent: "message" },
             }}
           >
-            Đăng nhập để liên hệ
-          </PublicLoginUpliftLink>
+            Nhắn riêng
+          </PublicTherapistActionLink>
         ) : (
           <div className="therapist-match-note">Therapist này hiện đang tạm đóng form liên hệ công khai.</div>
         )}

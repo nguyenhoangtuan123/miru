@@ -7,6 +7,24 @@ export const API_BASE_URL =
 export const WS_BASE_URL =
   import.meta.env.VITE_WS_BASE_URL ?? 'ws://localhost:8008';
 
+export const PUBLIC_SITE_URL = (
+  import.meta.env.VITE_PUBLIC_SITE_URL ??
+  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://miruai.vercel.app')
+).replace(/\/$/, '');
+
+export function buildPublicSiteUrl(path = '/') {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${PUBLIC_SITE_URL}${normalizedPath}`;
+}
+
+export function buildPublicArticleUrl(slug: string) {
+  return buildPublicSiteUrl(`/bai-viet/${encodeURIComponent(slug)}`);
+}
+
+export function buildPublicTherapistUrl(therapistId: string) {
+  return buildPublicSiteUrl(`/therapists/${encodeURIComponent(therapistId)}`);
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,

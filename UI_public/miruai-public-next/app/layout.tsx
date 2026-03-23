@@ -9,22 +9,22 @@ import { PublicHeader } from "../components/public/PublicHeader";
 
 const headlineFont = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-headline"
+  variable: "--font-headline",
 });
 
 const bodyFont = Manrope({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-body"
+  variable: "--font-body",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Miru | Đồng hành sức khoẻ tinh thần giữa các buổi trị liệu",
-    template: "%s | Miru"
+    default: "Miru | Đồng hành sức khỏe tinh thần giữa các buổi trị liệu",
+    template: "%s | Miru",
   },
   description:
-    "Landing page công khai của Miru: khám phá therapist, bài viết chia sẻ kiến thức và cách Miru đồng hành cùng thân chủ giữa các buổi trị liệu.",
+    "Không gian công khai của Miru để khám phá therapist, đọc bài viết chia sẻ kiến thức và bắt đầu một hành trình đồng hành an toàn hơn.",
   openGraph: {
     title: "Miru",
     description:
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "Miru",
     locale: "vi_VN",
-    type: "website"
-  }
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

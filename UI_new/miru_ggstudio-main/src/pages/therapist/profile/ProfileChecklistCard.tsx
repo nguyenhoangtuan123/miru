@@ -30,7 +30,7 @@ export function ProfileChecklistCard({
     <section className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-          Checklist tăng chuyển đổi
+          Checklist tăng chuyển đổi Community
         </h2>
         <span className="rounded-full bg-miru-primary/10 px-3 py-1 text-sm font-semibold text-miru-primary">
           {checklistPercent}%

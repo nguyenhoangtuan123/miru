@@ -11,6 +11,8 @@ export type TherapistArticleAnalytics = {
   aiSessionCount: number;
   aiMessageCount: number;
   loginPromptCount: number;
+  questionCount: number;
+  answeredQuestionCount: number;
   attributionSources: Array<{
     source: string;
     label: string;
@@ -41,6 +43,8 @@ export type TherapistArticleAnalyticsSummary = {
   totalProfileClicks: number;
   totalContactRequests: number;
   totalPairings: number;
+  totalQuestions: number;
+  totalAnsweredQuestions: number;
   publishedTrackedCount: number;
 };
 
@@ -194,6 +198,12 @@ function normalizeAnalyticsFromRecord(
     aiSessionCount: pickNumber(metricsRecord, ['ai_sessions', 'ai_session_count']),
     aiMessageCount: pickNumber(metricsRecord, ['ai_messages', 'ai_message_count']),
     loginPromptCount: pickNumber(metricsRecord, ['login_prompt_clicks', 'login_prompt_click_count']),
+    questionCount: pickNumber(metricsRecord, ['question_count', 'questions', 'questionCount']),
+    answeredQuestionCount: pickNumber(metricsRecord, [
+      'answered_question_count',
+      'answered_questions',
+      'answeredQuestionCount',
+    ]),
     attributionSources,
     topicTags,
     reasonTags: [
@@ -216,6 +226,8 @@ function normalizeAnalyticsFromRecord(
     normalized.aiSessionCount > 0 ||
     normalized.aiMessageCount > 0 ||
     normalized.loginPromptCount > 0 ||
+    normalized.questionCount > 0 ||
+    normalized.answeredQuestionCount > 0 ||
     normalized.attributionSources.length > 0 ||
     normalized.topicTags.length > 0;
 
@@ -263,6 +275,8 @@ function mergeAnalytics(
     aiSessionCount: primary.aiSessionCount || secondary.aiSessionCount,
     aiMessageCount: primary.aiMessageCount || secondary.aiMessageCount,
     loginPromptCount: primary.loginPromptCount || secondary.loginPromptCount,
+    questionCount: primary.questionCount || secondary.questionCount,
+    answeredQuestionCount: primary.answeredQuestionCount || secondary.answeredQuestionCount,
     attributionSources: mergeBuckets(primary.attributionSources, secondary.attributionSources, 'source'),
     topicTags: mergeBuckets(primary.topicTags, secondary.topicTags, 'tag'),
     reasonTags: Array.from(new Set([...primary.reasonTags, ...secondary.reasonTags])),
@@ -387,6 +401,8 @@ export function summarizeTherapistArticleAnalytics(
     totalProfileClicks: 0,
     totalContactRequests: 0,
     totalPairings: 0,
+    totalQuestions: 0,
+    totalAnsweredQuestions: 0,
     publishedTrackedCount: 0,
   };
 
@@ -398,6 +414,8 @@ export function summarizeTherapistArticleAnalytics(
     summary.totalProfileClicks += analytics.profileClickCount;
     summary.totalContactRequests += analytics.contactRequestCount;
     summary.totalPairings += analytics.pairingCount;
+    summary.totalQuestions += analytics.questionCount;
+    summary.totalAnsweredQuestions += analytics.answeredQuestionCount;
     if (article.status === 'published' && analytics.hasMeaningfulData) {
       summary.publishedTrackedCount += 1;
     }
@@ -456,6 +474,12 @@ export function buildAnalyticsInsights(
 
   if (analytics.aiSessionCount > 0 || analytics.loginPromptCount > 0) {
     insights.push('Người đọc đã bắt đầu tương tác với AI trong bài. Đây là tín hiệu tốt để thử CTA sang app hoặc lời mời khám phá therapist phù hợp hơn.');
+  }
+
+  if (analytics.questionCount > 0) {
+    insights.push(
+      `BÃ i nÃ y Ä‘ang nháº­n ${formatAnalyticsMetric(analytics.questionCount)} cÃ¢u há»i tá»« cá»™ng Ä‘á»“ng, trong Ä‘Ã³ ${formatAnalyticsMetric(analytics.answeredQuestionCount)} cÃ¢u Ä‘Ã£ cÃ³ tráº£ lá»i.`
+    );
   }
 
   if (insights.length === 0) {

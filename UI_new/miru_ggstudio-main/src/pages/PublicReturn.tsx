@@ -44,45 +44,42 @@ export function PublicReturn() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[PublicReturn] effect fired, processedRef =', processedRef.current);
     if (processedRef.current) {
+      console.log('[PublicReturn] SKIPPED — already processed');
       return;
     }
     processedRef.current = true;
 
-    let cancelled = false;
+    const anonymousId = searchParams.get('anonymous_id');
+    const sessionId = searchParams.get('session_id');
+    const returnTo = sanitizeReturnTo(searchParams.get('return_to'));
+    console.log('[PublicReturn] returnTo =', returnTo);
 
-    const run = async () => {
-      const anonymousId = searchParams.get('anonymous_id');
-      const sessionId = searchParams.get('session_id');
-      const returnTo = sanitizeReturnTo(searchParams.get('return_to'));
+    // Fire-and-forget: alias identity in background, don't block redirect
+    if (anonymousId) {
+      aliasPublicIdentity({
+        anonymous_id: anonymousId,
+        session_id: sessionId,
+      }).catch(() => { });
+    }
 
+    // Build redirect URL, passing token so Next.js can capture auth state
+    const token = localStorage.getItem('access_token');
+    let redirectUrl = returnTo;
+    if (token) {
       try {
-        if (anonymousId) {
-          await aliasPublicIdentity({
-            anonymous_id: anonymousId,
-            session_id: sessionId,
-          });
-        }
-      } catch (aliasError) {
-        if (!cancelled) {
-          setError(
-            aliasError instanceof Error
-              ? aliasError.message
-              : 'Khong the dong bo identity tu public site'
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          window.location.replace(returnTo);
-        }
+        const url = new URL(returnTo);
+        url.searchParams.set('miru_token', token);
+        redirectUrl = url.toString();
+      } catch {
+        // returnTo is a relative path (e.g. /chat), no token passing needed
       }
-    };
+    }
 
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
+    // Redirect immediately — never wait for the API call
+    console.log('[PublicReturn] REDIRECTING NOW to:', redirectUrl);
+    window.location.replace(redirectUrl);
   }, [searchParams]);
 
   return (

@@ -26,6 +26,7 @@ VALID_PRICING_UNITS = {"session", "package", "custom"}
 VALID_CONTACT_REQUEST_STATUSES = {"pending", "approved", "declined", "archived"}
 VALID_CONTACT_REQUEST_FUNNEL_STATUSES = {"new", "replied", "approved", "paired", "lost"}
 VALID_CONTACT_REQUEST_SOURCES = {"directory", "profile_direct_link", "therapist_invite", "referral", "article"}
+VALID_CONTACT_REQUEST_ENTRY_INTENTS = {"message", "therapy"}
 
 
 class ProfileService:
@@ -130,6 +131,11 @@ class ProfileService:
         if isinstance(value, str) and value.strip().lower() in VALID_CONTACT_REQUEST_SOURCES:
             return value.strip().lower()
         return "directory"
+
+    def _normalize_contact_request_entry_intent(self, value: Any) -> str:
+        if isinstance(value, str) and value.strip().lower() in VALID_CONTACT_REQUEST_ENTRY_INTENTS:
+            return value.strip().lower()
+        return "therapy"
 
     def _normalize_vnd_amount(self, value: Any) -> Optional[int]:
         if value is None or value == "":
@@ -961,6 +967,7 @@ class ProfileService:
             "funnel_status": self._normalize_contact_request_funnel_status(row.get("funnel_status")),
             "source": self._normalize_contact_request_source(row.get("source")),
             "source_article_slug": row.get("source_article_slug") if isinstance(row.get("source_article_slug"), str) else None,
+            "entry_intent": self._normalize_contact_request_entry_intent(row.get("entry_intent")),
             "message": row.get("message") if isinstance(row.get("message"), str) else "",
             "preferred_contact_method": row.get("preferred_contact_method") if isinstance(row.get("preferred_contact_method"), str) else None,
             "client_contact_phone": row.get("client_contact_phone") if isinstance(row.get("client_contact_phone"), str) else None,
@@ -1027,6 +1034,7 @@ class ProfileService:
             "funnel_status": "new",
             "source": self._normalize_contact_request_source(payload.get("source")),
             "source_article_slug": self._normalize_text(payload.get("source_article_slug"), 240),
+            "entry_intent": self._normalize_contact_request_entry_intent(payload.get("entry_intent")),
             "message": self._normalize_text(payload.get("message"), 1200) or "",
             "preferred_contact_method": self._normalize_text(payload.get("preferred_contact_method"), 40),
             "client_contact_phone": self._normalize_text(payload.get("client_contact_phone"), 40),
@@ -1042,11 +1050,15 @@ class ProfileService:
             THERAPIST_CONTACT_REQUEST_TABLE,
             [
                 insert_payload,
-                {key: value for key, value in insert_payload.items() if key not in {"source", "source_article_slug"}},
                 {
                     key: value
                     for key, value in insert_payload.items()
-                    if key not in {"source", "source_article_slug", "funnel_status"}
+                    if key not in {"source", "source_article_slug", "entry_intent"}
+                },
+                {
+                    key: value
+                    for key, value in insert_payload.items()
+                    if key not in {"source", "source_article_slug", "funnel_status", "entry_intent"}
                 },
             ],
         ) or insert_payload
@@ -1061,6 +1073,8 @@ class ProfileService:
                 {
                     "therapist_id": therapist_id,
                     "source": insert_payload.get("source"),
+                    "source_article_slug": insert_payload.get("source_article_slug"),
+                    "entry_intent": insert_payload.get("entry_intent"),
                 },
                 dedupe_seconds=0,
             )

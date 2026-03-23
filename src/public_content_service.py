@@ -20,11 +20,12 @@ PUBLIC_EVENTS_TABLE = "public_content_events"
 PUBLIC_IDENTITY_LINKS_TABLE = "public_content_identity_links"
 PUBLIC_AI_SESSIONS_TABLE = "public_article_ai_sessions"
 PUBLIC_AI_MESSAGES_TABLE = "public_article_ai_messages"
+PUBLIC_QUESTIONS_TABLE = "public_article_questions"
 USER_ENTITLEMENTS_TABLE = "user_feature_entitlements"
 
 SCHEMA_HINT = (
     "Schema public content flywheel chua san sang. Hay chay migration "
-    "029_add_public_content_flywheel.sql truoc khi dung tinh nang nay."
+    "029_add_public_content_flywheel.sql va 030_add_public_article_questions.sql truoc khi dung tinh nang nay."
 )
 
 VALID_PUBLIC_EVENT_TYPES = {
@@ -43,6 +44,24 @@ VALID_PUBLIC_EVENT_TYPES = {
     "article_ai_message_sent",
     "article_ai_quota_exhausted",
     "article_ai_login_prompt_clicked",
+    "article_to_app_login",
+    "community_question_started",
+    "community_question_submitted",
+    "community_question_published",
+    "community_question_answered",
+    "community_question_hidden",
+}
+
+VALID_QUESTION_STATUSES = {
+    "pending_review",
+    "published",
+    "answered",
+    "hidden",
+}
+
+VALID_AI_INTERACTION_MODES = {
+    "article_companion",
+    "community_qa",
 }
 
 TOPIC_RULES: Dict[str, tuple[str, ...]] = {
@@ -129,6 +148,55 @@ class PublicContentService:
             return 100
         return normalized
 
+    def _normalize_question_status(self, value: Any, default: str = "pending_review") -> str:
+        normalized = self._normalize_text(value, max_length=40)
+        if normalized in VALID_QUESTION_STATUSES:
+            return normalized
+        return default if default in VALID_QUESTION_STATUSES else "pending_review"
+
+    def _normalize_ai_interaction_mode(self, value: Any, default: str = "article_companion") -> str:
+        normalized = self._normalize_text(value, max_length=40)
+        if normalized in VALID_AI_INTERACTION_MODES:
+            return normalized
+        return default if default in VALID_AI_INTERACTION_MODES else "article_companion"
+
+    def _strip_markdown_to_plain_text(self, value: Any) -> str:
+        if not isinstance(value, str) or not value.strip():
+            return ""
+        text = value.replace("\r\n", "\n").replace("\r", "\n")
+        text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+        text = re.sub(r"`[^`]+`", " ", text)
+        text = re.sub(r"!\[[^\]]*\]\([^)]+\)", " ", text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        text = re.sub(r"^[#>\-*+\d.\s]+", "", text, flags=re.MULTILINE)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _article_body_context(self, article: Dict[str, Any], max_length: int = 2800) -> str:
+        raw_content = article.get("content_markdown")
+        cleaned = self._strip_markdown_to_plain_text(raw_content)
+        if not cleaned:
+            cleaned = self._normalize_text(article.get("excerpt") or article.get("seo_description"), max_length=max_length) or ""
+        return cleaned[:max_length].rstrip()
+
+    def _is_summary_request(self, message: str) -> bool:
+        normalized = (self._normalize_text(message, max_length=240) or "").lower()
+        return any(
+            phrase in normalized
+            for phrase in (
+                "tom tat",
+                "tóm tắt",
+                "tom luoc",
+                "tóm lược",
+                "summary",
+                "noi gon",
+                "nói gọn",
+                "main points",
+                "ý chính",
+                "y chinh",
+            )
+        )
+
     def _safe_int_env(self, key: str, default: int) -> int:
         try:
             return int(os.getenv(key, str(default)))
@@ -143,6 +211,7 @@ class PublicContentService:
         if (
             "public_content_" in message
             or "public_article_ai_" in message
+            or "public_article_questions" in message
             or "user_feature_entitlements" in message
             or "source_article_slug" in message
             or "relation" in message
@@ -248,6 +317,179 @@ class PublicContentService:
         ]
         return matches[:4] if matches else ["Lang nghe ban than"]
 
+    def _article_therapist_ids_for_user(
+        self,
+        user_id: str,
+        *,
+        email: str = "",
+        name: str = "",
+    ) -> List[str]:
+        therapist_ids: List[str] = []
+        try:
+            articles = self.article_service.list_my_articles(user_id, email=email, name=name)
+        except Exception:
+            return therapist_ids
+        for article in articles:
+            therapist_id = self._normalize_text(article.get("therapist_id"), max_length=160)
+            if therapist_id and therapist_id not in therapist_ids:
+                therapist_ids.append(therapist_id)
+        return therapist_ids
+
+    def _serialize_question_row(
+        self,
+        row: Dict[str, Any],
+        *,
+        public_view: bool = False,
+        article: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        normalized_status = self._normalize_question_status(row.get("status"))
+        payload = {
+            "question_id": self._normalize_text(row.get("question_id"), max_length=160),
+            "article_slug": self._normalize_text(row.get("article_slug"), max_length=240),
+            "therapist_id": self._normalize_text(row.get("therapist_id"), max_length=160),
+            "public_display_name": self._normalize_text(row.get("public_display_name"), max_length=120)
+            or "Nguoi dung Miru",
+            "question_text": self._normalize_text(row.get("question_text"), max_length=3000),
+            "answer_text": self._normalize_text(row.get("answer_text"), max_length=4000),
+            "status": normalized_status,
+            "questioned_at": row.get("questioned_at"),
+            "published_at": row.get("published_at"),
+            "answered_at": row.get("answered_at"),
+            "hidden_at": row.get("hidden_at"),
+            "created_at": row.get("created_at"),
+            "updated_at": row.get("updated_at"),
+        }
+        if isinstance(article, dict):
+            payload["article_title"] = self._normalize_text(article.get("title"), max_length=220)
+            payload["article_excerpt"] = self._normalize_text(article.get("excerpt"), max_length=600)
+            payload["article_topic_tags"] = self.derive_topic_tags(article)
+        if not public_view:
+            payload["user_id"] = self._normalize_text(row.get("user_id"), max_length=160)
+            payload["anonymous_id"] = self._normalize_text(row.get("anonymous_id"), max_length=160)
+        return payload
+
+    def _load_question_by_id(self, question_id: str) -> Optional[Dict[str, Any]]:
+        normalized_question_id = self._normalize_text(question_id, max_length=160)
+        if not normalized_question_id:
+            return None
+        return self._select_single(
+            PUBLIC_QUESTIONS_TABLE,
+            eq_filters={"question_id": normalized_question_id},
+        )
+
+    def _resolve_question_context(
+        self,
+        *,
+        article_slug: str,
+        question_id: Optional[str],
+        article: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        normalized_question_id = self._normalize_text(question_id, max_length=160)
+        if not normalized_question_id:
+            return None
+        question_row = self._load_question_by_id(normalized_question_id)
+        if not question_row:
+            raise PublicContentValidationError("Khong tim thay cau hoi")
+        normalized_article_slug = self._normalize_text(article_slug, max_length=240)
+        question_article_slug = self._normalize_text(question_row.get("article_slug"), max_length=240)
+        if question_article_slug != normalized_article_slug:
+            raise PublicContentValidationError("Cau hoi khong thuoc bai viet nay")
+        return self._serialize_question_row(question_row, public_view=False, article=article)
+
+    def _build_article_ai_prompt(
+        self,
+        *,
+        article: Dict[str, Any],
+        message: str,
+        topic_tags: List[str],
+        therapist_lines: List[str],
+        interaction_mode: str,
+        question_context: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        article_title = self._normalize_text(article.get("title"), max_length=220) or "Bai viet Miru"
+        article_excerpt = self._normalize_text(article.get("excerpt") or article.get("seo_description"), max_length=1200) or ""
+        article_body = self._article_body_context(article)
+        topic_line = ", ".join(topic_tags) if topic_tags else "chua xac dinh ro"
+        therapist_block = os.linesep.join(therapist_lines) if therapist_lines else "- Chua co goi y therapist cu the"
+        summary_request = self._is_summary_request(message)
+        if interaction_mode == "community_qa":
+            question_block = ""
+            if question_context:
+                question_block = (
+                    f"Cau hoi cong khai dang tham chieu: {question_context.get('question_text') or ''}\n"
+                    f"But danh cong khai: {question_context.get('public_display_name') or 'Nguoi dung Miru'}\n"
+                )
+            return (
+                "Ban la Miru Q&A companion duoi bai viet kien thuc suc khoe tinh than.\n"
+                "- Tra loi bang tieng Viet, ngan gon, de hieu, am ap.\n"
+                "- Chi duoc dua tren thong tin co trong bai viet duoi day; khong duoc tu them chu de khong xuat hien trong bai.\n"
+                "- Dua tren noi dung bai viet de giai thich, khong chan doan, khong dong vai therapist.\n"
+                "- Neu cau hoi qua ca nhan hoac can ho tro sau hon, noi ro day khong thay the tri lieu "
+                "va goi y nhan rieng therapist hoac dang ky tri lieu.\n"
+                "- Neu co the, dua ra 1 buoc nho, an toan, de tu quan sat.\n\n"
+                f"Tieu de bai viet: {article_title}\n"
+                f"Tom tat: {article_excerpt}\n"
+                f"Chu de bai viet: {topic_line}\n"
+                f"Noi dung bai viet (trich doan can bam sat): {article_body}\n"
+                f"Therapist lien quan:\n{therapist_block}\n"
+                f"{question_block}"
+                f"Cau hoi moi cua nguoi dung: {message}"
+            )
+        if summary_request:
+            return (
+                "Ban la Miru mini companion dang tom tat bai viet kien thuc suc khoe tinh than.\n"
+                "- Nhiem vu: tom tat DUNG bai viet duoi day, khong chen them chu de khac.\n"
+                "- Tra loi bang tieng Viet, 3-5 cau, ro rang, trung lap it.\n"
+                "- Neu phat hien cau hoi cua nguoi dung la yeu cau tom tat, chi tap trung vao y chinh trong bai.\n"
+                "- Tuyet doi khong tu suy dien sang burnout, trauma, hay chu de khac neu bai khong noi toi.\n\n"
+                f"Tieu de bai viet: {article_title}\n"
+                f"Tom tat hien co: {article_excerpt}\n"
+                f"Noi dung bai viet (trich doan can bam sat): {article_body}\n\n"
+                f"Yeu cau cua nguoi dung: {message}"
+            )
+        return (
+            "Ban la Miru mini companion trong bai viet kien thuc suc khoe tinh than.\n"
+            "- Tra loi bang tieng Viet, ngan, am, khong chan doan.\n"
+            "- Chi duoc dua tren thong tin co trong bai viet duoi day; khong tu chen chu de khac.\n"
+            "- Bam vao chu de cua bai viet va cau hoi hien tai.\n"
+            "- Neu hop ly, goi y mot buoc nho hoac mot therapist phu hop.\n\n"
+            f"Tieu de bai viet: {article_title}\n"
+            f"Tom tat: {article_excerpt}\n"
+            f"Chu de: {topic_line}\n"
+            f"Noi dung bai viet (trich doan can bam sat): {article_body}\n"
+            f"Therapist lien quan:\n{therapist_block}\n\n"
+            f"Cau hoi cua nguoi dung: {message}"
+        )
+
+    def _log_question_event(
+        self,
+        *,
+        event_type: str,
+        question_row: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        claimed_user_id: Optional[str] = None,
+    ) -> None:
+        anonymous_id = self._normalize_text(question_row.get("anonymous_id"), max_length=160)
+        if not anonymous_id:
+            anonymous_id = f"question_{self._normalize_text(question_row.get('question_id'), max_length=120) or 'event'}"
+        session_id = f"question_{self._normalize_text(question_row.get('question_id'), max_length=120) or 'event'}"
+        try:
+            self.log_public_events(
+                anonymous_id=anonymous_id,
+                session_id=session_id,
+                claimed_user_id=claimed_user_id or self._normalize_text(question_row.get("user_id"), max_length=160),
+                events=[
+                    {
+                        "event_type": event_type,
+                        "article_slug": self._normalize_text(question_row.get("article_slug"), max_length=240),
+                        "therapist_id": self._normalize_text(question_row.get("therapist_id"), max_length=160),
+                        "metadata": metadata or {},
+                    }
+                ],
+            )
+        except Exception:
+            pass
+
     def alias_identity(self, *, user_id: str, anonymous_id: str, session_id: Optional[str] = None) -> Dict[str, Any]:
         normalized_user_id = self._normalize_text(user_id, max_length=160)
         normalized_anonymous_id = self._normalize_text(anonymous_id, max_length=160)
@@ -324,6 +566,259 @@ class PublicContentService:
             return 0
         self._insert_rows(PUBLIC_EVENTS_TABLE, rows)
         return len(rows)
+
+    def list_public_article_questions(self, article_slug: str) -> List[Dict[str, Any]]:
+        current_article = self.article_service.get_public_article(article_slug)
+        if not current_article:
+            raise PublicContentValidationError("Khong tim thay bai viet")
+        rows = self._select_rows(
+            PUBLIC_QUESTIONS_TABLE,
+            eq_filters={"article_slug": self._normalize_text(article_slug, max_length=240)},
+            order_by="created_at",
+            desc=True,
+            limit=200,
+        )
+        public_rows = [
+            row
+            for row in rows
+            if self._normalize_question_status(row.get("status")) in {"published", "answered"}
+        ]
+        return [self._serialize_question_row(row, public_view=True, article=current_article) for row in public_rows]
+
+    def submit_public_article_question(
+        self,
+        *,
+        article_slug: str,
+        user_id: str,
+        question_text: str,
+        public_display_name: Optional[str] = None,
+        anonymous_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        article = self.article_service.get_public_article(article_slug)
+        if not article:
+            raise PublicContentValidationError("Khong tim thay bai viet")
+        normalized_user_id = self._normalize_text(user_id, max_length=160)
+        normalized_question_text = self._normalize_text(question_text, max_length=3000)
+        normalized_display_name = self._normalize_text(public_display_name, max_length=120) or "Nguoi dung Miru"
+        normalized_anonymous_id = self._normalize_text(anonymous_id, max_length=160)
+        normalized_session_id = self._normalize_text(session_id, max_length=160)
+        if not normalized_user_id:
+            raise PublicContentValidationError("user_id la bat buoc")
+        if not normalized_question_text or len(normalized_question_text) < 10:
+            raise PublicContentValidationError("Cau hoi can noi dung day du hon")
+        question_id = str(uuid4())
+        now_value = self._now()
+        payload = {
+            "question_id": question_id,
+            "article_slug": self._normalize_text(article_slug, max_length=240),
+            "therapist_id": self._normalize_text(article.get("therapist_id"), max_length=160),
+            "user_id": normalized_user_id,
+            "anonymous_id": normalized_anonymous_id,
+            "public_display_name": normalized_display_name,
+            "question_text": normalized_question_text,
+            "answer_text": None,
+            "status": "pending_review",
+            "questioned_at": now_value,
+            "published_at": None,
+            "answered_at": None,
+            "hidden_at": None,
+            "created_at": now_value,
+            "updated_at": now_value,
+        }
+        try:
+            inserted = self._insert_rows(PUBLIC_QUESTIONS_TABLE, [payload])
+        except Exception as exc:
+            self._handle_storage_exception(exc)
+            raise
+        question_row = inserted[0] if inserted else payload
+        metadata = {
+            "question_id": question_id,
+            "session_id": normalized_session_id,
+        }
+        self._log_question_event(
+            event_type="community_question_started",
+            question_row=question_row,
+            metadata=metadata,
+            claimed_user_id=normalized_user_id,
+        )
+        self._log_question_event(
+            event_type="community_question_submitted",
+            question_row=question_row,
+            metadata=metadata,
+            claimed_user_id=normalized_user_id,
+        )
+        return self._serialize_question_row(question_row, public_view=False, article=article)
+
+    def list_my_article_questions(
+        self,
+        user_id: str,
+        *,
+        email: str = "",
+        name: str = "",
+    ) -> Dict[str, Any]:
+        therapist_ids = self._article_therapist_ids_for_user(user_id, email=email, name=name)
+        if not therapist_ids:
+            return {"available": True, "questions": []}
+        rows = self._select_rows(
+            PUBLIC_QUESTIONS_TABLE,
+            in_filters={"therapist_id": therapist_ids},
+            order_by="updated_at",
+            desc=True,
+            limit=500,
+        )
+        article_cache: Dict[str, Dict[str, Any]] = {}
+        questions: List[Dict[str, Any]] = []
+        for row in rows:
+            slug = self._normalize_text(row.get("article_slug"), max_length=240) or ""
+            article = article_cache.get(slug)
+            if article is None and slug:
+                try:
+                    article = self.article_service.get_public_article(slug)
+                except Exception:
+                    article = None
+                if article:
+                    article_cache[slug] = article
+            questions.append(self._serialize_question_row(row, public_view=False, article=article))
+        return {"available": True, "questions": questions}
+
+    def _assert_question_owner(
+        self,
+        *,
+        user_id: str,
+        question_row: Dict[str, Any],
+        email: str = "",
+        name: str = "",
+    ) -> None:
+        therapist_ids = self._article_therapist_ids_for_user(user_id, email=email, name=name)
+        question_therapist_id = self._normalize_text(question_row.get("therapist_id"), max_length=160)
+        if not therapist_ids or question_therapist_id not in therapist_ids:
+            raise PublicContentValidationError("Ban khong co quyen voi cau hoi nay")
+
+    def publish_article_question(
+        self,
+        *,
+        user_id: str,
+        question_id: str,
+        email: str = "",
+        name: str = "",
+    ) -> Dict[str, Any]:
+        question_row = self._load_question_by_id(question_id)
+        if not question_row:
+            raise PublicContentValidationError("Khong tim thay cau hoi")
+        self._assert_question_owner(user_id=user_id, question_row=question_row, email=email, name=name)
+        current_status = self._normalize_question_status(question_row.get("status"))
+        if current_status == "hidden":
+            raise PublicContentValidationError("Cau hoi da bi an")
+        now_value = self._now()
+        next_status = "answered" if self._normalize_text(question_row.get("answer_text"), max_length=4000) else "published"
+        update_payload = {
+            "status": next_status,
+            "updated_at": now_value,
+        }
+        if not self._normalize_text(question_row.get("published_at"), max_length=80):
+            update_payload["published_at"] = now_value
+        try:
+            response = (
+                self.supabase.table(PUBLIC_QUESTIONS_TABLE)
+                .update(update_payload)
+                .eq("question_id", self._normalize_text(question_id, max_length=160))
+                .execute()
+            )
+        except Exception as exc:
+            self._handle_storage_exception(exc)
+            raise
+        updated_row = response.data[0] if response.data else {**question_row, **update_payload}
+        self._log_question_event(
+            event_type="community_question_published",
+            question_row=updated_row,
+            metadata={"question_id": self._normalize_text(question_id, max_length=160)},
+            claimed_user_id=user_id,
+        )
+        return self._serialize_question_row(updated_row, public_view=False)
+
+    def answer_article_question(
+        self,
+        *,
+        user_id: str,
+        question_id: str,
+        answer_text: str,
+        email: str = "",
+        name: str = "",
+    ) -> Dict[str, Any]:
+        question_row = self._load_question_by_id(question_id)
+        if not question_row:
+            raise PublicContentValidationError("Khong tim thay cau hoi")
+        self._assert_question_owner(user_id=user_id, question_row=question_row, email=email, name=name)
+        current_status = self._normalize_question_status(question_row.get("status"))
+        if current_status == "hidden":
+            raise PublicContentValidationError("Cau hoi da bi an")
+        normalized_answer = self._normalize_text(answer_text, max_length=4000)
+        if not normalized_answer:
+            raise PublicContentValidationError("Thieu noi dung tra loi")
+        now_value = self._now()
+        update_payload = {
+            "answer_text": normalized_answer,
+            "status": "answered",
+            "published_at": self._normalize_text(question_row.get("published_at"), max_length=80) or now_value,
+            "answered_at": now_value,
+            "updated_at": now_value,
+        }
+        try:
+            response = (
+                self.supabase.table(PUBLIC_QUESTIONS_TABLE)
+                .update(update_payload)
+                .eq("question_id", self._normalize_text(question_id, max_length=160))
+                .execute()
+            )
+        except Exception as exc:
+            self._handle_storage_exception(exc)
+            raise
+        updated_row = response.data[0] if response.data else {**question_row, **update_payload}
+        self._log_question_event(
+            event_type="community_question_answered",
+            question_row=updated_row,
+            metadata={"question_id": self._normalize_text(question_id, max_length=160)},
+            claimed_user_id=user_id,
+        )
+        return self._serialize_question_row(updated_row, public_view=False)
+
+    def hide_article_question(
+        self,
+        *,
+        user_id: str,
+        question_id: str,
+        email: str = "",
+        name: str = "",
+    ) -> Dict[str, Any]:
+        question_row = self._load_question_by_id(question_id)
+        if not question_row:
+            raise PublicContentValidationError("Khong tim thay cau hoi")
+        self._assert_question_owner(user_id=user_id, question_row=question_row, email=email, name=name)
+        now_value = self._now()
+        update_payload = {
+            "status": "hidden",
+            "hidden_at": now_value,
+            "updated_at": now_value,
+        }
+        try:
+            response = (
+                self.supabase.table(PUBLIC_QUESTIONS_TABLE)
+                .update(update_payload)
+                .eq("question_id", self._normalize_text(question_id, max_length=160))
+                .execute()
+            )
+        except Exception as exc:
+            self._handle_storage_exception(exc)
+            raise
+        updated_row = response.data[0] if response.data else {**question_row, **update_payload}
+        self._log_question_event(
+            event_type="community_question_hidden",
+            question_row=updated_row,
+            metadata={"question_id": self._normalize_text(question_id, max_length=160)},
+            claimed_user_id=user_id,
+        )
+        return self._serialize_question_row(updated_row, public_view=False)
 
     def _recent_reason_tags(
         self,
@@ -570,9 +1065,18 @@ class PublicContentService:
         anonymous_id: str,
         session_id: Optional[str],
         claimed_user_id: Optional[str],
+        interaction_mode: Optional[str] = None,
+        question_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        if not self.article_service.get_public_article(article_slug):
+        article = self.article_service.get_public_article(article_slug)
+        if not article:
             raise PublicContentValidationError("Khong tim thay bai viet")
+        normalized_interaction_mode = self._normalize_ai_interaction_mode(interaction_mode)
+        question_context = self._resolve_question_context(
+            article_slug=article_slug,
+            question_id=question_id,
+            article=article,
+        )
         normalized_anonymous_id = self._normalize_text(anonymous_id, max_length=160)
         if not normalized_anonymous_id:
             raise PublicContentValidationError("anonymous_id la bat buoc")
@@ -593,6 +1097,8 @@ class PublicContentService:
                         "article_slug": article_slug,
                         "metadata": {
                             "quota_scope": quota_state["quota_scope"],
+                            "interaction_mode": normalized_interaction_mode,
+                            "question_id": question_context.get("question_id") if question_context else None,
                         },
                     }
                 ],
@@ -635,10 +1141,18 @@ class PublicContentService:
         session_id: Optional[str],
         claimed_user_id: Optional[str],
         message: str,
+        interaction_mode: Optional[str] = None,
+        question_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         article = self.article_service.get_public_article(article_slug)
         if not article:
             raise PublicContentValidationError("Khong tim thay bai viet")
+        normalized_interaction_mode = self._normalize_ai_interaction_mode(interaction_mode)
+        question_context = self._resolve_question_context(
+            article_slug=article_slug,
+            question_id=question_id,
+            article=article,
+        )
         normalized_anonymous_id = self._normalize_text(anonymous_id, max_length=160)
         normalized_message = self._normalize_text(message, max_length=2000)
         if not normalized_anonymous_id or not normalized_message:
@@ -662,6 +1176,8 @@ class PublicContentService:
                             "article_slug": article_slug,
                             "metadata": {
                                 "quota_scope": quota_state["quota_scope"],
+                                "interaction_mode": normalized_interaction_mode,
+                                "question_id": question_context.get("question_id") if question_context else None,
                             },
                         }
                     ],
@@ -698,16 +1214,18 @@ class PublicContentService:
                 session_id=session_id_value,
                 claimed_user_id=user_id_value,
                 events=[
-                    {
-                        "event_type": "article_ai_message_sent",
-                        "article_slug": article_slug,
-                        "metadata": {
-                            "message_length": len(normalized_message),
-                            "quota_scope": quota_state["quota_scope"],
-                        },
-                    }
-                ],
-            )
+                        {
+                            "event_type": "article_ai_message_sent",
+                            "article_slug": article_slug,
+                            "metadata": {
+                                "message_length": len(normalized_message),
+                                "quota_scope": quota_state["quota_scope"],
+                                "interaction_mode": normalized_interaction_mode,
+                                "question_id": question_context.get("question_id") if question_context else None,
+                            },
+                        }
+                    ],
+                )
         except Exception:
             pass
         history = self._recent_session_history(session_id_value, limit=8)
@@ -725,16 +1243,13 @@ class PublicContentService:
                 continue
             specs = ", ".join(self._normalize_tags(therapist.get("specializations")))
             therapist_lines.append(f"- {name}: {specs or 'co the ho tro chu de nay'}")
-        prompt = (
-            "Ban la Miru mini companion trong bai viet kien thuc suc khoe tinh than.\n"
-            "- Tra loi bang tieng Viet, ngan, am, khong chan doan.\n"
-            "- Bam vao chu de cua bai viet va cau hoi hien tai.\n"
-            "- Neu hop ly, goi y mot buoc nho hoac mot therapist phu hop.\n\n"
-            f"Tieu de bai viet: {article.get('title')}\n"
-            f"Tom tat: {article.get('excerpt') or article.get('seo_description') or ''}\n"
-            f"Chu de: {', '.join(topic_tags)}\n"
-            f"Therapist lien quan:\n{os.linesep.join(therapist_lines) if therapist_lines else '- Chua co goi y therapist cu the'}\n\n"
-            f"Cau hoi cua nguoi dung: {normalized_message}"
+        prompt = self._build_article_ai_prompt(
+            article=article,
+            message=normalized_message,
+            topic_tags=topic_tags,
+            therapist_lines=therapist_lines,
+            interaction_mode=normalized_interaction_mode,
+            question_context=question_context,
         )
         ai_reply = await get_summarizer_service().generate_response(prompt, history=history[:-1] if history else None)
         normalized_reply = self._normalize_text(ai_reply, max_length=2400) or (
@@ -779,8 +1294,14 @@ class PublicContentService:
             "exhausted": False,
         }
 
-    def list_my_article_analytics(self, user_id: str) -> Dict[str, Any]:
-        articles = self.article_service.list_my_articles(user_id)
+    def list_my_article_analytics(
+        self,
+        user_id: str,
+        *,
+        email: str = "",
+        name: str = "",
+    ) -> Dict[str, Any]:
+        articles = self.article_service.list_my_articles(user_id, email=email, name=name)
         article_by_slug = {
             str(article.get("slug")): article
             for article in articles
@@ -811,6 +1332,16 @@ class PublicContentService:
             limit=300,
         )
         try:
+            question_rows = self._select_rows(
+                PUBLIC_QUESTIONS_TABLE,
+                in_filters={"article_slug": slugs},
+                order_by="updated_at",
+                desc=True,
+                limit=500,
+            )
+        except Exception:
+            question_rows = []
+        try:
             contact_rows = self._select_rows(
                 "therapist_contact_requests",
                 in_filters={"source_article_slug": slugs},
@@ -826,6 +1357,7 @@ class PublicContentService:
             article_events = [row for row in event_rows if row.get("article_slug") == slug]
             article_ai_messages = [row for row in ai_messages if row.get("article_slug") == slug]
             article_ai_sessions = [row for row in ai_sessions if row.get("article_slug") == slug]
+            article_questions = [row for row in question_rows if row.get("article_slug") == slug]
             article_contacts = [
                 row
                 for row in contact_rows
@@ -855,6 +1387,12 @@ class PublicContentService:
                     "profile_click_count": sum(1 for row in article_events if row.get("event_type") == "article_to_profile_click"),
                     "contact_request_count": len(article_contacts),
                     "pairing_count": sum(1 for row in article_contacts if self._normalize_text(row.get("funnel_status"), max_length=40) == "paired"),
+                    "question_count": len(article_questions),
+                    "answered_question_count": sum(
+                        1
+                        for row in article_questions
+                        if self._normalize_question_status(row.get("status")) == "answered"
+                    ),
                     "ai_session_count": len({str(row.get("session_id")) for row in article_ai_sessions if row.get("session_id")}),
                     "ai_message_count": sum(1 for row in article_ai_messages if self._normalize_text(row.get("role"), max_length=20) == "user"),
                     "login_prompt_click_count": sum(1 for row in article_events if row.get("event_type") == "article_ai_login_prompt_clicked"),

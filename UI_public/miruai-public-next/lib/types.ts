@@ -94,6 +94,38 @@ export type ArticleDetailResponse = {
   article: PublicArticle | null;
 };
 
+export type PublicArticleQuestion = {
+  question_id: string;
+  article_slug: string;
+  public_name?: string | null;
+  public_display_name?: string | null;
+  question_text: string;
+  status?: "pending_review" | "published" | "answered" | "hidden" | string;
+  created_at: string;
+  updated_at?: string | null;
+  answered_at?: string | null;
+  published_at?: string | null;
+  hidden_at?: string | null;
+  answer_text?: string | null;
+  answer_by?: string | null;
+  answer_role?: string | null;
+  topic_tags?: string[];
+  therapist_id?: string | null;
+  therapist_name?: string | null;
+  source?: string | null;
+};
+
+export type ArticleQuestionsResponse = {
+  success: boolean;
+  count?: number;
+  questions: PublicArticleQuestion[];
+};
+
+export type ArticleQuestionSubmissionResponse = {
+  success: boolean;
+  question: PublicArticleQuestion | null;
+};
+
 export type PublicRecommendationResponse<TItem> = {
   success: boolean;
   reason_tags: string[];

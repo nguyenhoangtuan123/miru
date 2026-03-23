@@ -86,10 +86,10 @@ function readStoredState(articleSlug: string): StoredArticleAiState | null {
         (message): message is ArticleAssistantMessage =>
           Boolean(
             message &&
-              typeof message === "object" &&
-              (message.role === "assistant" || message.role === "user") &&
-              typeof message.id === "string" &&
-              typeof message.content === "string",
+            typeof message === "object" &&
+            (message.role === "assistant" || message.role === "user") &&
+            typeof message.id === "string" &&
+            typeof message.content === "string",
           ),
       ),
       draft: typeof parsed.draft === "string" ? parsed.draft : "",
@@ -116,28 +116,55 @@ function writeStoredState(articleSlug: string, state: StoredArticleAiState) {
 export function ArticleAiCompanion({ article, topicTags }: ArticleAiCompanionProps) {
   const searchParams = useSearchParams();
   const promptSuggestions = buildAssistantPrompts(topicTags, article.title);
-  const storedState = readStoredState(article.slug);
 
-  const [messages, setMessages] = useState<ArticleAssistantMessage[]>(() =>
-    storedState?.messages.length
-      ? storedState.messages
-      : [
-          {
-            id: `assistant-intro-${article.slug}`,
-            role: "assistant",
-            content: introMessage(article, topicTags),
-          },
-        ],
-  );
-  const [draft, setDraft] = useState(() => storedState?.draft || "");
-  const [sessionId, setSessionId] = useState<string | null>(() => storedState?.sessionId || null);
+  // SSR-safe defaults: never read localStorage during initial render to avoid hydration mismatch.
+  const defaultIntroMessages: ArticleAssistantMessage[] = [
+    {
+      id: `assistant-intro-${article.slug}`,
+      role: "assistant",
+      content: introMessage(article, topicTags),
+    },
+  ];
+
+  const [messages, setMessages] = useState<ArticleAssistantMessage[]>(defaultIntroMessages);
+  const [draft, setDraft] = useState("");
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(() => storedState?.sessionStarted || false);
-  const [quota, setQuota] = useState(() => readAssistantQuota(article.slug));
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [quota, setQuota] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    isAuthenticated: boolean;
+    quotaScope: "anonymous_monthly" | "signed_in_monthly" | "entitled_monthly";
+  }>({ used: 0, limit: ANONYMOUS_MONTHLY_QUOTA, remaining: ANONYMOUS_MONTHLY_QUOTA, isAuthenticated: false, quotaScope: "anonymous_monthly" });
+  const [hasMounted, setHasMounted] = useState(false);
   const appChatHref = `${APP_URL}/chat?entry=public-article&article=${encodeURIComponent(article.slug)}`;
-  const quotaCopy = quota.isAuthenticated
-    ? `Bạn đang ở chế độ người dùng Miru với ${quota.remaining}/${quota.limit} lượt còn lại trong tháng.`
-    : `Bạn đang thử ở chế độ khách với ${quota.remaining}/${quota.limit} lượt trong tháng. Đăng nhập để mở thêm quota hỏi đáp.`;
+
+  // Hydrate all localStorage-dependent state after mount (client-only).
+  useEffect(() => {
+    const storedState = readStoredState(article.slug);
+    if (storedState?.messages.length) {
+      setMessages(storedState.messages);
+    }
+    if (storedState?.draft) {
+      setDraft(storedState.draft);
+    }
+    if (storedState?.sessionId) {
+      setSessionId(storedState.sessionId);
+    }
+    if (storedState?.sessionStarted) {
+      setSessionStarted(true);
+    }
+    setQuota(readAssistantQuota(article.slug));
+    setHasMounted(true);
+  }, [article.slug]);
+
+  const quotaCopy = !hasMounted
+    ? "Đang tải thông tin quota…"
+    : quota.isAuthenticated
+      ? `Bạn đang ở chế độ người dùng Miru với ${quota.remaining}/${quota.limit} lượt còn lại trong tháng.`
+      : `Bạn đang thử ở chế độ khách với ${quota.remaining}/${quota.limit} lượt trong tháng. Đăng nhập để mở thêm quota hỏi đáp.`;
 
   useEffect(() => {
     writeStoredState(article.slug, {
@@ -326,11 +353,11 @@ export function ArticleAiCompanion({ article, topicTags }: ArticleAiCompanionPro
               href={appChatHref}
               className="button-secondary"
               event={{
-                event_type: "article_ai_login_prompt_clicked",
+                event_type: "article_to_app_login",
                 article_slug: article.slug,
                 therapist_id: article.therapist_id || null,
                 topic_tags: topicTags,
-                metadata: { mode: "authenticated_continue" },
+                metadata: { mode: "authenticated_continue", surface: "article_ai" },
               }}
             >
               Tiếp tục trong app
@@ -344,7 +371,7 @@ export function ArticleAiCompanion({ article, topicTags }: ArticleAiCompanionPro
                 article_slug: article.slug,
                 therapist_id: article.therapist_id || null,
                 topic_tags: topicTags,
-                metadata: { mode: "login_uplift" },
+                metadata: { mode: "login_uplift", surface: "article_ai" },
               }}
             >
               Đăng nhập để mở thêm lượt

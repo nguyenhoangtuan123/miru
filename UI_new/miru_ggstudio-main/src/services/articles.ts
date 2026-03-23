@@ -67,6 +67,8 @@ export const ArticleAnalyticsMetricBundleSchema = z
     ai_message_count: NumericMetricSchema.optional(),
     login_prompt_clicks: NumericMetricSchema.optional(),
     login_prompt_click_count: NumericMetricSchema.optional(),
+    question_count: NumericMetricSchema.optional(),
+    answered_question_count: NumericMetricSchema.optional(),
   })
   .passthrough();
 
@@ -172,11 +174,90 @@ export const ArticleAnalyticsListResponseSchema = z
     };
   });
 
+export const ArticleQuestionStatusSchema = z.enum([
+  'pending_review',
+  'published',
+  'answered',
+  'hidden',
+]);
+
+export const ArticleQuestionSchema = z
+  .object({
+    id: IdSchema.optional(),
+    question_id: z.string().nullable().optional(),
+    article_id: IdSchema.optional(),
+    article_slug: z.string().nullable().optional(),
+    article_title: z.string().nullable().optional(),
+    pseudonym: z.string().nullable().optional(),
+    public_display_name: z.string().nullable().optional(),
+    question_text: z.string().nullable().optional(),
+    question: z.string().nullable().optional(),
+    answer_text: z.string().nullable().optional(),
+    answer: z.string().nullable().optional(),
+    status: ArticleQuestionStatusSchema.default('pending_review'),
+    answer_state: ArticleQuestionStatusSchema.optional(),
+    created_at: z.string().nullable().optional(),
+    updated_at: z.string().nullable().optional(),
+    answered_at: z.string().nullable().optional(),
+    published_at: z.string().nullable().optional(),
+    hidden_at: z.string().nullable().optional(),
+  })
+  .passthrough()
+  .transform((value) => {
+    const resolvedId = value.id ?? value.question_id ?? '';
+    return {
+      ...value,
+      id: resolvedId,
+      question_id: value.question_id ?? resolvedId,
+      pseudonym: value.pseudonym ?? value.public_display_name ?? null,
+      question_text: value.question_text ?? value.question ?? null,
+      answer_text: value.answer_text ?? value.answer ?? null,
+      answer_state: value.answer_state ?? value.status,
+    };
+  });
+
+export const ArticleQuestionListResponseSchema = z
+  .object({
+    success: z.boolean().optional().default(true),
+    available: z.boolean().optional(),
+    questions: z.array(ArticleQuestionSchema).optional(),
+    items: z.array(ArticleQuestionSchema).optional(),
+    data: z.array(ArticleQuestionSchema).optional(),
+    count: z.number().optional(),
+  })
+  .passthrough()
+  .transform((value) => {
+    const questions = value.questions ?? value.items ?? value.data ?? [];
+    return {
+      success: value.success ?? true,
+      available: value.available ?? true,
+      questions,
+      count: value.count ?? questions.length,
+    };
+  });
+
+export const ArticleQuestionMutationResponseSchema = z
+  .object({
+    success: z.boolean().optional().default(true),
+    question: ArticleQuestionSchema.nullable().optional(),
+    item: ArticleQuestionSchema.nullable().optional(),
+    data: ArticleQuestionSchema.nullable().optional(),
+  })
+  .passthrough()
+  .transform((value) => ({
+    success: value.success ?? true,
+    question: value.question ?? value.item ?? value.data ?? null,
+  }));
+
 export type ArticleStatus = z.infer<typeof ArticleStatusSchema>;
 export type Article = z.infer<typeof ArticleSchema>;
 export type ArticleAnalyticsMetricBundle = z.infer<typeof ArticleAnalyticsMetricBundleSchema>;
 export type ArticleAnalyticsBucket = z.infer<typeof ArticleAnalyticsBucketSchema>;
 export type ArticleAnalyticsRecord = z.infer<typeof ArticleAnalyticsRecordSchema>;
+export type ArticleQuestionStatus = z.infer<typeof ArticleQuestionStatusSchema>;
+export type ArticleQuestion = z.infer<typeof ArticleQuestionSchema>;
+export type ArticleQuestionListResponse = z.infer<typeof ArticleQuestionListResponseSchema>;
+export type ArticleQuestionMutationResponse = z.infer<typeof ArticleQuestionMutationResponseSchema>;
 export type ArticleForm = z.infer<typeof ArticleFormSchema>;
 export type ArticleListResponse = z.infer<typeof ArticleListResponseSchema>;
 export type ArticleDetailResponse = z.infer<typeof ArticleDetailResponseSchema>;
@@ -191,6 +272,10 @@ const ArticleMutationResponseSchemaForParse =
   ArticleMutationResponseSchema as unknown as z.ZodType<ArticleMutationResponse>;
 const ArticleAnalyticsListResponseSchemaForParse =
   ArticleAnalyticsListResponseSchema as unknown as z.ZodType<ArticleAnalyticsListResponse>;
+const ArticleQuestionListResponseSchemaForParse =
+  ArticleQuestionListResponseSchema as unknown as z.ZodType<ArticleQuestionListResponse>;
+const ArticleQuestionMutationResponseSchemaForParse =
+  ArticleQuestionMutationResponseSchema as unknown as z.ZodType<ArticleQuestionMutationResponse>;
 
 export async function getPublicArticles(limit?: number) {
   return parseApi(
@@ -235,6 +320,62 @@ export async function getMyTherapistArticleAnalytics() {
     analytics: [],
     count: 0,
   } satisfies ArticleAnalyticsListResponse;
+}
+
+export async function getMyTherapistArticleQuestions(status?: ArticleQuestionStatus | 'all') {
+  const candidates = [
+    '/api/therapist/articles/me/questions',
+    '/api/therapist/articles/questions/me',
+  ];
+  const params =
+    status && status !== 'all' ? { status } : undefined;
+
+  for (const path of candidates) {
+    try {
+      return await parseApi(
+        api.get(path, { params }),
+        ArticleQuestionListResponseSchemaForParse
+      );
+    } catch (error) {
+      if (axios.isAxiosError(error) && [404, 405, 501].includes(error.response?.status ?? 0)) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return {
+    success: false,
+    available: false,
+    questions: [],
+    count: 0,
+  } satisfies ArticleQuestionListResponse;
+}
+
+export async function answerTherapistArticleQuestion(
+  questionId: string | number,
+  answer_text: string
+) {
+  return parseApi(
+    api.post(`/api/therapist/articles/questions/${encodeURIComponent(String(questionId))}/answer`, {
+      answer_text,
+    }),
+    ArticleQuestionMutationResponseSchemaForParse
+  );
+}
+
+export async function publishTherapistArticleQuestion(questionId: string | number) {
+  return parseApi(
+    api.post(`/api/therapist/articles/questions/${encodeURIComponent(String(questionId))}/publish`),
+    ArticleQuestionMutationResponseSchemaForParse
+  );
+}
+
+export async function hideTherapistArticleQuestion(questionId: string | number) {
+  return parseApi(
+    api.post(`/api/therapist/articles/questions/${encodeURIComponent(String(questionId))}/hide`),
+    ArticleQuestionMutationResponseSchemaForParse
+  );
 }
 
 export async function createTherapistArticle(payload: ArticleForm) {

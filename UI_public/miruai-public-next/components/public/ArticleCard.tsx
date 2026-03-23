@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 import { estimateReadingMinutes, formatVietnameseDate } from "../../lib/format";
 import type { PublicEventPayload } from "../../lib/public-events";
@@ -35,9 +36,9 @@ export function ArticleCard({ article, featured = false, trackingEvent }: Articl
           {article.therapist_name ? <span className="chip">{article.therapist_name}</span> : null}
         </div>
         <h2 className="article-title">{article.title}</h2>
-        <p className="article-excerpt">
-          {article.excerpt || "Một góc nhìn thực tế, an toàn và giàu tính đồng hành cho hành trình chăm sóc sức khỏe tinh thần."}
-        </p>
+        <div className="article-excerpt">
+          <ReactMarkdown>{article.excerpt || "Một góc nhìn thực tế, an toàn và giàu tính đồng hành cho hành trình chăm sóc sức khỏe tinh thần."}</ReactMarkdown>
+        </div>
         <div className="article-meta">
           <span>{formatVietnameseDate(article.published_at || article.updated_at)}</span>
           <span>&bull;</span>
@@ -63,9 +64,9 @@ export function ArticleCard({ article, featured = false, trackingEvent }: Articl
         <h3 className="article-title article-title--small" style={{ marginTop: 10 }}>
           {article.title}
         </h3>
-        <p className="article-excerpt" style={{ marginTop: 10 }}>
-          {article.excerpt || "Bài viết đang được cập nhật tóm tắt."}
-        </p>
+        <div className="article-excerpt" style={{ marginTop: 10 }}>
+          <ReactMarkdown>{article.excerpt || "Bài viết đang được cập nhật tóm tắt."}</ReactMarkdown>
+        </div>
       </div>
 
       <div className="article-meta" style={{ marginTop: "auto" }}>

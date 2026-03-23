@@ -51,10 +51,23 @@ class ArticleAssistantSessionPayload(BaseModel):
     anonymous_id: str
     session_id: Optional[str] = None
     user_id: Optional[str] = None
+    interaction_mode: Optional[str] = None
+    question_id: Optional[str] = None
 
 
 class ArticleAssistantMessagePayload(ArticleAssistantSessionPayload):
     message: str
+
+
+class PublicArticleQuestionCreatePayload(BaseModel):
+    public_display_name: Optional[str] = None
+    anonymous_id: Optional[str] = None
+    session_id: Optional[str] = None
+    question_text: str
+
+
+class TherapistArticleQuestionAnswerPayload(BaseModel):
+    answer_text: str
 
 
 async def _require_current_user(request: Request) -> Dict[str, Any]:
@@ -150,6 +163,32 @@ async def get_public_therapist_recommendations(
     return {"success": True, **payload}
 
 
+@router.get("/api/public/articles/{slug}/questions")
+async def get_public_article_questions(slug: str):
+    try:
+        questions = get_public_content_service().list_public_article_questions(slug)
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "questions": questions}
+
+
+@router.post("/api/public/articles/{slug}/questions")
+async def post_public_article_question(slug: str, data: PublicArticleQuestionCreatePayload, request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        question = get_public_content_service().submit_public_article_question(
+            article_slug=slug,
+            user_id=current_user["resolved_user_id"],
+            question_text=data.question_text,
+            public_display_name=data.public_display_name,
+            anonymous_id=data.anonymous_id,
+            session_id=data.session_id,
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "question": question}
+
+
 @router.post("/api/public/articles/{slug}/assistant/session")
 async def start_public_article_ai_session(slug: str, data: ArticleAssistantSessionPayload):
     try:
@@ -158,6 +197,8 @@ async def start_public_article_ai_session(slug: str, data: ArticleAssistantSessi
             anonymous_id=data.anonymous_id,
             session_id=data.session_id,
             claimed_user_id=data.user_id,
+            interaction_mode=data.interaction_mode,
+            question_id=data.question_id,
         )
     except Exception as exc:
         _raise_service_error(exc)
@@ -173,6 +214,41 @@ async def send_public_article_ai_message(slug: str, data: ArticleAssistantMessag
             session_id=data.session_id,
             claimed_user_id=data.user_id,
             message=data.message,
+            interaction_mode=data.interaction_mode,
+            question_id=data.question_id,
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, **payload}
+
+
+@router.post("/api/public/articles/{slug}/questions/assistant/session")
+async def start_public_article_question_ai_session(slug: str, data: ArticleAssistantSessionPayload):
+    try:
+        payload = await get_public_content_service().start_article_ai_session(
+            article_slug=slug,
+            anonymous_id=data.anonymous_id,
+            session_id=data.session_id,
+            claimed_user_id=data.user_id,
+            interaction_mode="community_qa",
+            question_id=data.question_id,
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, **payload}
+
+
+@router.post("/api/public/articles/{slug}/questions/assistant/message")
+async def send_public_article_question_ai_message(slug: str, data: ArticleAssistantMessagePayload):
+    try:
+        payload = await get_public_content_service().send_article_ai_message(
+            article_slug=slug,
+            anonymous_id=data.anonymous_id,
+            session_id=data.session_id,
+            claimed_user_id=data.user_id,
+            message=data.message,
+            interaction_mode="community_qa",
+            question_id=data.question_id,
         )
     except Exception as exc:
         _raise_service_error(exc)
@@ -184,8 +260,70 @@ async def get_my_therapist_article_analytics(request: Request):
     current_user = await _require_current_user(request)
     try:
         payload = get_public_content_service().list_my_article_analytics(
-            current_user["resolved_user_id"]
+            current_user["resolved_user_id"],
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
         )
     except Exception as exc:
         _raise_service_error(exc)
     return {"success": True, **payload}
+
+
+@router.get("/api/therapist/articles/questions/me")
+async def get_my_article_questions(request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        payload = get_public_content_service().list_my_article_questions(
+            current_user["resolved_user_id"],
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, **payload}
+
+
+@router.post("/api/therapist/articles/questions/{question_id}/publish")
+async def publish_my_article_question(question_id: str, request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        question = get_public_content_service().publish_article_question(
+            user_id=current_user["resolved_user_id"],
+            question_id=question_id,
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "question": question}
+
+
+@router.post("/api/therapist/articles/questions/{question_id}/answer")
+async def answer_my_article_question(question_id: str, data: TherapistArticleQuestionAnswerPayload, request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        question = get_public_content_service().answer_article_question(
+            user_id=current_user["resolved_user_id"],
+            question_id=question_id,
+            answer_text=data.answer_text,
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "question": question}
+
+
+@router.post("/api/therapist/articles/questions/{question_id}/hide")
+async def hide_my_article_question(question_id: str, request: Request):
+    current_user = await _require_current_user(request)
+    try:
+        question = get_public_content_service().hide_article_question(
+            user_id=current_user["resolved_user_id"],
+            question_id=question_id,
+            email=str(current_user.get("email") or ""),
+            name=str(current_user.get("name") or ""),
+        )
+    except Exception as exc:
+        _raise_service_error(exc)
+    return {"success": True, "question": question}

@@ -49,6 +49,26 @@ function getSourceLabel(value?: string | null) {
   }
 }
 
+function getNormalizedSourceLabel(value?: string | null) {
+  const legacyLabel = getSourceLabel(value);
+  switch (value) {
+    case 'article':
+      return 'Bài viết Community';
+    case 'profile_direct_link':
+      return 'Hồ sơ therapist';
+    case 'therapist_invite':
+      return 'Therapist invite';
+    case 'referral':
+      return 'Giới thiệu';
+    default:
+      return legacyLabel;
+  }
+}
+
+function getIntentLabel(value?: string | null) {
+  return value === 'message' ? 'Nhắn riêng' : 'Đăng ký trị liệu';
+}
+
 function formatLatency(item: TherapistContactRequest) {
   if (typeof item.response_time_hours === 'number') {
     return `Đã phản hồi sau ${item.response_time_hours} giờ`;
@@ -250,11 +270,19 @@ export function TherapistContactRequestsPage() {
                             {getFunnelLabel(item.funnel_status)}
                           </span>
                           <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
-                            Nguồn: {getSourceLabel(item.source)}
+                            Nguồn: {getNormalizedSourceLabel(item.source)}
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
+                            Intent: {getIntentLabel(item.entry_intent)}
                           </span>
                           <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
                             Nhu cầu: {item.service_interest === 'free' ? 'Miễn phí' : item.service_interest === 'paid' ? 'Có phí' : 'Chưa rõ'}
                           </span>
+                          {item.source_article_slug ? (
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
+                              Bài: /{item.source_article_slug}
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-white/40">

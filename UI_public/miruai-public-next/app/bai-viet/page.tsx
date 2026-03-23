@@ -11,7 +11,7 @@ type ArticleLibraryPageProps = {
 };
 
 export const metadata = {
-  title: "Thư viện bài viết"
+  title: "Thư viện bài viết",
 };
 
 export default async function ArticleLibraryPage({ searchParams }: ArticleLibraryPageProps) {
@@ -21,7 +21,7 @@ export default async function ArticleLibraryPage({ searchParams }: ArticleLibrar
   const filteredArticles = filterByKeyword(
     articles,
     keyword,
-    (article) => `${article.title} ${article.excerpt || ""} ${article.therapist_name || ""}`
+    (article) => `${article.title} ${article.excerpt || ""} ${article.therapist_name || ""}`,
   );
   const [featuredArticle, ...otherArticles] = filteredArticles;
 
@@ -70,7 +70,7 @@ export default async function ArticleLibraryPage({ searchParams }: ArticleLibrar
         </div>
       ) : (
         <div className="surface-card empty-card">
-          Không tìm thấy bài viết phù hợp với từ khoá hiện tại. Bạn có thể thử lại với từ khoá ngắn hơn.
+          Không tìm thấy bài viết phù hợp với từ khóa hiện tại. Bạn có thể thử lại với từ khóa ngắn hơn.
         </div>
       )}
     </div>

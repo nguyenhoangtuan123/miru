@@ -13,15 +13,29 @@ type TrackedPublicLinkProps = {
 };
 
 export function TrackedPublicLink({ href, className, children, event }: TrackedPublicLinkProps) {
+  const isExternal = /^https?:\/\//i.test(href);
+
   return (
-    <Link
-      href={href}
-      className={className}
-      onClick={() => {
-        void trackPublicEvent(event);
-      }}
-    >
-      {children}
-    </Link>
+    isExternal ? (
+      <a
+        href={href}
+        className={className}
+        onClick={() => {
+          void trackPublicEvent(event);
+        }}
+      >
+        {children}
+      </a>
+    ) : (
+      <Link
+        href={href}
+        className={className}
+        onClick={() => {
+          void trackPublicEvent(event);
+        }}
+      >
+        {children}
+      </Link>
+    )
   );
 }

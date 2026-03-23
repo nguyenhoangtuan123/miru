@@ -6,6 +6,7 @@ import { LogIn, Stethoscope, User } from 'lucide-react';
 type LocationState = {
   from?: {
     pathname?: string;
+    search?: string;
   };
 };
 
@@ -14,13 +15,19 @@ export function Login() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
+  const stateFromPath = state?.from?.pathname
+    ? `${state.from.pathname}${state.from.search ?? ''}`
+    : null;
 
   const requestedNextPath = searchParams.get('next');
   const requestedIntent = searchParams.get('intent');
-  const clientNextPath = requestedNextPath || state?.from?.pathname || '/chat';
-  const therapistNextPath = state?.from?.pathname?.startsWith('/therapist')
-    ? state.from.pathname
-    : '/therapist';
+  const clientNextPath = requestedNextPath || stateFromPath || '/chat';
+  const therapistNextPath =
+    (requestedIntent === 'therapist' && requestedNextPath?.startsWith('/therapist')
+      ? requestedNextPath
+      : null) ||
+    (stateFromPath?.startsWith('/therapist') ? stateFromPath : null) ||
+    '/therapist';
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">

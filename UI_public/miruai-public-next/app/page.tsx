@@ -10,7 +10,7 @@ import { getPublicArticles, getPublicTherapists } from "../lib/data";
 export default async function HomePage() {
   const [articles, therapists] = await Promise.all([
     getPublicArticles({ limit: 3 }),
-    getPublicTherapists(3)
+    getPublicTherapists(3),
   ]);
 
   const [featuredArticle, ...otherArticles] = articles;

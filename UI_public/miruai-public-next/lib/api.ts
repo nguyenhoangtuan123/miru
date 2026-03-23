@@ -2,11 +2,31 @@ const DEFAULT_API_BASE_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:8008"
     : "https://web-production-56fc05.up.railway.app";
-const DEFAULT_SITE_URL = "https://miruai.vercel.app";
-const DEFAULT_APP_URL = "https://app.miruai.vercel.app";
+const DEFAULT_SITE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3001"
+    : "https://miruai.vercel.app";
+const DEFAULT_APP_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://app.miruai.vercel.app";
+
+function isLocalhostUrl(value: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value.trim());
+}
 
 function normalizeUrl(value: string | undefined, fallback: string) {
-  return (value || fallback).replace(/\/+$/, "");
+  const trimmed = (value || "").trim();
+
+  if (!trimmed) {
+    return fallback.replace(/\/+$/, "");
+  }
+
+  if (process.env.NODE_ENV !== "development" && isLocalhostUrl(trimmed)) {
+    return fallback.replace(/\/+$/, "");
+  }
+
+  return trimmed.replace(/\/+$/, "");
 }
 
 export const API_BASE_URL = normalizeUrl(
@@ -25,11 +45,64 @@ export function getAppUrl() {
   return APP_URL;
 }
 
-export function buildClientLoginUrl(nextPath = "/chat") {
+export type AppLoginIntent = "client" | "therapist";
+
+export function buildAppLoginUrl(options?: {
+  nextPath?: string;
+  intent?: AppLoginIntent;
+  entry?: string;
+}) {
   const url = new URL("/auth/login", APP_URL);
-  url.searchParams.set("next", nextPath);
-  url.searchParams.set("intent", "client");
-  url.searchParams.set("entry", "public-content");
+  url.searchParams.set("next", options?.nextPath || "/chat");
+  url.searchParams.set("intent", options?.intent || "client");
+  url.searchParams.set("entry", options?.entry || "public-content");
+  return url.toString();
+}
+
+export function buildClientLoginUrl(nextPath = "/chat") {
+  return buildAppLoginUrl({
+    nextPath,
+    intent: "client",
+  });
+}
+
+export function buildTherapistLoginUrl(nextPath = "/therapist/articles") {
+  return buildAppLoginUrl({
+    nextPath,
+    intent: "therapist",
+  });
+}
+
+export function buildAppTherapistConnectUrl(options: {
+  therapistId: string;
+  source?: "article" | "profile_direct_link" | "directory" | "referral" | "therapist_invite";
+  sourceArticleSlug?: string;
+  entryIntent?: "message" | "therapy";
+  returnTo?: string;
+  anonymousId?: string;
+  sessionId?: string | null;
+}) {
+  const url = new URL("/connect/therapist", APP_URL);
+  url.searchParams.set("therapist_id", options.therapistId);
+  url.searchParams.set("source", options.source || "profile_direct_link");
+  url.searchParams.set("entry_intent", options.entryIntent || "therapy");
+
+  if (options.sourceArticleSlug) {
+    url.searchParams.set("source_article_slug", options.sourceArticleSlug);
+  }
+
+  if (options.returnTo) {
+    url.searchParams.set("return_to", options.returnTo);
+  }
+
+  if (options.anonymousId) {
+    url.searchParams.set("anonymous_id", options.anonymousId);
+  }
+
+  if (options.sessionId) {
+    url.searchParams.set("session_id", options.sessionId);
+  }
+
   return url.toString();
 }
 
@@ -37,6 +110,7 @@ export function buildPublicContentLoginUrl(options: {
   returnTo: string;
   anonymousId: string;
   sessionId?: string | null;
+  intent?: AppLoginIntent;
 }) {
   const bridgeUrl = new URL("/public-return", APP_URL);
   bridgeUrl.searchParams.set("return_to", options.returnTo);
@@ -44,7 +118,11 @@ export function buildPublicContentLoginUrl(options: {
   if (options.sessionId) {
     bridgeUrl.searchParams.set("session_id", options.sessionId);
   }
-  return buildClientLoginUrl(`${bridgeUrl.pathname}${bridgeUrl.search}`);
+  return buildAppLoginUrl({
+    nextPath: `${bridgeUrl.pathname}${bridgeUrl.search}`,
+    intent: options.intent || "client",
+    entry: "public-content",
+  });
 }
 
 export async function fetchApi<T>(
@@ -56,6 +134,28 @@ export async function fetchApi<T>(
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       next: { revalidate: options?.revalidate ?? 300 }
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function postApi<T>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<T | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      credentials: "include",
     });
     if (!response.ok) {
       return null;

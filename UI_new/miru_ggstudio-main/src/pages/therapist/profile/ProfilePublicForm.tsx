@@ -22,6 +22,17 @@ export function ProfilePublicForm({
 }: Props) {
   return (
     <section className="glass-panel rounded-[32px] border border-white/10 p-6 md:p-8">
+      <div className="mb-5">
+        <div className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-white/35">
+          Community profile studio
+        </div>
+        <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+          Nội dung hồ sơ công khai
+        </h2>
+        <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/60">
+          Những gì bạn chỉnh ở đây sẽ quyết định cách Miru Community hiển thị profile, chuyên môn, mức giá và đường dẫn kết nối của bạn.
+        </p>
+      </div>
       <div className="grid gap-4">
         <input
           value={profileForm?.display_name ?? ''}

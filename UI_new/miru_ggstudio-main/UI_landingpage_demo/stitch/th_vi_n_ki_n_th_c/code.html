@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Library | Sanctuary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error-container": "#510017",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#56497c",
+              "tertiary-fixed": "#e5dffe",
+              "surface-container-low": "#f0f0f6",
+              "on-primary-fixed-variant": "#420078",
+              "tertiary": "#5c5872",
+              "secondary-dim": "#55487a",
+              "surface-dim": "#d2d4db",
+              "secondary-container": "#d9caff",
+              "on-tertiary-container": "#524f68",
+              "error": "#b41340",
+              "error-dim": "#a70138",
+              "on-primary": "#fbefff",
+              "outline": "#75777b",
+              "secondary": "#615387",
+              "surface-container": "#e7e8ee",
+              "surface-bright": "#f6f6fb",
+              "on-secondary": "#f7f0ff",
+              "error-container": "#f74b6d",
+              "on-surface": "#2d2f33",
+              "surface-tint": "#811cd9",
+              "inverse-on-surface": "#9c9da1",
+              "on-background": "#2d2f33",
+              "on-tertiary-fixed-variant": "#5c5872",
+              "secondary-fixed": "#d9caff",
+              "inverse-primary": "#b56eff",
+              "tertiary-dim": "#504d66",
+              "primary-dim": "#7400c9",
+              "primary": "#811cd9",
+              "surface": "#f6f6fb",
+              "surface-variant": "#dbdde3",
+              "tertiary-container": "#e5dffe",
+              "primary-fixed": "#c185ff",
+              "secondary-fixed-dim": "#cbbbf6",
+              "on-error": "#ffefef",
+              "primary-container": "#c185ff",
+              "on-primary-container": "#350062",
+              "inverse-surface": "#0c0e12",
+              "surface-container-highest": "#dbdde3",
+              "on-primary-fixed": "#000000",
+              "on-secondary-fixed": "#392c5d",
+              "tertiary-fixed-dim": "#d6d1ef",
+              "on-tertiary": "#f5f0ff",
+              "on-secondary-container": "#4c3f72",
+              "on-tertiary-fixed": "#403c55",
+              "background": "#f6f6fb",
+              "on-surface-variant": "#5a5b60",
+              "surface-container-high": "#e1e2e8",
+              "outline-variant": "#acadb1",
+              "primary-fixed-dim": "#b772ff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-mesh {
+            background-color: #f6f6fb;
+            background-image: 
+                radial-gradient(at 0% 0%, #e5dffe 0px, transparent 50%),
+                radial-gradient(at 100% 0%, #c185ff 0px, transparent 50%),
+                radial-gradient(at 100% 100%, #f0f0f6 0px, transparent 50%),
+                radial-gradient(at 0% 100%, #fbefff 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="bg-mesh font-body text-on-surface">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#f6f6fb]/80 dark:bg-slate-950/80 backdrop-blur-md">
+<div class="flex items-center justify-between px-8 py-4 max-w-[1440px] mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-[#811cd9] dark:text-[#c185ff] font-headline">Sanctuary</div>
+<div class="hidden md:flex items-center space-x-8 font-['Plus_Jakarta_Sans'] font-medium tracking-tight">
+<a class="text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-all duration-300" href="#">Library</a>
+<a class="text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-all duration-300" href="#">Community</a>
+<a class="text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-all duration-300" href="#">Resources</a>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 rounded-full hover:bg-[#f0f0f6] dark:hover:bg-slate-800 transition-all duration-300 text-[#5a5b60]">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-[#f0f0f6] dark:hover:bg-slate-800 transition-all duration-300 text-[#5a5b60]">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-32 max-w-[1440px] mx-auto px-8">
+<!-- Hero Section -->
+<header class="mb-16">
+<div class="max-w-3xl">
+<h1 class="text-5xl md:text-6xl font-headline font-extrabold tracking-tighter text-on-surface mb-6">
+                    Thư viện <span class="text-primary">Kiến thức</span>
+</h1>
+<p class="text-lg text-on-surface-variant max-w-xl leading-relaxed">
+                    Khám phá kho tàng kiến thức tâm lý học được tuyển chọn kỹ lưỡng để hỗ trợ hành trình thấu hiểu bản thân và nuôi dưỡng tâm hồn của bạn.
+                </p>
+</div>
+</header>
+<!-- Search & Filter Bar -->
+<div class="flex flex-col md:flex-row gap-6 mb-12 items-center">
+<div class="relative w-full md:max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-12 pr-4 py-4 rounded-full bg-surface-container-highest/50 focus:bg-surface-container-lowest border-none ring-2 ring-primary/5 focus:ring-primary/20 transition-all placeholder:text-on-surface-variant" placeholder="Tìm kiếm bài viết, chủ đề..." type="text"/>
+</div>
+<div class="flex gap-2 overflow-x-auto pb-2 w-full no-scrollbar">
+<button class="px-6 py-2 rounded-full bg-primary text-on-primary font-medium whitespace-nowrap">Tất cả</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap shadow-sm">Sức khỏe tinh thần</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap shadow-sm">Mối quan hệ</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap shadow-sm">Phát triển bản thân</button>
+<button class="px-6 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap shadow-sm">Gia đình</button>
+</div>
+</div>
+<!-- Bento Grid Layout for Articles -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<!-- Featured Card -->
+<div class="md:col-span-8 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col md:flex-row h-full transition-transform duration-300 hover:-translate-y-1">
+<div class="md:w-1/2 h-64 md:h-auto overflow-hidden">
+<img alt="Mindfulness practice" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Abstract calming purple and white fluid patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdUv5PNX9PL6m6epnj1lNOHfaloiy737o2cATbHoH8SmpNtdT8E5Mt6d_6WicG47XcYU3dFVpBaGpy6GTDILstRbAiRysR67vVoN9jqiEAB6W1fDtYW-HHqQyxGXpOy05H8gHb_7DaEt4nG4sB-SDjzjtLunPJOMy50L4eqhJSqJetHRnN_N60E5mFiMVziHyUXOzN8eZLogzuJw5dgTDlPcd9IBIRil1dFr5t64vQ45qjSypisWU-u25mu_Uv1lvoj_q6rOkCqSlJ"/>
+</div>
+<div class="md:w-1/2 p-10 flex flex-col justify-center">
+<span class="text-xs font-bold uppercase tracking-widest text-primary mb-4">Tiêu điểm</span>
+<h2 class="text-3xl font-headline font-bold text-on-surface mb-4 leading-tight">Nghệ thuật của sự hiện diện: Chữa lành qua Mindfulness</h2>
+<p class="text-on-surface-variant mb-6 line-clamp-3">Làm thế nào để duy trì sự bình yên trong một thế giới đầy biến động? Khám phá những phương pháp thực hành chánh niệm đơn giản mỗi ngày.</p>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container"></div>
+<div>
+<p class="text-sm font-bold">Dr. Minh Anh</p>
+<p class="text-xs text-on-surface-variant">12 phút đọc</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Small Card 1 -->
+<div class="md:col-span-4 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] p-8 h-full transition-transform duration-300 hover:-translate-y-1 flex flex-col">
+<div class="mb-6 rounded-2xl overflow-hidden h-48">
+<img alt="Healthy relationships" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Two silhouettes sharing a soft light together" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDirSpijTNyAkiHoZdznsRRoBjGVyGsOorim_0fa-w5FkBaSes-Kj0VRmQ_TNaiAO9JXvPRAXLv0K_ytfSdK3H_SXW1a4loRs2KZ6QqE78F0w1XnWhnYDu5R24pG-Uee3ukjwB5bkw4AQhOGAQtkbBRe1s2Al9gFFOCvHd_C3og7CWGv--u4iHzWkkB7ogJo3wP_xbSYodkUIGRFSNvWA74kMwX77445s858QEuV8oWmwvRv9-8DeRJtH4muO5Mrp4S45Nkj0UEQaXg"/>
+</div>
+<span class="text-xs font-bold text-tertiary mb-3">Mối quan hệ</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-3 leading-snug">Thiết lập ranh giới lành mạnh trong tình yêu</h3>
+<p class="text-sm text-on-surface-variant mb-6 flex-grow">Học cách nói "không" mà không cảm thấy tội lỗi để bảo vệ năng lượng cá nhân.</p>
+<div class="flex items-center justify-between mt-auto">
+<span class="text-xs font-medium text-on-surface-variant">8 phút đọc</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Small Card 2 -->
+<div class="md:col-span-4 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] p-8 h-full transition-transform duration-300 hover:-translate-y-1 flex flex-col">
+<div class="mb-6 rounded-2xl overflow-hidden h-48">
+<img alt="Self development" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Person climbing a stylized staircase of light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCf_x6pb5M6gUgftCGuE4Q4hi-_NiAV98XH4P9eJLBXm_dbuCb5njvysa70FMoD9tatg5Lp99NKztteTfzbbf9IAS7xeVx2Kk_tjqULZ8V1VQgqFnR4vd-8VzUvEol7Q52khUuZDZYBvdiKcKAKzmFM3a2Yv0NABt9zpqIt7qotEQxQEBF308Yg_d-72vKDk47VoKf08Q0Lz8VLmjr6uz-m4pP4bK3TnRg5AJvEwwWz6jPqWwK7CeuKjGSqpUEiKf9Jog15nv46mT4"/>
+</div>
+<span class="text-xs font-bold text-tertiary mb-3">Phát triển bản thân</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-3 leading-snug">Vượt qua hội chứng "Kẻ mạo danh"</h3>
+<p class="text-sm text-on-surface-variant mb-6 flex-grow">Nhận diện và đối mặt với cảm giác không xứng đáng trong sự nghiệp.</p>
+<div class="flex items-center justify-between mt-auto">
+<span class="text-xs font-medium text-on-surface-variant">10 phút đọc</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Wide Card -->
+<div class="md:col-span-8 group cursor-pointer">
+<div class="bg-primary/5 rounded-[2rem] p-10 h-full flex flex-col md:flex-row gap-8 items-center border border-white/20 backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
+<div class="flex-1">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-primary text-[10px] font-bold uppercase mb-6 shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            Gợi ý bởi AI
+                        </div>
+<h3 class="text-2xl font-headline font-bold text-on-surface mb-4">Lộ trình 21 ngày xây dựng sự tự tin bền vững</h3>
+<p class="text-on-surface-variant mb-6">Dựa trên lịch sử quan tâm của bạn, chúng tôi đã biên soạn một lộ trình riêng biệt để giúp bạn phát triển khả năng giao tiếp.</p>
+<button class="px-8 py-3 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold text-sm shadow-lg shadow-primary/20">Bắt đầu ngay</button>
+</div>
+<div class="w-48 h-48 rounded-full bg-white p-4 shadow-xl">
+<div class="w-full h-full rounded-full overflow-hidden bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-6xl text-primary" data-icon="psychology">psychology</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Small Card 3 -->
+<div class="md:col-span-4 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] p-8 h-full transition-transform duration-300 hover:-translate-y-1 flex flex-col">
+<div class="mb-6 rounded-2xl overflow-hidden h-48">
+<img alt="Mental health" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Peaceful yoga pose against soft sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEwk_o3qIPwEx1EOLuYI7rhyYTaXXkqS75pNLSwB3npjiThD1SYOeWUn1zPX1R3FhBV3m6q4B5GrC9FyhiETzbhJuPa3t1dfuCzEKLGEyUENQGhfgQ38PN8NNUMGdlAeODvfa91udakksefLW-FJxUb1BblVSB-qSkiGFOo_kHBFFK87yzM6r68e-gFzH-cuQPLQYkUZz8EFT9UYmRxf3h1XBQlYQOxScG4hrJxoJ-zHu69sUok1S5ENylLplTCjT7Aohz4YNZMNRn"/>
+</div>
+<span class="text-xs font-bold text-tertiary mb-3">Sức khỏe tinh thần</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-3 leading-snug">Giấc ngủ và Sức khỏe tâm thần: Mối liên hệ mật thiết</h3>
+<p class="text-sm text-on-surface-variant mb-6 flex-grow">Hiểu về cơ chế sinh học đằng sau giấc ngủ và tác động của nó tới cảm xúc.</p>
+<div class="flex items-center justify-between mt-auto">
+<span class="text-xs font-medium text-on-surface-variant">15 phút đọc</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Small Card 4 -->
+<div class="md:col-span-4 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] p-8 h-full transition-transform duration-300 hover:-translate-y-1 flex flex-col">
+<div class="mb-6 rounded-2xl overflow-hidden h-48">
+<img alt="Journaling" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Open notebook with a pen and lavender flowers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDR5b8VXqMCNPgIx2OtR0B14p2QmIYu8dLJvxwonuZWe8_xLmEF80r6jnxUnCWX-GjkCRazyUukQSV848eZ3CA252s9bKWwYTYxyWH698vQHD_koiOIpoyGk9Uosp4zA54XLrK4vguWuI8XsiZ4b8LcHJkbLPxo9PXNxmCE-7726XwNLeV2HfIxXAF9FN2g-7CRpvSziCdBNOnxcqXLyDtBayJMvOnfkXeuNvXOFTNfl_VDR0ArEy6jw4KLsVggHtHPdGZjzBQDc1bO"/>
+</div>
+<span class="text-xs font-bold text-tertiary mb-3">Phát triển bản thân</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-3 leading-snug">Liệu pháp Viết: Trút bỏ gánh nặng qua trang giấy</h3>
+<p class="text-sm text-on-surface-variant mb-6 flex-grow">Cách bắt đầu thói quen viết nhật ký để giải tỏa căng thẳng hiệu quả.</p>
+<div class="flex items-center justify-between mt-auto">
+<span class="text-xs font-medium text-on-surface-variant">7 phút đọc</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Small Card 5 -->
+<div class="md:col-span-4 group cursor-pointer">
+<div class="bg-surface-container-lowest rounded-[2rem] p-8 h-full transition-transform duration-300 hover:-translate-y-1 flex flex-col">
+<div class="mb-6 rounded-2xl overflow-hidden h-48">
+<img alt="Compassion" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close up of hands holding a small glowing light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4jldnZ3NpusN63y4DhNPXVkshLJxw-xE-CLIpP3Tbp8eDUvxM9R55mNq7Mf-2mZpyD50nzk8eC_Ki7sOXZNsXSFw-D6j98TUTqMSedu2szAwxNpIoN42q95ZJ-Mz0tnzV8LvpG7OJ6g2KP2TBHTNw1BzSKdtHtd36ZT_jPfodB1vfUiFUZYTwWyllXpz2UUOp9OfM64JA5lzGbn_h1jzgoxfgs8qfoW4FThImAT0vTTMz1q2g_Ww1KChCEYlJjNWL7qCCk5c4eJEJ"/>
+</div>
+<span class="text-xs font-bold text-tertiary mb-3">Mối quan hệ</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-3 leading-snug">Lòng trắc ẩn: Chìa khóa cho sự thấu hiểu</h3>
+<p class="text-sm text-on-surface-variant mb-6 flex-grow">Làm sao để nuôi dưỡng sự đồng cảm trong các cuộc hội thoại khó khăn.</p>
+<div class="flex items-center justify-between mt-auto">
+<span class="text-xs font-medium text-on-surface-variant">9 phút đọc</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Load More Section -->
+<div class="mt-20 flex justify-center">
+<button class="px-10 py-4 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-colors font-bold text-on-surface flex items-center gap-2 group">
+                Xem thêm bài viết
+                <span class="material-symbols-outlined group-hover:rotate-90 transition-transform" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full mt-20 bg-[#f0f0f6] dark:bg-slate-900">
+<div class="max-w-7xl mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+<div>
+<div class="text-lg font-bold text-[#811cd9] mb-4">Sanctuary</div>
+<p class="font-['Manrope'] text-sm leading-relaxed text-[#5a5b60] dark:text-slate-400 max-w-sm">
+                    © 2024 Sanctuary AI. Designed for Cognitive Ease. Nơi tìm thấy sự bình yên và thấu hiểu trong tâm hồn.
+                </p>
+</div>
+<div class="flex flex-wrap gap-x-8 gap-y-4 justify-start md:justify-end">
+<a class="font-['Manrope'] text-sm text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-colors" href="#">Privacy Policy</a>
+<a class="font-['Manrope'] text-sm text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-colors" href="#">Terms of Service</a>
+<a class="font-['Manrope'] text-sm text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-colors" href="#">Mental Health Resources</a>
+<a class="font-['Manrope'] text-sm text-[#5a5b60] dark:text-slate-400 hover:text-[#811cd9] transition-colors" href="#">Crisis Support</a>
+</div>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-[2rem] md:hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-2xl">
+<div class="flex justify-around items-center px-6 pb-6 pt-3">
+<div class="flex flex-col items-center justify-center text-[#5a5b60] dark:text-slate-400 transition-transform hover:scale-110">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Manrope'] text-[11px] font-semibold mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#f0f0f6] dark:bg-slate-800 text-[#811cd9] rounded-2xl px-5 py-2 transition-transform hover:scale-110">
+<span class="material-symbols-outlined" data-icon="menu_book" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-['Manrope'] text-[11px] font-semibold mt-1">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#5a5b60] dark:text-slate-400 transition-transform hover:scale-110">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-['Manrope'] text-[11px] font-semibold mt-1">AI Chat</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#5a5b60] dark:text-slate-400 transition-transform hover:scale-110">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-['Manrope'] text-[11px] font-semibold mt-1">Community</span>
+</div>
+</div>
+</nav>
+<!-- FAB (Suppressed on Library/Details) -->
+</body></html>

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ClipboardList, BrainCircuit, Home, MessageCircle, Settings, Stethoscope } from 'lucide-react';
+import { ClipboardList, BrainCircuit, Globe, Home, MessageCircle, Settings, Stethoscope } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { prefetchClientRouteData } from '../queries/appQueries';
+import { PUBLIC_SITE_URL } from '../services/api';
 
 type GestureMode = 'open' | 'close';
 
@@ -28,6 +29,7 @@ export function BottomNav() {
   const navItems = [
     { icon: Home, label: 'Trang chủ', path: '/' },
     { icon: MessageCircle, label: 'Trò chuyện', path: '/chat' },
+    { icon: Globe, label: 'Community', path: PUBLIC_SITE_URL, external: true },
     { icon: ClipboardList, label: 'Đánh giá', path: '/assessments' },
     { icon: BrainCircuit, label: 'Ký ức', path: '/memories' },
     { icon: Stethoscope, label: 'Trị liệu', path: '/therapy' },
@@ -100,8 +102,25 @@ export function BottomNav() {
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive =
-                      location.pathname === item.path ||
-                      (item.path !== '/' && location.pathname.startsWith(item.path));
+                      !item.external &&
+                      (location.pathname === item.path ||
+                        (item.path !== '/' && location.pathname.startsWith(item.path)));
+
+                    const cls = cn(
+                      'flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center transition-all duration-300',
+                      isActive
+                        ? 'bg-miru-primary/18 text-miru-primary'
+                        : 'text-white/60 hover:bg-white/6 hover:text-white/90'
+                    );
+
+                    if (item.external) {
+                      return (
+                        <a key={item.path} href={item.path} className={cls} onClick={() => setIsMobileExpanded(false)}>
+                          <Icon size={22} strokeWidth={2} />
+                          <span className="text-[11px] font-medium leading-4">{item.label}</span>
+                        </a>
+                      );
+                    }
 
                     return (
                       <NavLink
@@ -110,12 +129,7 @@ export function BottomNav() {
                         onClick={() => setIsMobileExpanded(false)}
                         onMouseEnter={() => handlePrefetch(item.path)}
                         onFocus={() => handlePrefetch(item.path)}
-                        className={cn(
-                          'flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl px-3 py-3 text-center transition-all duration-300',
-                          isActive
-                            ? 'bg-miru-primary/18 text-miru-primary'
-                            : 'text-white/60 hover:bg-white/6 hover:text-white/90'
-                        )}
+                        className={cls}
                       >
                         <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                         <span className="text-[11px] font-medium leading-4">{item.label}</span>
@@ -157,8 +171,25 @@ export function BottomNav() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
-              location.pathname === item.path ||
-              (item.path !== '/' && location.pathname.startsWith(item.path));
+              !item.external &&
+              (location.pathname === item.path ||
+                (item.path !== '/' && location.pathname.startsWith(item.path)));
+
+            const cls = cn(
+              'group flex flex-col items-center gap-2 rounded-2xl p-3 transition-all duration-300',
+              isActive
+                ? 'bg-miru-primary/20 text-miru-primary'
+                : 'text-white/50 hover:bg-white/5 hover:text-white/80'
+            );
+
+            if (item.external) {
+              return (
+                <a key={item.path} href={item.path} className={cls} title={item.label}>
+                  <Icon size={28} strokeWidth={2} className="transition-transform group-hover:scale-110" />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </a>
+              );
+            }
 
             return (
               <NavLink
@@ -166,12 +197,7 @@ export function BottomNav() {
                 to={item.path}
                 onMouseEnter={() => handlePrefetch(item.path)}
                 onFocus={() => handlePrefetch(item.path)}
-                className={cn(
-                  'group flex flex-col items-center gap-2 rounded-2xl p-3 transition-all duration-300',
-                  isActive
-                    ? 'bg-miru-primary/20 text-miru-primary'
-                    : 'text-white/50 hover:bg-white/5 hover:text-white/80'
-                )}
+                className={cls}
                 title={item.label}
               >
                 <Icon
