@@ -6,6 +6,7 @@ function isAllowedReturnOrigin(origin: string) {
   const allowedReturnOrigins = new Set([
     window.location.origin,
     'https://miruai.vercel.app',
+    'https://miruai-web.vercel.app',
     'https://app.miruai.vercel.app',
     'https://miruggstudio-main.vercel.app',
     'http://localhost:3001',

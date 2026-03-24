@@ -51,7 +51,7 @@ export function TherapistLayout() {
       </a>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden">
-        <div className="glass-panel mx-4 mb-4 flex items-center justify-between rounded-full px-4 py-3 shadow-lg">
+        <div className="glass-panel mx-4 mb-4 flex items-center gap-2 overflow-x-auto rounded-full px-4 py-3 shadow-lg scrollbar-none">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -65,7 +65,7 @@ export function TherapistLayout() {
                 onMouseEnter={() => handlePrefetch(item.path)}
                 onFocus={() => handlePrefetch(item.path)}
                 className={cn(
-                  'flex min-w-0 flex-col items-center gap-1 rounded-xl p-2 text-center transition-all duration-300',
+                  'flex min-w-0 shrink-0 flex-col items-center gap-1 rounded-xl p-2 text-center transition-all duration-300',
                   isActive ? 'text-miru-primary' : 'text-white/50 hover:text-white/80'
                 )}
               >
@@ -83,7 +83,7 @@ export function TherapistLayout() {
             <span className="text-xl font-bold text-miru-primary">M</span>
           </div>
 
-          <div className="flex w-full flex-1 flex-col gap-5">
+          <div className="flex w-full min-h-0 flex-1 flex-col gap-3 overflow-y-auto scrollbar-none">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive =

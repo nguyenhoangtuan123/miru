@@ -76,10 +76,23 @@ export function getViewerState(): ViewerState {
   const win = safeWindow();
   const anonymous_id = getOrCreateAnonymousId();
   const session_id = getOrCreateSessionId();
-  const authUser = win ? win.localStorage.getItem("miru_public_user") : null;
-  const cookieUser = readCookie("miru_public_user_id");
-  const appUser = readCookie("miru_user_id");
-  const user_id = authUser || cookieUser || appUser || null;
+
+  // Use real profile ID from backend-synced auth state
+  let user_id: string | null = null;
+  try {
+    const { getPublicAuthState } = require("./public-auth");
+    const authState = getPublicAuthState();
+    if (authState?.profile?.id) {
+      user_id = authState.profile.id;
+    }
+  } catch {
+    // fallback
+  }
+  if (!user_id) {
+    const cookieUser = readCookie("miru_public_user_id");
+    const appUser = readCookie("miru_user_id");
+    user_id = cookieUser || appUser || null;
+  }
 
   return {
     anonymous_id,

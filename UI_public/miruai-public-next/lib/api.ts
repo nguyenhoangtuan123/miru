@@ -5,11 +5,11 @@ const DEFAULT_API_BASE_URL =
 const DEFAULT_SITE_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3001"
-    : "https://miruai.vercel.app";
+    : "https://miruai-web.vercel.app";
 const DEFAULT_APP_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : "https://app.miruai.vercel.app";
+    : "https://miruai.vercel.app";
 
 function isLocalhostUrl(value: string) {
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value.trim());

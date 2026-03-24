@@ -659,6 +659,12 @@ class PublicContentService:
     ) -> Dict[str, Any]:
         therapist_ids = self._article_therapist_ids_for_user(user_id, email=email, name=name)
         if not therapist_ids:
+            therapist_ids = []
+        # Admin reviewers also see community hub questions
+        is_admin = self._is_admin_reviewer(email)
+        if is_admin and "__miru_community__" not in therapist_ids:
+            therapist_ids = list(therapist_ids) + ["__miru_community__"]
+        if not therapist_ids:
             return {"available": True, "questions": []}
         rows = self._select_rows(
             PUBLIC_QUESTIONS_TABLE,
@@ -672,15 +678,27 @@ class PublicContentService:
         for row in rows:
             slug = self._normalize_text(row.get("article_slug"), max_length=240) or ""
             article = article_cache.get(slug)
-            if article is None and slug:
+            if article is None and slug and slug != "__community_hub__":
                 try:
                     article = self.article_service.get_public_article(slug)
                 except Exception:
                     article = None
                 if article:
                     article_cache[slug] = article
+            # For community hub questions, use a synthetic article
+            if slug == "__community_hub__" and article is None:
+                article = {"title": "Câu hỏi cộng đồng", "slug": "__community_hub__"}
+                article_cache[slug] = article
             questions.append(self._serialize_question_row(row, public_view=False, article=article))
         return {"available": True, "questions": questions}
+
+    def _is_admin_reviewer(self, email: str) -> bool:
+        """Check if a user is an admin reviewer."""
+        try:
+            from therapist_verification_service import get_therapist_verification_service
+            return get_therapist_verification_service().is_admin_reviewer(email)
+        except Exception:
+            return False
 
     def _assert_question_owner(
         self,
@@ -690,8 +708,11 @@ class PublicContentService:
         email: str = "",
         name: str = "",
     ) -> None:
-        therapist_ids = self._article_therapist_ids_for_user(user_id, email=email, name=name)
+        # Admin reviewers can manage community hub questions
         question_therapist_id = self._normalize_text(question_row.get("therapist_id"), max_length=160)
+        if question_therapist_id == "__miru_community__" and self._is_admin_reviewer(email):
+            return
+        therapist_ids = self._article_therapist_ids_for_user(user_id, email=email, name=name)
         if not therapist_ids or question_therapist_id not in therapist_ids:
             raise PublicContentValidationError("Ban khong co quyen voi cau hoi nay")
 

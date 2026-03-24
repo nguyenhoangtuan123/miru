@@ -270,6 +270,7 @@ async def get_my_therapist_article_analytics(request: Request):
 
 
 @router.get("/api/therapist/articles/questions/me")
+@router.get("/api/therapist/articles/me/questions")
 async def get_my_article_questions(request: Request):
     current_user = await _require_current_user(request)
     try:
@@ -327,3 +328,82 @@ async def hide_my_article_question(question_id: str, request: Request):
     except Exception as exc:
         _raise_service_error(exc)
     return {"success": True, "question": question}
+
+
+# ── Community Hub Q&A ────────────────────────────────────
+
+
+class CommunityQuestionPayload(BaseModel):
+    public_name: str
+    question_text: str
+    topic_tags: List[str] = Field(default_factory=list)
+    source: str = "community_hub"
+
+
+@router.post("/api/public/community/questions")
+async def submit_community_question(payload: CommunityQuestionPayload, request: Request):
+    """Submit a community hub question (requires auth)."""
+    current_user = await _require_current_user(request)
+    user_id = current_user["resolved_user_id"]
+
+    try:
+        import uuid
+        from datetime import datetime, timezone
+
+        from database import DatabaseManager
+
+        db = DatabaseManager()
+        question_id = str(uuid.uuid4())
+        now_value = datetime.now(timezone.utc).isoformat()
+
+        row = db.supabase.table("public_article_questions").insert({
+            "question_id": question_id,
+            "article_slug": "__community_hub__",
+            "therapist_id": "__miru_community__",
+            "user_id": user_id,
+            "anonymous_id": user_id,
+            "public_display_name": payload.public_name or "Người dùng Miru",
+            "question_text": payload.question_text,
+            "answer_text": None,
+            "status": "pending_review",
+            "questioned_at": now_value,
+            "published_at": None,
+            "answered_at": None,
+            "hidden_at": None,
+            "created_at": now_value,
+            "updated_at": now_value,
+        }).execute()
+
+        return {
+            "success": True,
+            "question_id": question_id,
+            "status": "pending_review",
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to submit question: {exc}")
+
+
+@router.get("/api/public/community/questions")
+async def list_community_questions(
+    limit: int = Query(default=20, le=50),
+    offset: int = Query(default=0, ge=0),
+):
+    """List published community hub questions."""
+    try:
+        from database import DatabaseManager
+
+        db = DatabaseManager()
+        result = (
+            db.supabase.table("public_article_questions")
+            .select("*")
+            .eq("article_slug", "__community_hub__")
+            .in_("status", ["published", "answered"])
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+
+        return {"success": True, "questions": result.data or []}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch questions: {exc}")
+

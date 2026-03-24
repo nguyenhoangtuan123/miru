@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-import { APP_URL, buildAppLoginUrl, buildPublicContentLoginUrl, SITE_URL } from "../../lib/api";
-import { captureTokenFromUrl, getPublicAuthState, logoutPublic } from "../../lib/public-auth";
+import { buildPublicContentLoginUrl, SITE_URL } from "../../lib/api";
+import { captureTokenFromUrl, logoutPublic, syncProfile } from "../../lib/public-auth";
 import { getViewerState } from "../../lib/public-events";
+import { computeStageCta, type StageCta } from "../../lib/stage-cta";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
 export function PublicHeader() {
@@ -16,41 +17,73 @@ export function PublicHeader() {
       ? "/therapists"
       : pathname?.startsWith("/bai-viet")
         ? "/bai-viet"
-        : "/";
+        : pathname?.startsWith("/hoi-dap")
+          ? "/hoi-dap"
+          : "/";
 
-  const [authState, setAuthState] = useState<{ name: string } | null>(null);
+  // Always start with anonymous CTA for SSR to avoid hydration mismatch
+  const [cta, setCta] = useState<StageCta>(() => computeStageCta("anonymous"));
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Capture token from URL if returning from login
-    captureTokenFromUrl();
-    // Check stored auth
-    const state = getPublicAuthState();
-    if (state) {
-      setAuthState({ name: state.user.name });
+    setMounted(true);
+    const captured = captureTokenFromUrl();
+    if (captured) {
+      syncProfile().then(() => {
+        setCta(computeStageCta());
+      });
+    } else {
+      setCta(computeStageCta());
     }
   }, [pathname]);
 
+  // For anonymous stage, build a tracked login URL with viewer context
   const currentPageUrl = `${SITE_URL}${pathname || "/"}`;
-
-  const [clientLoginHref, setClientLoginHref] = useState(() =>
-    buildAppLoginUrl({ nextPath: "/chat", intent: "client" }),
-  );
+  const [loginHref, setLoginHref] = useState(cta.primary.href);
 
   useEffect(() => {
-    const viewer = getViewerState();
-    setClientLoginHref(
-      buildPublicContentLoginUrl({
-        returnTo: currentPageUrl,
-        anonymousId: viewer.anonymous_id,
-        sessionId: viewer.session_id,
-      }),
-    );
-  }, [currentPageUrl]);
+    if (cta.stage === "anonymous") {
+      const viewer = getViewerState();
+      setLoginHref(
+        buildPublicContentLoginUrl({
+          returnTo: currentPageUrl,
+          anonymousId: viewer.anonymous_id,
+          sessionId: viewer.session_id,
+        }),
+      );
+    }
+  }, [currentPageUrl, cta.stage]);
 
   const handleLogout = useCallback(() => {
     logoutPublic();
-    setAuthState(null);
+    setCta(computeStageCta());
   }, []);
+
+  const renderCtaButton = (btn: StageCta["primary"], isLogin = false) => {
+    const className = btn.style === "primary" ? "button-primary" : "button-secondary";
+    const href = isLogin ? loginHref : btn.href;
+
+    if (btn.external) {
+      return (
+        <TrackedPublicLink
+          href={href}
+          className={className}
+          event={{
+            event_type: "header_cta_click",
+            metadata: { label: btn.label, stage: cta.stage },
+          }}
+        >
+          {btn.label}
+        </TrackedPublicLink>
+      );
+    }
+
+    return (
+      <Link href={href} className={className}>
+        {btn.label}
+      </Link>
+    );
+  };
 
   return (
     <header className="site-header">
@@ -69,48 +102,30 @@ export function PublicHeader() {
           <Link href="/bai-viet" className={activePath === "/bai-viet" ? "is-active" : undefined}>
             Bài viết
           </Link>
+          <Link href="/hoi-dap" className={activePath === "/hoi-dap" ? "is-active" : undefined}>
+            Câu hỏi
+          </Link>
         </nav>
 
         <div className="button-row">
-          {authState ? (
-            <>
-              <span className="chip" style={{ fontWeight: 600 }}>
-                👋 {authState.name}
-              </span>
-              <a href={`${APP_URL}/chat`} className="button-primary" style={{ textDecoration: "none" }}>
-                Vào app
-              </a>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={handleLogout}
-              >
-                Đăng xuất
-              </button>
-            </>
-          ) : (
-            <>
-              <TrackedPublicLink
-                href={clientLoginHref}
-                className="button-primary"
-                event={{
-                  event_type: "article_to_app_login",
-                  metadata: { source: "header", intent: "client" },
-                }}
-              >
-                Đăng nhập / vào app
-              </TrackedPublicLink>
-              <TrackedPublicLink
-                href={buildAppLoginUrl({ nextPath: "/therapist/articles", intent: "therapist" })}
-                className="button-secondary"
-                event={{
-                  event_type: "article_to_app_login",
-                  metadata: { source: "header", intent: "therapist" },
-                }}
-              >
-                Viết bài cho Miru
-              </TrackedPublicLink>
-            </>
+          {cta.greeting && (
+            <span className="chip" style={{ fontWeight: 600 }}>
+              {cta.greeting}
+            </span>
+          )}
+
+          {renderCtaButton(cta.primary, cta.stage === "anonymous")}
+
+          {cta.secondary && renderCtaButton(cta.secondary)}
+
+          {cta.showLogout && (
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={handleLogout}
+            >
+              Đăng xuất
+            </button>
           )}
         </div>
       </div>

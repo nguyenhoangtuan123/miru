@@ -10,9 +10,13 @@ export function TherapistGuard({ children }: { children: React.ReactNode }) {
   const [isRechecking, setIsRechecking] = useState(false);
   const [hasRechecked, setHasRechecked] = useState(false);
 
+  // Extract primitive to avoid object reference triggering re-renders
+  const userRole = user?.role;
+  const hasUser = Boolean(user);
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (loading || !token || !user || user.role === 'therapist' || hasRechecked) {
+    if (loading || !token || !hasUser || userRole === 'therapist' || hasRechecked) {
       return;
     }
 
@@ -35,7 +39,7 @@ export function TherapistGuard({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [checkAuth, hasRechecked, loading, user]);
+  }, [checkAuth, hasRechecked, loading, userRole, hasUser]);
 
   if (loading || isRechecking || (user && consentLoading)) {
     return (

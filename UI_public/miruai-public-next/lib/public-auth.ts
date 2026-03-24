@@ -1,12 +1,23 @@
-const TOKEN_KEY = "miru_public_token";
-const USER_KEY = "miru_public_user";
+import { API_BASE_URL } from "./api";
 
-type PublicUser = {
+const TOKEN_KEY = "miru_public_token";
+const PROFILE_KEY = "miru_public_profile";
+
+// ── Types ──────────────────────────────────────────────
+export type AuthStage = "anonymous" | "client" | "therapist";
+export type TherapistStatus = "not_submitted" | "pending" | "approved" | "rejected";
+
+export interface PublicAuthProfile {
+    id: string;
     name: string;
     email: string;
-};
+    role: "client" | "therapist" | null;
+    therapist_status: TherapistStatus | null;
+    can_access_therapist_portal: boolean;
+    is_admin_reviewer: boolean;
+}
 
-/** Decode JWT payload without validation (client-side display only). */
+// ── JWT helpers ────────────────────────────────────────
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
     try {
         const parts = token.split(".");
@@ -18,9 +29,51 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     }
 }
 
+function isTokenExpired(token: string): boolean {
+    const payload = decodeJwtPayload(token);
+    if (!payload || typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 < Date.now();
+}
+
+// ── Profile sync from backend ──────────────────────────
+async function fetchProfileFromBackend(token: string): Promise<PublicAuthProfile | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/user/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+            if (res.status === 401) {
+                logoutPublic();
+            }
+            return null;
+        }
+        const data = await res.json();
+        const u = data.user;
+        if (!u) return null;
+
+        const profile: PublicAuthProfile = {
+            id: u.id || "",
+            name: u.name || u.email?.split("@")[0] || "User",
+            email: u.email || "",
+            role: u.role || null,
+            therapist_status: u.therapist_status || null,
+            can_access_therapist_portal: u.can_access_therapist_portal ?? false,
+            is_admin_reviewer: u.is_admin_reviewer ?? false,
+        };
+
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        return profile;
+    } catch (err) {
+        console.error("[public-auth] Failed to fetch profile:", err);
+        return null;
+    }
+}
+
+// ── Token capture ──────────────────────────────────────
 /**
  * Call on page load: reads `miru_token` from URL, stores in localStorage,
- * then removes from URL bar (clean URL).
+ * fetches full profile from backend, then cleans URL.
+ * Returns true if a token was captured.
  */
 export function captureTokenFromUrl(): boolean {
     if (typeof window === "undefined") return false;
@@ -32,52 +85,80 @@ export function captureTokenFromUrl(): boolean {
     // Store token
     localStorage.setItem(TOKEN_KEY, token);
 
-    // Extract user info from JWT
+    // Build a temporary profile from JWT until backend sync completes
     const payload = decodeJwtPayload(token);
     if (payload) {
         const meta = (payload.user_metadata ?? {}) as Record<string, unknown>;
-        const user: PublicUser = {
-            name:
-                String(payload.name || meta.name || payload.email || "").split("@")[0] || "User",
+        const tempProfile: PublicAuthProfile = {
+            id: String(payload.sub || ""),
+            name: String(payload.name || meta.name || payload.email || "").split("@")[0] || "User",
             email: String(payload.email || ""),
+            role: null,
+            therapist_status: null,
+            can_access_therapist_portal: false,
+            is_admin_reviewer: false,
         };
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(tempProfile));
     }
 
-    // Clean URL — remove miru_token param
+    // Clean URL
     url.searchParams.delete("miru_token");
     window.history.replaceState({}, "", url.toString());
+
+    // Async: fetch real profile from backend (fire-and-forget)
+    void fetchProfileFromBackend(token);
 
     return true;
 }
 
-/** Get current auth state. Returns null if not logged in. */
-export function getPublicAuthState(): { token: string; user: PublicUser } | null {
+/**
+ * Sync profile from backend. Call this after page load to ensure
+ * the profile is up-to-date (e.g., after role changes).
+ */
+export async function syncProfile(): Promise<PublicAuthProfile | null> {
+    const token = getPublicToken();
+    if (!token) return null;
+    return fetchProfileFromBackend(token);
+}
+
+// ── Auth state getters ─────────────────────────────────
+
+/** Get current auth profile. Returns null if not logged in or token expired. */
+export function getPublicAuthState(): { token: string; profile: PublicAuthProfile } | null {
     if (typeof window === "undefined") return null;
 
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
 
-    // Check if token is expired
-    const payload = decodeJwtPayload(token);
-    if (payload && typeof payload.exp === "number") {
-        if (payload.exp * 1000 < Date.now()) {
-            logoutPublic();
-            return null;
-        }
+    if (isTokenExpired(token)) {
+        logoutPublic();
+        return null;
     }
 
-    let user: PublicUser = { name: "User", email: "" };
+    let profile: PublicAuthProfile | null = null;
     try {
-        const stored = localStorage.getItem(USER_KEY);
+        const stored = localStorage.getItem(PROFILE_KEY);
         if (stored) {
-            user = JSON.parse(stored) as PublicUser;
+            profile = JSON.parse(stored) as PublicAuthProfile;
         }
     } catch {
         // ignore
     }
 
-    return { token, user };
+    if (!profile) {
+        // Fallback: minimal profile
+        profile = { id: "", name: "User", email: "", role: null, therapist_status: null, can_access_therapist_portal: false, is_admin_reviewer: false };
+    }
+
+    return { token, profile };
+}
+
+/** Get the current auth stage. */
+export function getAuthStage(): AuthStage {
+    const state = getPublicAuthState();
+    if (!state) return "anonymous";
+    if (state.profile.role === "therapist") return "therapist";
+    return "client";
 }
 
 /** Get stored token for API calls. */
@@ -86,9 +167,11 @@ export function getPublicToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
 }
 
-/** Clear auth state. */
+/** Clear all public auth state. */
 export function logoutPublic() {
     if (typeof window === "undefined") return;
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(PROFILE_KEY);
+    // Legacy cleanup
+    localStorage.removeItem("miru_public_user");
 }

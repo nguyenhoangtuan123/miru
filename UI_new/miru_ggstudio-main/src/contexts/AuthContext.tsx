@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../services/api';
 import { getCurrentUser, setUserRole } from '../services/backend';
 
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isSyncingRole, setIsSyncingRole] = useState(false);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('access_token');
 
     if (!token) {
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return null;
-  };
+  }, []);
 
   useEffect(() => {
     void checkAuth();
