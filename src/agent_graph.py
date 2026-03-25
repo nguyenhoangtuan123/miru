@@ -240,16 +240,19 @@ def memory_retrieval_node(state: AgentState) -> AgentState:
 
 
 async def parallel_init_node(state: AgentState) -> AgentState:
-    """Chạy song song crisis_check và memory_retrieval để tối ưu tốc độ."""
+    """Khởi tạo context cho agent theo cách an toàn với môi trường deploy.
+
+    Trước đây node này dùng ``asyncio.to_thread`` để chạy crisis + memory song song.
+    Trên một số runtime bị giới hạn thread, Mem0/PostHog và executor phụ có thể cùng
+    cố mở thread mới, dẫn tới ``RuntimeError: can't start new thread`` và làm hỏng
+    toàn bộ vòng chat. Ở đây ưu tiên độ ổn định hơn vài ms hiệu năng.
+    """
     import time
     start_time = time.time()
-    
-    # Chạy cả 2 task đồng thời
-    crisis_task = asyncio.to_thread(crisis_check_node, state.copy())
-    memory_task = asyncio.to_thread(memory_retrieval_node, state.copy())
-    
-    crisis_result, memory_result = await asyncio.gather(crisis_task, memory_task)
-    
+
+    crisis_result = crisis_check_node(state.copy())
+    memory_result = memory_retrieval_node(state.copy())
+
     # Merge kết quả
     state["crisis_level"] = crisis_result["crisis_level"]
     state["crisis_detected"] = crisis_result["crisis_detected"]

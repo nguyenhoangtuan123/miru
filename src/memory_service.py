@@ -315,17 +315,26 @@ class MemoryService:
         """
         if self.memory is None:
             return []
-        
-        result = self.memory.search(
-            query=query, 
-            user_id=user_id, 
-            limit=limit
-        )
-        
-        memories = result.get("results", [])
-        print(f"[SEARCH] Mem0: Found {len(memories)} memories for query: '{query[:50]}...'")
-        
-        return memories
+
+        try:
+            result = self.memory.search(
+                query=query,
+                user_id=user_id,
+                limit=limit
+            )
+
+            memories = result.get("results", [])
+            print(f"[SEARCH] Mem0: Found {len(memories)} memories for query: '{query[:50]}...'")
+            return memories
+        except RuntimeError as exc:
+            mem0_logger.warning(
+                "[SEARCH] Mem0 search skipped because runtime could not start a new thread: %s",
+                exc,
+            )
+            return []
+        except Exception as exc:
+            mem0_logger.warning("[SEARCH] Mem0 search failed, continuing without memories: %s", exc)
+            return []
     
     def get_all_memories(self, user_id: str) -> Dict[str, Any]:
         """
@@ -337,7 +346,17 @@ class MemoryService:
         """
         if self.memory is None:
             return {"results": [], "relations": []}
-        return self.memory.get_all(user_id=user_id)
+        try:
+            return self.memory.get_all(user_id=user_id)
+        except RuntimeError as exc:
+            mem0_logger.warning(
+                "[GET_ALL] Mem0 get_all skipped because runtime could not start a new thread: %s",
+                exc,
+            )
+            return {"results": [], "relations": []}
+        except Exception as exc:
+            mem0_logger.warning("[GET_ALL] Mem0 get_all failed, returning empty result: %s", exc)
+            return {"results": [], "relations": []}
     
     def delete_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
         """
