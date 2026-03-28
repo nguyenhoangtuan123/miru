@@ -5,6 +5,7 @@ import asyncio
 import traceback
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
+from pydantic import BaseModel
 from schemas import GenerateTitleRequest, UpdateTitleRequest, FirstMessageRequest
 from services import (
     chat_manager, memory_service, GROQ_API_KEY, groq_client,
@@ -15,6 +16,7 @@ from agent_graph import run_agent
 from push_service import get_push_service
 from auth_middleware import get_current_user
 from auth import verify_token
+from chat_article_recommender import recommend_for_chat
 
 router = APIRouter(tags=["Chat"])
 
@@ -22,6 +24,14 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 STREAM_CHUNK_SIZE = 24
 STREAM_CHUNK_DELAY_SECONDS = 0.03
+
+
+class ArticleSuggestionClickRequest(BaseModel):
+    user_id: str
+    session_id: str
+    article_slug: str
+    position: int = 0
+    source: str = "chat_ai"
 
 
 def _stream_chunks(message: str, chunk_size: int = STREAM_CHUNK_SIZE) -> list[str]:
@@ -382,12 +392,20 @@ async def websocket_chat(websocket: WebSocket, user_id: str):
                     })
                     await asyncio.sleep(STREAM_CHUNK_DELAY_SECONDS)
 
+                # Compute article suggestions (never let failures break chat)
+                article_suggestions = []
+                try:
+                    article_suggestions = recommend_for_chat(user_message, ai_message)
+                except Exception as e:
+                    print(f"[ArticleSuggestions] Error: {e}")
+
                 # Send final response event for compatibility with existing clients
                 await websocket.send_json({
                     "type": "ai_response",
                     "message": ai_message,
                     "crisis_level": agent_result["crisis_level"],
-                    "timestamp": response_timestamp
+                    "timestamp": response_timestamp,
+                    "article_suggestions": article_suggestions,
                 })
                 
                 # Save messages to database
@@ -450,3 +468,39 @@ async def websocket_chat(websocket: WebSocket, user_id: str):
                 await loop.run_in_executor(None, memory_service.sync_session_facts_to_mem0, current_session_id, user_id)
             except Exception as e:
                 print(f"[ERROR] Failed to auto-sync facts: {e}")
+
+
+@router.post("/api/chat/article-suggestion-click")
+async def log_article_suggestion_click(
+    request: ArticleSuggestionClickRequest,
+    http_request: Request,
+):
+    """Log a click on an article suggestion from the chat."""
+    try:
+        user = await get_current_user(http_request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        current_user_id = user.get("sub") or user.get("user_id")
+        if current_user_id != request.user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        from public_content_service import get_public_content_service
+        get_public_content_service().log_public_events(
+            anonymous_id=f"app_user_{request.user_id}",
+            session_id=str(request.session_id),
+            claimed_user_id=request.user_id,
+            events=[{
+                "event_type": "chat_article_suggestion_click",
+                "article_slug": request.article_slug,
+                "metadata": {
+                    "position": request.position,
+                    "source": request.source,
+                },
+            }],
+        )
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ArticleSuggestionClick] Error: {e}")
+        return {"success": False, "error": str(e)}
