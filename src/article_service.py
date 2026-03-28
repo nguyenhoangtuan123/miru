@@ -8,6 +8,9 @@ from typing import Any, Dict, Iterable, List, Optional
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
+# Pattern detecting common mojibake sequences from UTF-8 → Latin-1 mis-decoding
+_MOJIBAKE_RE = re.compile(r"[\xc3\xc4\xc6][\x80-\xbf]|\xc3[\xa0-\xbf]|â€|á»")
+
 from profile_service import get_profile_service
 from therapist_service import get_therapist_service
 from therapist_verification_service import get_therapist_verification_service
@@ -82,12 +85,29 @@ class ArticleService:
             return ArticleSchemaError(f"{SCHEMA_HINT} ({detail})")
         return ArticleSchemaError(SCHEMA_HINT)
 
+    @staticmethod
+    def _repair_encoding(text: str) -> str:
+        """Repair double-encoded UTF-8 (UTF-8 bytes stored/read as Latin-1/CP1252)."""
+        if not text or not _MOJIBAKE_RE.search(text):
+            return text
+        # Try latin-1 roundtrip (most common mojibake cause)
+        for codec in ("latin-1", "cp1252"):
+            try:
+                candidate = text.encode(codec).decode("utf-8")
+                # Sanity: repaired text should have fewer high-byte chars
+                if candidate and len(candidate) <= len(text):
+                    return candidate
+            except (UnicodeDecodeError, UnicodeEncodeError):
+                continue
+        return text
+
     def _normalize_text(self, value: Any, max_length: Optional[int] = None) -> Optional[str]:
         if not isinstance(value, str):
             return None
         cleaned = re.sub(r"\s+", " ", value).strip()
         if not cleaned:
             return None
+        cleaned = self._repair_encoding(cleaned)
         if isinstance(max_length, int) and max_length > 0:
             return cleaned[:max_length]
         return cleaned
@@ -98,6 +118,7 @@ class ArticleService:
         cleaned = value.replace("\r\n", "\n").replace("\r", "\n").strip()
         if not cleaned:
             return None
+        cleaned = self._repair_encoding(cleaned)
         if isinstance(max_length, int) and max_length > 0:
             return cleaned[:max_length]
         return cleaned

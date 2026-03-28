@@ -1,3 +1,4 @@
+import { Eye, EyeOff, UserCheck, UserX } from 'lucide-react';
 import type { TherapistPublicProfileForm } from '../../../services/profiles';
 
 type Props = {
@@ -30,9 +31,109 @@ export function ProfilePublicForm({
           Nội dung hồ sơ công khai
         </h2>
         <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/60">
-          Những gì bạn chỉnh ở đây sẽ quyết định cách Miru Community hiển thị profile, chuyên môn, mức giá và đường dẫn kết nối của bạn.
+          Những gì bạn chỉnh ở đây sẽ quyết định cách Miru Community hiển thị profile,
+          chuyên môn, mức giá và đường dẫn kết nối của bạn.
         </p>
       </div>
+
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                Hiển thị trên danh bạ therapist
+              </div>
+              <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-white/55">
+                Tắt mục này nếu bạn muốn ẩn hẳn khỏi Miru Community và danh sách therapist.
+              </p>
+            </div>
+            <div
+              className={`rounded-2xl p-3 ${
+                profileForm?.is_public
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
+                  : 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-white/55'
+              }`}
+            >
+              {profileForm?.is_public ? <Eye size={18} /> : <EyeOff size={18} />}
+            </div>
+          </div>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setProfileField('is_public', true)}
+              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+                profileForm?.is_public
+                  ? 'bg-miru-primary text-white'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10'
+              }`}
+            >
+              Hiển thị
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileField('is_public', false)}
+              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+                profileForm?.is_public
+                  ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10'
+                  : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+              }`}
+            >
+              Ẩn khỏi danh bạ
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                Trạng thái nhận thân chủ mới
+              </div>
+              <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-white/55">
+                Giữ profile công khai nhưng chủ động khóa intake khi bạn đang kín lịch.
+              </p>
+            </div>
+            <div
+              className={`rounded-2xl p-3 ${
+                profileForm?.accepting_new_clients
+                  ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200'
+                  : 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-white/55'
+              }`}
+            >
+              {profileForm?.accepting_new_clients ? (
+                <UserCheck size={18} />
+              ) : (
+                <UserX size={18} />
+              )}
+            </div>
+          </div>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setProfileField('accepting_new_clients', true)}
+              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+                profileForm?.accepting_new_clients
+                  ? 'bg-miru-primary text-white'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10'
+              }`}
+            >
+              Đang nhận ca
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileField('accepting_new_clients', false)}
+              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${
+                profileForm?.accepting_new_clients
+                  ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10'
+                  : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+              }`}
+            >
+              Tạm ngừng nhận
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4">
         <input
           value={profileForm?.display_name ?? ''}
@@ -86,7 +187,7 @@ export function ProfilePublicForm({
           >
             <option value="session">Theo phiên</option>
             <option value="package">Theo gói</option>
-            <option value="custom">Thoả thuận</option>
+            <option value="custom">Thỏa thuận</option>
           </select>
         </div>
         <input
@@ -109,9 +210,7 @@ export function ProfilePublicForm({
         />
         <textarea
           value={profileForm?.public_payment_note ?? ''}
-          onChange={(event) =>
-            setProfileField('public_payment_note', event.target.value)
-          }
+          onChange={(event) => setProfileField('public_payment_note', event.target.value)}
           rows={3}
           placeholder="Ghi chú thanh toán công khai"
           className="rounded-[24px] border border-slate-200 bg-white p-4 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
@@ -138,26 +237,20 @@ export function ProfilePublicForm({
           />
           <input
             value={profileForm?.contact_zalo_url ?? ''}
-            onChange={(event) =>
-              setProfileField('contact_zalo_url', event.target.value)
-            }
+            onChange={(event) => setProfileField('contact_zalo_url', event.target.value)}
             placeholder="Link Zalo"
             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
           />
           <input
             value={profileForm?.contact_facebook_url ?? ''}
-            onChange={(event) =>
-              setProfileField('contact_facebook_url', event.target.value)
-            }
+            onChange={(event) => setProfileField('contact_facebook_url', event.target.value)}
             placeholder="Link Facebook"
             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
           />
         </div>
         <input
           value={profileForm?.contact_website_url ?? ''}
-          onChange={(event) =>
-            setProfileField('contact_website_url', event.target.value)
-          }
+          onChange={(event) => setProfileField('contact_website_url', event.target.value)}
           placeholder="Website"
           className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white"
         />

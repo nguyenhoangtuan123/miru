@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { setUserRole } from '../services/backend';
 
 const AUTH_USER_STORAGE_KEY = 'miru_auth_user';
 
@@ -24,49 +23,30 @@ export function AuthCallback() {
     }
 
     hasProcessedRef.current = true;
-    let cancelled = false;
 
-    const completeAuth = async () => {
-      const token = searchParams.get('token');
-      const pendingRole = localStorage.getItem('pending_role');
-      const fallbackPath = pendingRole === 'therapist' ? '/therapist' : '/chat';
-      const nextPath = sanitizeNextPath(searchParams.get('next'), fallbackPath);
-      if (!token) {
-        navigate('/auth/login', { replace: true });
-        return;
-      }
+    const token = searchParams.get('token');
+    const nextPath = sanitizeNextPath(searchParams.get('next'), '/chat');
 
-      try {
-        localStorage.setItem('access_token', token);
-        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    if (!token) {
+      navigate('/auth/login', { replace: true });
+      return;
+    }
 
-        if (pendingRole === 'client' || pendingRole === 'therapist') {
-          await setUserRole(pendingRole);
-          localStorage.removeItem('pending_role');
-        }
+    try {
+      // Save token and clear cached user (will be re-fetched by AuthContext)
+      localStorage.setItem('access_token', token);
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
 
-        if (!cancelled) {
-          window.location.replace(nextPath);
-        }
-      } catch (authError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('pending_role');
-
-        if (!cancelled) {
-          setError(
-            authError instanceof Error
-              ? authError.message
-              : 'Không thể hoàn tất đăng nhập'
-          );
-        }
-      }
-    };
-
-    void completeAuth();
-
-    return () => {
-      cancelled = true;
-    };
+      // Role is already applied server-side — just redirect
+      window.location.replace(nextPath);
+    } catch (authError) {
+      localStorage.removeItem('access_token');
+      setError(
+        authError instanceof Error
+          ? authError.message
+          : 'Không thể hoàn tất đăng nhập'
+      );
+    }
   }, [navigate, searchParams]);
 
   return (

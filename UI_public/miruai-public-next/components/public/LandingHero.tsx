@@ -77,29 +77,39 @@ export function LandingHero() {
         </div>
       </div>
 
-      <div className="glass-card hero-visual">
-        <div className="hero-frame">
-          <div className="hero-orb hero-orb--one" />
-          <div className="hero-orb hero-orb--two" />
-          <div className="hero-panel">
-            <div className="hero-note">
-              <strong>Một lớp community mềm và rõ</strong>
-              <div className="muted-copy">
-                Bài viết, AI companion, câu hỏi công khai và hồ sơ therapist tạo thành cửa vào nhẹ hơn cho người mới.
+      <div className="glass-card hero-visual" style={{ overflow: 'hidden', position: 'relative', padding: 0 }}>
+        <img
+          src="/hero-illustration.png"
+          alt="Miru — Hiểu mình sâu hơn, kết nối therapist rõ hơn"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            borderRadius: 'inherit',
+            display: 'block',
+            minHeight: 320,
+          }}
+        />
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '48px 24px 24px',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)',
+          borderRadius: '0 0 inherit inherit',
+        }}>
+          <div className="hero-card-stack">
+            <div className="hero-stat" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}>
+              <div>
+                <div className="hero-stat__value" style={{ color: '#fff' }}>Community</div>
+                <div className="muted-copy" style={{ color: 'rgba(255,255,255,0.7)' }}>Đọc, hỏi, khám phá và tìm therapist phù hợp</div>
               </div>
             </div>
-            <div className="hero-card-stack">
-              <div className="hero-stat">
-                <div>
-                  <div className="hero-stat__value">Community</div>
-                  <div className="muted-copy">Đọc, hỏi, khám phá và tìm therapist phù hợp</div>
-                </div>
-              </div>
-              <div className="hero-stat">
-                <div>
-                  <div className="hero-stat__value">App</div>
-                  <div className="muted-copy">Cá nhân hóa, trajectory, bài tập và follow-up riêng tư</div>
-                </div>
+            <div className="hero-stat" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}>
+              <div>
+                <div className="hero-stat__value" style={{ color: '#fff' }}>App</div>
+                <div className="muted-copy" style={{ color: 'rgba(255,255,255,0.7)' }}>Cá nhân hóa, trajectory, bài tập và follow-up riêng tư</div>
               </div>
             </div>
           </div>

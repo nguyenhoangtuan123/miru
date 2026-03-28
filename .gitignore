@@ -42,3 +42,5 @@ UI_public/miruai-public-next/.vercel/
 # Local side projects / experiments
 computer_vision/
 memory_skill/
+
+.vercel

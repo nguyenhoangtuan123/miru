@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpRight,
@@ -35,6 +35,7 @@ import { createArticleDraft, formatArticleDate, getArticleStatusMeta } from '../
 import { ArticleEditorPanel } from './articles/ArticleEditorPanel';
 import { ArticleAnalyticsPanel } from './articles/ArticleAnalyticsPanel';
 import { ArticleListPanel } from './articles/ArticleListPanel';
+import { ArticleHistoryPanel } from './articles/ArticleHistoryPanel';
 import { QuestionInboxPanel } from './articles/QuestionInboxPanel';
 import {
   buildTherapistArticleAnalyticsIndex,
@@ -42,6 +43,8 @@ import {
   formatAnalyticsMetric,
   summarizeTherapistArticleAnalytics,
 } from './articles/articleAnalytics';
+
+/* ── Helpers ──────────────────────────────────────────── */
 
 function buildStats(articles: Article[]) {
   const stats = {
@@ -62,6 +65,48 @@ function buildStats(articles: Article[]) {
 
   return stats;
 }
+
+/** Compare two ArticleForm objects to detect dirty state */
+function areDraftsEqual(a: ArticleForm, b: ArticleForm): boolean {
+  return (
+    a.title === b.title &&
+    a.slug === b.slug &&
+    a.excerpt === b.excerpt &&
+    a.cover_image_url === b.cover_image_url &&
+    a.content_markdown === b.content_markdown &&
+    a.seo_title === b.seo_title &&
+    a.seo_description === b.seo_description
+  );
+}
+
+type SaveStatus = 'unsaved' | 'saved' | 'dirty' | 'submitted';
+
+function getSaveStatusLabel(status: SaveStatus): string {
+  switch (status) {
+    case 'unsaved':
+      return 'Chưa lưu';
+    case 'saved':
+      return 'Đã lưu nháp';
+    case 'dirty':
+      return 'Có thay đổi chưa lưu';
+    case 'submitted':
+      return 'Đã gửi duyệt';
+  }
+}
+
+function getSaveStatusDotClass(status: SaveStatus): string {
+  switch (status) {
+    case 'unsaved':
+    case 'dirty':
+      return 'bg-amber-400';
+    case 'saved':
+      return 'bg-emerald-400';
+    case 'submitted':
+      return 'bg-miru-primary';
+  }
+}
+
+/* ── Sub-components ──────────────────────────────────── */
 
 function OverviewCard({
   icon: Icon,
@@ -99,6 +144,17 @@ function HeaderPill({ label, value }: { label: string; value: string }) {
   );
 }
 
+function SaveStatusPill({ status }: { status: SaveStatus }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm backdrop-blur">
+      <span className={`h-2 w-2 rounded-full ${getSaveStatusDotClass(status)}`} />
+      <span className="font-medium text-white/80">{getSaveStatusLabel(status)}</span>
+    </div>
+  );
+}
+
+/* ── Main Component ──────────────────────────────────── */
+
 export function TherapistArticlesPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -121,12 +177,36 @@ export function TherapistArticlesPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Dirty state tracking ──
+  const savedSnapshotRef = useRef<ArticleForm>(createArticleDraft());
+  const isDirty = !areDraftsEqual(draft, savedSnapshotRef.current);
+
   const selectedArticle = useMemo(
     () =>
       articles.find((article) => String(article.id) === String(selectedArticleId ?? '')) ?? null,
     [articles, selectedArticleId]
   );
 
+  // Compute save status for the indicator pill
+  const saveStatus: SaveStatus = useMemo(() => {
+    if (selectedArticle?.status === 'pending_review' && !isDirty) return 'submitted';
+    if (!selectedArticle && isCreatingNew) return 'unsaved';
+    if (isDirty) return 'dirty';
+    if (selectedArticle) return 'saved';
+    return 'unsaved';
+  }, [selectedArticle, isCreatingNew, isDirty]);
+
+  // ── beforeunload warning ──
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  // Auto-select first article
   useEffect(() => {
     if (selectedArticleId !== null || isCreatingNew) {
       return;
@@ -134,15 +214,20 @@ export function TherapistArticlesPage() {
     const firstArticle = articles[0];
     if (firstArticle) {
       setSelectedArticleId(firstArticle.id);
-      setDraft(createArticleDraft(firstArticle));
+      const newDraft = createArticleDraft(firstArticle);
+      setDraft(newDraft);
+      savedSnapshotRef.current = newDraft;
     }
   }, [articles, isCreatingNew, selectedArticleId]);
 
+  // Sync draft when selected article changes (from list refresh, etc.)
   useEffect(() => {
     if (!selectedArticle) {
       return;
     }
-    setDraft(createArticleDraft(selectedArticle));
+    const newDraft = createArticleDraft(selectedArticle);
+    setDraft(newDraft);
+    savedSnapshotRef.current = newDraft;
   }, [selectedArticle]);
 
   const stats = useMemo(() => buildStats(articles), [articles]);
@@ -186,9 +271,26 @@ export function TherapistArticlesPage() {
   }
 
   function startNewArticle() {
+    if (isDirty) {
+      const confirmed = window.confirm('Bạn có thay đổi chưa lưu. Bỏ thay đổi và tạo bài mới?');
+      if (!confirmed) return;
+    }
     setSelectedArticleId(null);
     setIsCreatingNew(true);
-    setDraft(createArticleDraft());
+    const newDraft = createArticleDraft();
+    setDraft(newDraft);
+    savedSnapshotRef.current = newDraft;
+    setMessage(null);
+    setError(null);
+  }
+
+  function handleSelectArticle(article: Article) {
+    if (isDirty) {
+      const confirmed = window.confirm('Bạn có thay đổi chưa lưu. Bỏ thay đổi và chuyển bài?');
+      if (!confirmed) return;
+    }
+    setSelectedArticleId(article.id);
+    setIsCreatingNew(false);
     setMessage(null);
     setError(null);
   }
@@ -233,60 +335,96 @@ export function TherapistArticlesPage() {
     },
   });
 
-  async function saveArticle() {
-    try {
-      setSaving(true);
-      setMessage(null);
-      setError(null);
+  /**
+   * Save current draft to backend.
+   * @param options.silent — if true, skip success message
+   * @returns the saved article id, or null on failure
+   */
+  const saveArticle = useCallback(
+    async (options?: { silent?: boolean }): Promise<string | number | null> => {
+      try {
+        setSaving(true);
+        setMessage(null);
+        setError(null);
 
-      const payload = {
-        title: draft.title,
-        slug: draft.slug,
-        excerpt: draft.excerpt,
-        cover_image_url: draft.cover_image_url,
-        content_markdown: draft.content_markdown,
-        seo_title: draft.seo_title,
-        seo_description: draft.seo_description,
-      };
+        const payload = {
+          title: draft.title,
+          slug: draft.slug,
+          excerpt: draft.excerpt,
+          cover_image_url: draft.cover_image_url,
+          content_markdown: draft.content_markdown,
+          seo_title: draft.seo_title,
+          seo_description: draft.seo_description,
+        };
 
-      const response = selectedArticle?.id
-        ? await updateTherapistArticle(selectedArticle.id, payload)
-        : await createTherapistArticle(payload);
+        const response = selectedArticle?.id
+          ? await updateTherapistArticle(selectedArticle.id, payload)
+          : await createTherapistArticle(payload);
 
-      const nextArticle = response.article ?? null;
-      await refreshArticles();
+        const nextArticle = response.article ?? null;
+        await refreshArticles();
 
-      if (nextArticle?.id !== undefined && nextArticle?.id !== null) {
-        setSelectedArticleId(nextArticle.id);
-        setIsCreatingNew(false);
-        setDraft(createArticleDraft(nextArticle));
+        if (nextArticle?.id !== undefined && nextArticle?.id !== null) {
+          setSelectedArticleId(nextArticle.id);
+          setIsCreatingNew(false);
+          const newDraft = createArticleDraft(nextArticle);
+          setDraft(newDraft);
+          savedSnapshotRef.current = newDraft;
+        } else {
+          // Update snapshot to current draft even without returned article
+          savedSnapshotRef.current = { ...draft };
+        }
+
+        if (!options?.silent) {
+          setMessage(selectedArticle ? 'Đã lưu thay đổi cho bài viết.' : 'Đã tạo bản nháp mới.');
+        }
+        return nextArticle?.id ?? selectedArticle?.id ?? null;
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Không lưu được bài viết');
+        return null;
+      } finally {
+        setSaving(false);
       }
+    },
+    [draft, selectedArticle, refreshArticles]
+  );
 
-      setMessage(selectedArticle ? 'Đã lưu thay đổi cho bài viết.' : 'Đã tạo bản nháp mới.');
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Không lưu được bài viết');
-    } finally {
-      setSaving(false);
-    }
-  }
-
+  /**
+   * Submit article for review.
+   * Auto-saves first if the article is new or has unsaved changes.
+   */
   async function submitReview() {
-    if (!selectedArticle?.id) {
-      setError('Bạn cần lưu bài trước khi gửi duyệt.');
-      return;
-    }
     try {
       setSubmitting(true);
       setMessage(null);
       setError(null);
-      const response = await submitTherapistArticle(selectedArticle.id);
+
+      // Resolve the article id — auto-save if needed
+      let articleId = selectedArticle?.id ?? null;
+
+      if (!articleId || isDirty) {
+        // Need to save first (new article or has unsaved edits)
+        const savedId = await saveArticle({ silent: true });
+        if (!savedId) {
+          // Save failed — error already set by saveArticle
+          return;
+        }
+        articleId = savedId;
+      }
+
+      // Now submit
+      const response = await submitTherapistArticle(articleId);
       const nextArticle = response.article ?? null;
       await refreshArticles();
+
       if (nextArticle?.id !== undefined && nextArticle?.id !== null) {
         setSelectedArticleId(nextArticle.id);
         setIsCreatingNew(false);
-        setDraft(createArticleDraft(nextArticle));
+        const newDraft = createArticleDraft(nextArticle);
+        setDraft(newDraft);
+        savedSnapshotRef.current = newDraft;
       }
+
       setMessage('Đã gửi bài sang hàng chờ duyệt.');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Không gửi duyệt được bài');
@@ -310,7 +448,9 @@ export function TherapistArticlesPage() {
       if (nextArticle?.id !== undefined && nextArticle?.id !== null) {
         setSelectedArticleId(nextArticle.id);
         setIsCreatingNew(false);
-        setDraft(createArticleDraft(nextArticle));
+        const newDraft = createArticleDraft(nextArticle);
+        setDraft(newDraft);
+        savedSnapshotRef.current = newDraft;
       }
       setMessage('Đã lưu trữ bài viết.');
     } catch (archiveError) {
@@ -345,12 +485,7 @@ export function TherapistArticlesPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <HeaderPill label="Trạng thái" value={selectedStatusMeta.label} />
-                <HeaderPill
-                  label="Cập nhật"
-                  value={
-                    selectedArticle ? formatArticleDate(selectedArticle.updated_at, 'Chưa lưu') : 'Bản nháp mới'
-                  }
-                />
+                <SaveStatusPill status={saveStatus} />
                 <HeaderPill label="Đăng nhập" value={user?.name || user?.email || 'Therapist'} />
               </div>
             </div>
@@ -381,16 +516,16 @@ export function TherapistArticlesPage() {
               <button
                 type="button"
                 onClick={() => void saveArticle()}
-                disabled={saving}
+                disabled={saving || !isDirty}
                 className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur transition hover:bg-white/10 disabled:opacity-60"
               >
-                {saving ? 'Đang lưu...' : selectedArticle ? 'Lưu thay đổi' : 'Lưu nháp'}
+                {saving ? 'Đang lưu...' : 'Lưu nháp'}
               </button>
 
               <button
                 type="button"
                 onClick={() => void submitReview()}
-                disabled={submitting || !selectedArticle}
+                disabled={submitting || saving}
                 className="rounded-full bg-miru-primary px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(127,13,242,0.25)] transition hover:bg-miru-primary/85 disabled:opacity-60"
               >
                 {submitting ? 'Đang gửi...' : 'Gửi duyệt'}
@@ -410,19 +545,19 @@ export function TherapistArticlesPage() {
 
         <div className="space-y-4">
           {message ? (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-200">
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-800 dark:text-emerald-200">
               {message}
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200">
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-800 dark:text-amber-200">
               {error}
             </div>
           ) : null}
 
           {queryError ? (
-            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-800 dark:text-rose-200">
               {queryError}
             </div>
           ) : null}
@@ -467,12 +602,7 @@ export function TherapistArticlesPage() {
               articles={articles}
               analyticsIndex={analyticsIndex}
               selectedArticleId={selectedArticleId}
-              onSelect={(article) => {
-                setSelectedArticleId(article.id);
-                setIsCreatingNew(false);
-                setMessage(null);
-                setError(null);
-              }}
+              onSelect={handleSelectArticle}
               onCreateNew={startNewArticle}
               onRefresh={() => void refreshArticles()}
               refreshing={articlesQuery.isFetching}
@@ -488,6 +618,11 @@ export function TherapistArticlesPage() {
                 <strong className="text-white/80">nháp</strong> nếu backend áp dụng quy tắc đó.
               </p>
             </div>
+
+            <ArticleHistoryPanel
+              articles={articles}
+              onSelect={handleSelectArticle}
+            />
           </div>
 
           <div className="min-w-0 space-y-4">

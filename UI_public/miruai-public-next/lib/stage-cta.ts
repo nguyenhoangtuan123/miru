@@ -5,7 +5,7 @@
  */
 
 import { APP_URL, buildAppLoginUrl } from "./api";
-import { getPublicAuthState, type AuthStage, type PublicAuthProfile } from "./public-auth";
+import { getPublicAuthState, getAuthStatus, type AuthStage, type PublicAuthProfile } from "./public-auth";
 
 export interface CtaButton {
     label: string;
@@ -28,9 +28,11 @@ export interface StageCta {
 
 export function computeStageCta(forceStage?: AuthStage): StageCta {
     const authState = forceStage === "anonymous" ? null : getPublicAuthState();
+    const status = forceStage === "anonymous" ? "anonymous" : getAuthStatus();
 
-    // ── Anonymous ───────────────────────────────────────
-    if (!authState) {
+    // ── Anonymous or Hydrating ────────────────────────────
+    // While hydrating, show anonymous CTAs — they'll update on next render
+    if (!authState || status === "anonymous" || status === "hydrating") {
         return {
             stage: "anonymous",
             profile: null,
@@ -54,7 +56,7 @@ export function computeStageCta(forceStage?: AuthStage): StageCta {
     const { profile } = authState;
 
     // ── Therapist ───────────────────────────────────────
-    if (profile.role === "therapist") {
+    if (profile.auth_stage === "therapist") {
         if (profile.can_access_therapist_portal) {
             return {
                 stage: "therapist",
@@ -113,7 +115,7 @@ export function computeStageCta(forceStage?: AuthStage): StageCta {
         };
     }
 
-    // ── Client (default for logged-in users) ────────────
+    // ── Client (default for authenticated users) ────────
     return {
         stage: "client",
         profile,

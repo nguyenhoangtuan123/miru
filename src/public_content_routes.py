@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from auth_middleware import get_current_user
@@ -407,3 +407,69 @@ async def list_community_questions(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch questions: {exc}")
 
+
+# ── Image upload for article editor ──────────────────────────────────────────
+
+ARTICLE_IMAGES_BUCKET = "article-images"
+ALLOWED_IMAGE_MIME = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def _ensure_article_images_bucket() -> None:
+    try:
+        from database import DatabaseManager
+        db = DatabaseManager()
+        db.supabase.storage.create_bucket(ARTICLE_IMAGES_BUCKET, options={"public": True})
+    except Exception:
+        pass  # bucket already exists
+
+
+@router.post("/api/therapist/articles/upload-image")
+async def upload_article_image(request: Request, file: UploadFile = File(...)):
+    """Upload an image for use in articles (inline or cover)."""
+    current_user = await _require_current_user(request)
+    user_id = current_user["resolved_user_id"]
+
+    # Validate MIME type
+    mime = file.content_type or ""
+    if mime not in ALLOWED_IMAGE_MIME:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Loại file không hợp lệ: {mime}. Chỉ chấp nhận JPG, PNG, WebP, GIF.",
+        )
+
+    # Read and validate size
+    content = await file.read()
+    if len(content) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File quá lớn ({len(content) // 1024 // 1024}MB). Giới hạn 5MB.",
+        )
+    if not content:
+        raise HTTPException(status_code=400, detail="File trống.")
+
+    # Determine extension
+    ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}
+    ext = ext_map.get(mime, "jpg")
+
+    from uuid import uuid4
+    from database import DatabaseManager
+
+    _ensure_article_images_bucket()
+
+    db = DatabaseManager()
+    path = f"{user_id}/{uuid4()}.{ext}"
+
+    try:
+        db.supabase.storage.from_(ARTICLE_IMAGES_BUCKET).upload(
+            path,
+            content,
+            file_options={"content-type": mime, "upsert": "false"},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Upload thất bại: {exc}")
+
+    # Build public URL
+    public_url = db.supabase.storage.from_(ARTICLE_IMAGES_BUCKET).get_public_url(path)
+
+    return {"success": True, "url": public_url, "path": path}

@@ -51,7 +51,19 @@ export function buildAppLoginUrl(options?: {
   nextPath?: string;
   intent?: AppLoginIntent;
   entry?: string;
+  surface?: "app" | "community";
 }) {
+  const surface = options?.surface || "app";
+  // For community surface, go directly to backend auth start (cross-origin)
+  if (surface === "community") {
+    const url = new URL("/auth/google/start", API_BASE_URL);
+    url.searchParams.set("intent", options?.intent || "client");
+    url.searchParams.set("surface", "community");
+    url.searchParams.set("return_to", options?.nextPath || "/");
+    url.searchParams.set("entry", options?.entry || "public-content");
+    return url.toString();
+  }
+  // For app surface, route through the app's login page
   const url = new URL("/auth/login", APP_URL);
   url.searchParams.set("next", options?.nextPath || "/chat");
   url.searchParams.set("intent", options?.intent || "client");
@@ -112,17 +124,23 @@ export function buildPublicContentLoginUrl(options: {
   sessionId?: string | null;
   intent?: AppLoginIntent;
 }) {
-  const bridgeUrl = new URL("/public-return", APP_URL);
-  bridgeUrl.searchParams.set("return_to", options.returnTo);
-  bridgeUrl.searchParams.set("anonymous_id", options.anonymousId);
-  if (options.sessionId) {
-    bridgeUrl.searchParams.set("session_id", options.sessionId);
+  // Use full return URL so backend can redirect back to community directly
+  const fullReturnTo = options.returnTo.startsWith("http")
+    ? options.returnTo
+    : `${SITE_URL}${options.returnTo.startsWith("/") ? options.returnTo : `/${options.returnTo}`}`;
+
+  const url = new URL("/auth/google/start", API_BASE_URL);
+  url.searchParams.set("intent", options.intent || "client");
+  url.searchParams.set("surface", "community");
+  url.searchParams.set("return_to", fullReturnTo);
+  url.searchParams.set("entry", "public-content");
+  if (options.anonymousId) {
+    url.searchParams.set("anonymous_id", options.anonymousId);
   }
-  return buildAppLoginUrl({
-    nextPath: `${bridgeUrl.pathname}${bridgeUrl.search}`,
-    intent: options.intent || "client",
-    entry: "public-content",
-  });
+  if (options.sessionId) {
+    url.searchParams.set("session_id", options.sessionId);
+  }
+  return url.toString();
 }
 
 export async function fetchApi<T>(

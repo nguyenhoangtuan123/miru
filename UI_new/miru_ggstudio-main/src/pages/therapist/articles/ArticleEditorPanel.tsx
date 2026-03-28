@@ -1,5 +1,7 @@
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ImagePlus, X, Upload } from 'lucide-react';
+import { useRef, useState, useCallback } from 'react';
 import type { Article, ArticleForm } from '../../../services/articles';
+import { uploadArticleImage } from '../../../services/articles';
 import { cleanArticleText, formatArticleDate, getArticleStatusMeta } from '../../articles/articleUtils';
 import { RichTextEditor } from './RichTextEditor';
 import './editor.css';
@@ -20,6 +22,122 @@ function estimateReadingMinutes(content: string, excerpt: string) {
   const words = countWords(`${content} ${excerpt}`.trim());
   return Math.max(1, Math.round(words / 180));
 }
+
+/* ── Cover Image Upload ──────────────────────────────── */
+
+function CoverImageUpload({
+  url,
+  onUpload,
+  onRemove,
+}: {
+  url: string;
+  onUpload: (url: string) => void;
+  onRemove: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setError(null);
+      if (!file.type.startsWith('image/')) {
+        setError('Chỉ chấp nhận file ảnh.');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File quá lớn. Giới hạn 5MB.');
+        return;
+      }
+      setUploading(true);
+      try {
+        const publicUrl = await uploadArticleImage(file);
+        onUpload(publicUrl);
+      } catch {
+        setError('Upload thất bại. Thử lại.');
+      } finally {
+        setUploading(false);
+      }
+    },
+    [onUpload]
+  );
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) void handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const onFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) void handleFile(file);
+    },
+    [handleFile]
+  );
+
+  if (url) {
+    return (
+      <div className="relative group rounded-2xl overflow-hidden border border-white/10">
+        <img src={url} alt="Cover" className="w-full h-48 object-cover" />
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="rounded-full bg-white/20 p-2 text-white hover:bg-white/30 transition"
+            title="Thay ảnh"
+          >
+            <ImagePlus size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-full bg-red-500/60 p-2 text-white hover:bg-red-500/80 transition"
+            title="Xoá ảnh bìa"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-2xl border-2 border-dashed transition cursor-pointer flex flex-col items-center justify-center gap-2 py-10 ${dragOver ? 'border-miru-primary bg-miru-primary/5' : 'border-white/15 hover:border-white/30'
+        }`}
+      onClick={() => fileRef.current?.click()}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+    >
+      {uploading ? (
+        <span className="text-sm text-white/50">Đang tải lên...</span>
+      ) : (
+        <>
+          <Upload size={24} className="text-white/30" />
+          <span className="text-sm text-white/50">
+            Kéo thả hoặc click để chọn ảnh bìa
+          </span>
+          <span className="text-[11px] text-white/30">JPG, PNG, WebP — tối đa 5MB</span>
+        </>
+      )}
+      {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+    </div>
+  );
+}
+
+/* ── Main Component ──────────────────────────────────── */
 
 export function ArticleEditorPanel({
   draft,
@@ -61,6 +179,18 @@ export function ArticleEditorPanel({
       </div>
 
       <div className="px-6 py-8 md:px-8 md:py-10">
+        {/* ─── Cover Image ─── */}
+        <div className="mb-8">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-white/35">
+            Ảnh bìa (thumbnail)
+          </div>
+          <CoverImageUpload
+            url={draft.cover_image_url || ''}
+            onUpload={(url) => onChange('cover_image_url', url)}
+            onRemove={() => onChange('cover_image_url', '')}
+          />
+        </div>
+
         {/* Title input */}
         <input
           type="text"

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -33,8 +33,15 @@ import {
     Table as TableIcon,
     Underline as UnderlineIcon,
     Undo2,
+    Upload,
+    X,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    Maximize2,
     type LucideIcon,
 } from 'lucide-react';
+import { uploadArticleImage } from '../../../services/articles';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +50,9 @@ type RichTextEditorProps = {
     onChange: (markdown: string) => void;
     placeholder?: string;
 };
+
+type ImageAlign = 'left' | 'center' | 'right';
+type ImageSize = 'small' | 'medium' | 'full';
 
 // ─── Helpers to get markdown from editor ──────────────────────────────────────
 
@@ -230,9 +240,391 @@ function Divider() {
     return <div className="mx-0.5 h-6 w-px bg-white/10" />;
 }
 
+// ─── Image Insert Modal ──────────────────────────────────────────────────────
+
+function ImageInsertModal({
+    onInsert,
+    onClose,
+}: {
+    onInsert: (url: string, alt: string, align: ImageAlign, size: ImageSize) => void;
+    onClose: () => void;
+}) {
+    const [tab, setTab] = useState<'upload' | 'url'>('upload');
+    const [url, setUrl] = useState('');
+    const [alt, setAlt] = useState('');
+    const [align, setAlign] = useState<ImageAlign>('center');
+    const [size, setSize] = useState<ImageSize>('full');
+    const [uploading, setUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
+    const [dragOver, setDragOver] = useState(false);
+
+    const handleFile = useCallback(async (file: File) => {
+        setError(null);
+        if (!file.type.startsWith('image/')) {
+            setError('Chỉ chấp nhận file ảnh.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('File quá lớn. Giới hạn 5MB.');
+            return;
+        }
+
+        // Show local preview
+        const reader = new FileReader();
+        reader.onload = (e) => setPreviewUrl(e.target?.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload
+        setUploading(true);
+        try {
+            const publicUrl = await uploadArticleImage(file);
+            setUploadedUrl(publicUrl);
+        } catch {
+            setError('Upload thất bại. Thử lại.');
+        } finally {
+            setUploading(false);
+        }
+    }, []);
+
+    const onDrop = useCallback(
+        (e: React.DragEvent) => {
+            e.preventDefault();
+            setDragOver(false);
+            const file = e.dataTransfer.files[0];
+            if (file) void handleFile(file);
+        },
+        [handleFile]
+    );
+
+    const finalUrl = tab === 'upload' ? uploadedUrl : url.trim();
+    const canInsert = !!finalUrl && !uploading;
+
+    const handleInsert = () => {
+        if (!finalUrl) return;
+        onInsert(finalUrl, alt.trim(), align, size);
+        onClose();
+    };
+
+    const alignOptions: Array<{ value: ImageAlign; icon: LucideIcon; label: string }> = [
+        { value: 'left', icon: AlignLeft, label: 'Trái' },
+        { value: 'center', icon: AlignCenter, label: 'Giữa' },
+        { value: 'right', icon: AlignRight, label: 'Phải' },
+    ];
+
+    const sizeOptions: Array<{ value: ImageSize; label: string; desc: string }> = [
+        { value: 'small', label: 'Nhỏ', desc: '40%' },
+        { value: 'medium', label: 'Vừa', desc: '70%' },
+        { value: 'full', label: 'Toàn bộ', desc: '100%' },
+    ];
+
+    return (
+        <>
+            <div className="fixed inset-0 z-50 bg-black/60" onClick={onClose} />
+            <div
+                className="fixed left-1/2 top-1/2 z-50 w-[480px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 shadow-2xl"
+                style={{ background: '#1a1a2e' }}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <h3 className="text-base font-bold text-white">Chèn ảnh</h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-lg p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-4">
+                    {/* Tabs */}
+                    <div className="flex gap-1 rounded-xl bg-white/5 p-1">
+                        <button
+                            type="button"
+                            onClick={() => setTab('upload')}
+                            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${tab === 'upload'
+                                ? 'bg-miru-primary/20 text-miru-primary'
+                                : 'text-white/50 hover:text-white'
+                                }`}
+                        >
+                            <Upload size={14} className="inline mr-1.5 -mt-0.5" />
+                            Tải lên
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTab('url')}
+                            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${tab === 'url'
+                                ? 'bg-miru-primary/20 text-miru-primary'
+                                : 'text-white/50 hover:text-white'
+                                }`}
+                        >
+                            <Link2 size={14} className="inline mr-1.5 -mt-0.5" />
+                            Dán URL
+                        </button>
+                    </div>
+
+                    {/* Upload tab */}
+                    {tab === 'upload' && (
+                        <div>
+                            {previewUrl ? (
+                                <div className="relative rounded-xl overflow-hidden border border-white/10">
+                                    <img src={previewUrl} alt="Preview" className="w-full max-h-48 object-contain bg-black/30" />
+                                    {uploading && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                            <span className="text-sm text-white/80">Đang tải lên...</span>
+                                        </div>
+                                    )}
+                                    {uploadedUrl && !uploading && (
+                                        <div className="absolute bottom-2 right-2 rounded-full bg-green-500/80 px-2.5 py-1 text-xs font-bold text-white">
+                                            ✓ Sẵn sàng
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div
+                                    className={`rounded-xl border-2 border-dashed transition cursor-pointer flex flex-col items-center gap-2 py-10 ${dragOver ? 'border-miru-primary bg-miru-primary/5' : 'border-white/15 hover:border-white/30'}`}
+                                    onClick={() => fileRef.current?.click()}
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        setDragOver(true);
+                                    }}
+                                    onDragLeave={() => setDragOver(false)}
+                                    onDrop={onDrop}
+                                >
+                                    <Upload size={28} className="text-white/25" />
+                                    <span className="text-sm text-white/50">Kéo thả hoặc click chọn ảnh</span>
+                                    <span className="text-[11px] text-white/25">JPG, PNG, WebP, GIF — max 5MB</span>
+                                </div>
+                            )}
+                            <input
+                                ref={fileRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) void handleFile(f);
+                                }}
+                            />
+                            {previewUrl && (
+                                <button
+                                    type="button"
+                                    className="mt-2 text-xs text-white/40 hover:text-white/70 transition"
+                                    onClick={() => {
+                                        setPreviewUrl(null);
+                                        setUploadedUrl(null);
+                                    }}
+                                >
+                                    Chọn ảnh khác
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* URL tab */}
+                    {tab === 'url' && (
+                        <div>
+                            <input
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                placeholder="https://example.com/image.jpg"
+                                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-miru-primary/40"
+                            />
+                            {url.trim() && (
+                                <div className="mt-3 rounded-xl overflow-hidden border border-white/10">
+                                    <img src={url} alt="Preview" className="w-full max-h-40 object-contain bg-black/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Alt text */}
+                    <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                            Mô tả ảnh (alt text)
+                        </label>
+                        <input
+                            value={alt}
+                            onChange={(e) => setAlt(e.target.value)}
+                            placeholder="Ảnh minh họa..."
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-miru-primary/40"
+                        />
+                    </div>
+
+                    {/* Alignment */}
+                    <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                            Căn chỉnh
+                        </label>
+                        <div className="flex gap-2">
+                            {alignOptions.map((opt) => {
+                                const OptIcon = opt.icon;
+                                return (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setAlign(opt.value)}
+                                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${align === opt.value
+                                            ? 'border-miru-primary/40 bg-miru-primary/10 text-miru-primary'
+                                            : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white'
+                                            }`}
+                                    >
+                                        <OptIcon size={14} />
+                                        {opt.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Size */}
+                    <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                            Kích cỡ
+                        </label>
+                        <div className="flex gap-2">
+                            {sizeOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setSize(opt.value)}
+                                    className={`flex-1 rounded-lg border py-2 text-center text-xs font-medium transition ${size === opt.value
+                                        ? 'border-miru-primary/40 bg-miru-primary/10 text-miru-primary'
+                                        : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white'
+                                        }`}
+                                >
+                                    <Maximize2 size={12} className="inline mr-1 -mt-0.5" />
+                                    {opt.label}
+                                    <span className="ml-1 text-[10px] opacity-60">{opt.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {error && <p className="text-xs text-red-400">{error}</p>}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 border-t border-white/10 px-5 py-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-xl px-4 py-2 text-sm font-medium text-white/50 hover:text-white transition"
+                    >
+                        Huỷ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleInsert}
+                        disabled={!canInsert}
+                        className="rounded-xl bg-miru-primary px-5 py-2 text-sm font-bold text-white transition hover:bg-miru-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        Chèn ảnh
+                    </button>
+                </div>
+            </div>
+        </>
+    );
+}
+
+// ─── Floating Image Toolbar ──────────────────────────────────────────────────
+
+function ImageBubbleToolbar({
+    editor,
+}: {
+    editor: ReturnType<typeof useEditor>;
+}) {
+    if (!editor) return null;
+
+    const updateImageAttr = (key: string, value: string) => {
+        const attrs = editor.getAttributes('image');
+        const currentTitle = (attrs.title as string) || 'center|full';
+        const [currentAlign, currentSize] = currentTitle.split('|');
+        const newAlign = key === 'align' ? value : (currentAlign || 'center');
+        const newSize = key === 'size' ? value : (currentSize || 'full');
+        editor.chain().focus().updateAttributes('image', { title: `${newAlign}|${newSize}` }).run();
+    };
+
+    const attrs = editor.getAttributes('image');
+    const title = (attrs.title as string) || 'center|full';
+    const [curAlign, curSize] = title.split('|');
+
+    const alignBtns: Array<{ value: string; icon: LucideIcon }> = [
+        { value: 'left', icon: AlignLeft },
+        { value: 'center', icon: AlignCenter },
+        { value: 'right', icon: AlignRight },
+    ];
+
+    const sizeBtns: Array<{ value: string; label: string }> = [
+        { value: 'small', label: 'S' },
+        { value: 'medium', label: 'M' },
+        { value: 'full', label: 'L' },
+    ];
+
+    return (
+        <div
+            className="flex items-center gap-1 rounded-xl border border-white/15 px-2 py-1 shadow-2xl"
+            style={{ background: '#1a1a2e' }}
+        >
+            {alignBtns.map((btn) => {
+                const BtnIcon = btn.icon;
+                return (
+                    <button
+                        key={btn.value}
+                        type="button"
+                        onClick={() => updateImageAttr('align', btn.value)}
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition ${curAlign === btn.value
+                            ? 'bg-miru-primary/25 text-miru-primary'
+                            : 'text-white/50 hover:bg-white/10 hover:text-white'
+                            }`}
+                        title={`Căn ${btn.value}`}
+                    >
+                        <BtnIcon size={14} />
+                    </button>
+                );
+            })}
+            <div className="mx-0.5 h-5 w-px bg-white/10" />
+            {sizeBtns.map((btn) => (
+                <button
+                    key={btn.value}
+                    type="button"
+                    onClick={() => updateImageAttr('size', btn.value)}
+                    className={`inline-flex h-7 min-w-[28px] items-center justify-center rounded-lg text-xs font-bold transition ${curSize === btn.value
+                        ? 'bg-miru-primary/25 text-miru-primary'
+                        : 'text-white/50 hover:bg-white/10 hover:text-white'
+                        }`}
+                    title={btn.value === 'small' ? '40%' : btn.value === 'medium' ? '70%' : '100%'}
+                >
+                    {btn.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function RichTextEditor({ content, onChange, placeholder }: RichTextEditorProps) {
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [pasteToast, setPasteToast] = useState<string | null>(null);
+    const [imageSelected, setImageSelected] = useState(false);
+
+    const handlePasteImage = useCallback(async (file: File) => {
+        setPasteToast('Đang tải ảnh...');
+        try {
+            const url = await uploadArticleImage(file);
+            setPasteToast(null);
+            return url;
+        } catch {
+            setPasteToast('Upload thất bại');
+            setTimeout(() => setPasteToast(null), 2000);
+            return null;
+        }
+    }, []);
+
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -246,6 +638,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
             }),
             Image.configure({
                 HTMLAttributes: { class: 'editor-image' },
+                inline: false,
             }),
             Placeholder.configure({
                 placeholder: placeholder || 'Bắt đầu viết...',
@@ -267,10 +660,40 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
             attributes: {
                 class: 'editor-content outline-none min-h-[440px] px-1 py-2',
             },
+            handlePaste: (view, event) => {
+                const items = event.clipboardData?.items;
+                if (!items) return false;
+
+                for (const item of Array.from(items)) {
+                    if (item.type.startsWith('image/')) {
+                        event.preventDefault();
+                        const file = item.getAsFile();
+                        if (!file) return true;
+
+                        // Async upload and insert
+                        void handlePasteImage(file).then((url) => {
+                            if (url && view.state) {
+                                const { state, dispatch } = view;
+                                const node = state.schema.nodes.image.create({
+                                    src: url,
+                                    title: 'center|full',
+                                });
+                                const tr = state.tr.replaceSelectionWith(node);
+                                dispatch(tr);
+                            }
+                        });
+                        return true;
+                    }
+                }
+                return false;
+            },
         },
         onUpdate: ({ editor: ed }) => {
             const md = getMarkdownFromEditor(ed);
             if (md) onChange(md);
+        },
+        onSelectionUpdate: ({ editor: ed }) => {
+            setImageSelected(ed.isActive('image'));
         },
     });
 
@@ -313,12 +736,20 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }, [editor]);
 
-    const addImage = useCallback(() => {
-        if (!editor) return;
-        const url = window.prompt('URL ảnh:', 'https://');
-        if (!url) return;
-        editor.chain().focus().setImage({ src: url }).run();
-    }, [editor]);
+    const insertImageFromModal = useCallback(
+        (url: string, alt: string, align: ImageAlign, size: ImageSize) => {
+            if (!editor) return;
+            const cssClass = `editor-image editor-image--${align} editor-image--${size}`;
+            editor
+                .chain()
+                .focus()
+                .setImage({ src: url, alt: alt || undefined, title: `${align}|${size}` })
+                .run();
+            // After insertion, manually add class to the last inserted image
+            // We encode align|size in the title attribute for markdown roundtrip
+        },
+        [editor]
+    );
 
     const insertTable = useCallback(() => {
         if (!editor) return;
@@ -336,7 +767,14 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
                 : null;
 
     return (
-        <div className="rounded-[28px] border border-white/10 bg-white/[0.03] overflow-visible">
+        <div className="relative rounded-[28px] border border-white/10 bg-white/[0.03] overflow-visible">
+            {/* ─── Paste toast ─── */}
+            {pasteToast && (
+                <div className="absolute left-1/2 top-14 z-30 -translate-x-1/2 rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-white shadow-xl" style={{ background: '#1a1a2e' }}>
+                    {pasteToast}
+                </div>
+            )}
+
             {/* ─── Toolbar ─── */}
             <div className="relative flex flex-wrap items-center gap-0.5 rounded-t-[28px] border-b border-white/10 bg-white/[0.02] px-3 py-2">
                 {/* Undo / Redo */}
@@ -439,7 +877,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
                     onTable={insertTable}
                     onHorizontalRule={() => editor.chain().focus().setHorizontalRule().run()}
                     onTaskList={() => editor.chain().focus().toggleTaskList().run()}
-                    onImage={addImage}
+                    onImage={() => setShowImageModal(true)}
                 />
             </div>
 
@@ -447,6 +885,21 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
             <div className="px-6 py-4 md:px-8">
                 <EditorContent editor={editor} />
             </div>
+
+            {/* ─── Floating image toolbar (shown when image is selected) ─── */}
+            {imageSelected && (
+                <div className="flex justify-center px-6 pb-3 -mt-1 animate-in fade-in duration-150">
+                    <ImageBubbleToolbar editor={editor} />
+                </div>
+            )}
+
+            {/* ─── Image modal ─── */}
+            {showImageModal && (
+                <ImageInsertModal
+                    onInsert={insertImageFromModal}
+                    onClose={() => setShowImageModal(false)}
+                />
+            )}
         </div>
     );
 }

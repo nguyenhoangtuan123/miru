@@ -225,11 +225,41 @@
     height: auto;
     border-radius: 16px;
     margin: 1rem 0;
+    display: block;
 }
 
 .editor-content .ProseMirror img.ProseMirror-selectednode {
     outline: 2px solid rgba(127, 13, 242, 0.6);
     outline-offset: 2px;
+}
+
+/* Alignment variants */
+.editor-content .ProseMirror img.editor-image--left {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.editor-content .ProseMirror img.editor-image--center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.editor-content .ProseMirror img.editor-image--right {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* Size variants */
+.editor-content .ProseMirror img.editor-image--small {
+    max-width: 40%;
+}
+
+.editor-content .ProseMirror img.editor-image--medium {
+    max-width: 70%;
+}
+
+.editor-content .ProseMirror img.editor-image--full {
+    max-width: 100%;
 }
 
 /* ─── Table ─── */

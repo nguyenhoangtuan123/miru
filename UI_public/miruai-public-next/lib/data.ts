@@ -34,20 +34,37 @@ type TherapistResponse = {
   profile?: unknown;
 };
 
-const MOJIBAKE_PATTERN = /Ã|Ä|Æ|á»|â€|Â/;
+const MOJIBAKE_PATTERN = /[\xc3\xc4\xc6][\x80-\xbf]|\xc3[\xa0-\xbf]|Ã|Ä|Æ|á»|â€|Â/;
 
 function repairMojibake(value: string) {
   if (!value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
   }
 
+  // Try re-encoding as Latin-1 bytes and decoding as UTF-8
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (decoded && decoded.length <= value.length) {
+      return decoded;
+    }
+  } catch {
+    // fatal: true throws on invalid sequences — fall through
+  }
+
+  // Fallback: non-strict decode (replaces invalid sequences with U+FFFD)
   try {
     const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
     const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-    return decoded || value;
+    // Only accept if no replacement characters were introduced
+    if (decoded && !decoded.includes("\ufffd") && decoded.length <= value.length) {
+      return decoded;
+    }
   } catch {
-    return value;
+    // ignore
   }
+
+  return value;
 }
 
 const fallbackTherapists: PublicTherapist[] = [
@@ -340,8 +357,8 @@ function normalizeTherapist(raw: unknown): PublicTherapist | null {
     bio: asText(therapist.bio) || null,
     specializations: Array.isArray(therapist.specializations)
       ? therapist.specializations
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => asText(item))
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => asText(item))
       : [],
     avatar_image:
       therapist.avatar_image && typeof therapist.avatar_image === "object"
@@ -350,8 +367,8 @@ function normalizeTherapist(raw: unknown): PublicTherapist | null {
     accepting_new_clients: therapist.accepting_new_clients !== false,
     service_mode:
       therapist.service_mode === "free" ||
-      therapist.service_mode === "paid" ||
-      therapist.service_mode === "both"
+        therapist.service_mode === "paid" ||
+        therapist.service_mode === "both"
         ? therapist.service_mode
         : "both",
     starting_price_vnd:
@@ -360,15 +377,15 @@ function normalizeTherapist(raw: unknown): PublicTherapist | null {
         : null,
     pricing_unit:
       therapist.pricing_unit === "package" ||
-      therapist.pricing_unit === "custom" ||
-      therapist.pricing_unit === "session"
+        therapist.pricing_unit === "custom" ||
+        therapist.pricing_unit === "session"
         ? therapist.pricing_unit
         : "session",
     pricing_note: asText(therapist.pricing_note) || null,
     public_workflow_steps: Array.isArray(therapist.public_workflow_steps)
       ? therapist.public_workflow_steps
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => asText(item))
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => asText(item))
       : [],
     can_receive_contact_requests: therapist.can_receive_contact_requests === true,
     is_verified: therapist.is_verified === true,
@@ -407,8 +424,8 @@ function normalizeArticle(raw: unknown): PublicArticle | null {
     content_markdown: asText(article.content_markdown) || null,
     topic_tags: Array.isArray(article.topic_tags)
       ? article.topic_tags
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => asText(item))
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => asText(item))
       : [],
     seo_title: asText(article.seo_title) || null,
     seo_description: asText(article.seo_description) || null,
@@ -417,7 +434,7 @@ function normalizeArticle(raw: unknown): PublicArticle | null {
     therapist:
       article.therapist && typeof article.therapist === "object"
         ? (article.therapist as PublicArticle["therapist"])
-      : null
+        : null
   };
 }
 
@@ -454,8 +471,8 @@ function normalizeQuestion(raw: unknown): PublicArticleQuestion | null {
     answer_role: asText(question.answer_role) || null,
     topic_tags: Array.isArray(question.topic_tags)
       ? question.topic_tags
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => asText(item))
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => asText(item))
       : [],
     therapist_id: asText(question.therapist_id) || null,
     therapist_name: asText(question.therapist_name) || null,
@@ -536,8 +553,8 @@ export async function getPublicArticleQuestions(articleSlug: string, limit = 6) 
   );
   const remoteQuestions = Array.isArray(response?.questions)
     ? response.questions
-        .map(normalizeQuestion)
-        .filter((item): item is PublicArticleQuestion => Boolean(item))
+      .map(normalizeQuestion)
+      .filter((item): item is PublicArticleQuestion => Boolean(item))
     : [];
 
   const fallbackQuestions = (fallbackArticleQuestions[articleSlug] || [])
@@ -597,8 +614,8 @@ function parseRecommendationArticlesResponse(raw: unknown) {
   const payload = raw as Record<string, unknown>;
   const items = Array.isArray(payload.recommended_articles)
     ? payload.recommended_articles
-        .map(normalizeArticle)
-        .filter((item): item is PublicArticle => Boolean(item))
+      .map(normalizeArticle)
+      .filter((item): item is PublicArticle => Boolean(item))
     : [];
   const reasonTags = Array.isArray(payload.reason_tags)
     ? payload.reason_tags.filter((item): item is string => typeof item === "string")
@@ -616,8 +633,8 @@ function parseRecommendationTherapistsResponse(raw: unknown) {
   const payload = raw as Record<string, unknown>;
   const items = Array.isArray(payload.recommended_therapists)
     ? payload.recommended_therapists
-        .map(normalizeTherapist)
-        .filter((item): item is PublicTherapist => Boolean(item))
+      .map(normalizeTherapist)
+      .filter((item): item is PublicTherapist => Boolean(item))
     : [];
   const reasonTags = Array.isArray(payload.reason_tags)
     ? payload.reason_tags.filter((item): item is string => typeof item === "string")

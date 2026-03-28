@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 # Import Routers
 from auth_routes import router as auth_router
+from email_otp_routes import router as email_otp_router
 from profile_routes import router as profile_router
 from contact_request_routes import router as contact_request_router
 from therapist_routes import router as therapist_router
@@ -56,6 +57,7 @@ def _build_user_payload(user_claims: dict, db_user: dict | None = None, role: st
         "email": user_claims.get("email") or (db_user or {}).get("email"),
         "picture": user_claims.get("picture") or (db_user or {}).get("picture"),
         "role": role,
+        "auth_stage": role or "client",
     }
 
 
@@ -284,6 +286,7 @@ app.add_middleware(
 
 # Register authentication routes
 app.include_router(auth_router)
+app.include_router(email_otp_router)
 app.include_router(profile_router)
 app.include_router(contact_request_router)
 app.include_router(therapist_router)

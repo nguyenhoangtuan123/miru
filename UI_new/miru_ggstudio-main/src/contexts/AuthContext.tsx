@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../services/api';
-import { getCurrentUser, setUserRole } from '../services/backend';
+import { getCurrentUser } from '../services/backend';
 
 type UserRole = 'client' | 'therapist';
 type TherapistStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
@@ -12,6 +12,7 @@ interface User {
   name?: string | null;
   picture?: string | null;
   role?: UserRole | null;
+  auth_stage?: UserRole | null;
   therapist_status?: TherapistStatus | null;
   can_access_therapist_portal?: boolean;
   is_admin_reviewer?: boolean;
@@ -67,7 +68,6 @@ function readCachedUser() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [loading, setLoading] = useState(true);
-  const [isSyncingRole, setIsSyncingRole] = useState(false);
 
   const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('access_token');
@@ -113,59 +113,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void checkAuth();
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const pendingRole = localStorage.getItem('pending_role');
-
-    if (!token || !pendingRole || loading || isSyncingRole) {
-      return;
-    }
-
-    if (pendingRole !== 'client' && pendingRole !== 'therapist') {
-      localStorage.removeItem('pending_role');
-      return;
-    }
-
-    if (user?.role === pendingRole) {
-      localStorage.removeItem('pending_role');
-      return;
-    }
-
-    let cancelled = false;
-
-    const syncPendingRole = async () => {
-      try {
-        setIsSyncingRole(true);
-        await setUserRole(pendingRole);
-        await checkAuth();
-      } catch (error) {
-        console.error('Pending role sync failed:', error);
-      } finally {
-        if (!cancelled) {
-          localStorage.removeItem('pending_role');
-          setIsSyncingRole(false);
-        }
-      }
-    };
-
-    void syncPendingRole();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [checkAuth, isSyncingRole, loading, user?.role]);
-
   const login = (role: UserRole = 'client', nextPath?: string) => {
-    const targetPath = sanitizeNextPath(nextPath ?? (role === 'therapist' ? '/therapist' : '/chat'));
-    const callbackPath = `/auth/callback?next=${encodeURIComponent(targetPath)}`;
+    const defaultPath = role === 'therapist' ? '/therapist' : '/chat';
+    const targetPath = sanitizeNextPath(nextPath ?? defaultPath);
 
-    localStorage.setItem('pending_role', role);
-    window.location.href = `${API_BASE_URL}/auth/login?next=${encodeURIComponent(callbackPath)}`;
+    // Build full auth intent URL — backend now owns role application
+    const params = new URLSearchParams({
+      intent: role,
+      surface: 'app',
+      return_to: targetPath,
+      entry: 'app_login',
+    });
+
+    window.location.href = `${API_BASE_URL}/auth/google/start?${params.toString()}`;
   };
 
   const logout = async () => {
     localStorage.removeItem('access_token');
-    localStorage.removeItem('pending_role');
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     setUser(null);
     window.location.replace(

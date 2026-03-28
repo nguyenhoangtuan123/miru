@@ -1,14 +1,12 @@
 """
 Google OAuth routes for authentication
 Handles login, callback, logout, and user info endpoints
+
+Also provides:
+  GET /auth/providers     – capability discovery
+  GET /auth/google/start  – new intent-aware Google login entry
 """
-import base64
-import hashlib
-import hmac
-import json
 import os
-import secrets
-import time
 from typing import Optional
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -20,6 +18,16 @@ from dotenv import load_dotenv
 from auth import create_access_token
 from auth_db import AuthDatabase
 from auth_middleware import get_current_user, create_auth_cookie, clear_auth_cookie
+from auth_intent import (
+    AuthIntent,
+    serialize_intent,
+    parse_intent,
+    apply_role_intent,
+    build_final_redirect,
+    _sanitize_return_to,
+    _sanitize_intent,
+    _sanitize_surface,
+)
 
 load_dotenv()
 
@@ -45,7 +53,6 @@ SCOPES = [
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 auth_db = AuthDatabase()
-OAUTH_STATE_MAX_AGE_SECONDS = int(os.getenv("OAUTH_STATE_MAX_AGE_SECONDS", "1800"))
 
 
 def serialize_user_response(user_claims: dict, user_data: Optional[dict] = None) -> dict:
@@ -83,120 +90,140 @@ def build_logout_response(next_path: Optional[str] = None):
     return response
 
 
-def _get_oauth_state_secret() -> str:
-    return os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+def _build_google_flow(state: Optional[str] = None):
+    """Create a Google OAuth Flow instance."""
+    kwargs = dict(
+        client_config={
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+            }
+        },
+        scopes=SCOPES,
+        redirect_uri=GOOGLE_REDIRECT_URI,
+    )
+    if state is not None:
+        kwargs["state"] = state
+    return Flow.from_client_config(**kwargs)
 
 
-def create_signed_oauth_state(return_to: str) -> str:
-    payload = {
-        "next": sanitize_return_to(return_to),
-        "iat": int(time.time()),
-        "nonce": secrets.token_urlsafe(16),
-    }
-    payload_json = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    payload_b64 = base64.urlsafe_b64encode(payload_json).rstrip(b"=")
-    signature = hmac.new(
-        _get_oauth_state_secret().encode("utf-8"),
-        payload_b64,
-        hashlib.sha256,
-    ).digest()
-    signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=")
-    return f"{payload_b64.decode('utf-8')}.{signature_b64.decode('utf-8')}"
+# ──────────────────────────────────────────────────────────────
+# Provider discovery
+# ──────────────────────────────────────────────────────────────
 
-
-def parse_signed_oauth_state(state: str) -> str:
+@router.get("/providers")
+async def get_providers():
+    """Return which auth providers are currently available."""
+    email_otp = False
     try:
-        payload_part, signature_part = state.split(".", 1)
-        payload_bytes = payload_part.encode("utf-8")
-        expected_signature = hmac.new(
-            _get_oauth_state_secret().encode("utf-8"),
-            payload_bytes,
-            hashlib.sha256,
-        ).digest()
-        provided_signature = base64.urlsafe_b64decode(signature_part + "=" * (-len(signature_part) % 4))
+        import resend  # noqa: F401
+        email_otp = bool(os.getenv("RESEND_API_KEY"))
+    except ImportError:
+        pass
 
-        if not hmac.compare_digest(expected_signature, provided_signature):
-            raise ValueError("Invalid OAuth state signature")
-
-        payload_json = base64.urlsafe_b64decode(payload_part + "=" * (-len(payload_part) % 4))
-        payload = json.loads(payload_json.decode("utf-8"))
-
-        issued_at = int(payload.get("iat", 0))
-        if not issued_at or (time.time() - issued_at) > OAUTH_STATE_MAX_AGE_SECONDS:
-            raise ValueError("OAuth state expired")
-
-        return sanitize_return_to(payload.get("next"))
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="Invalid state parameter") from exc
+    return {"google": True, "email_otp": email_otp}
 
 
-@router.get("/login")
-async def login(next: Optional[str] = None):
+# ──────────────────────────────────────────────────────────────
+# Google start (new – full auth intent)
+# ──────────────────────────────────────────────────────────────
+
+@router.get("/google/start")
+async def google_start(
+    intent: Optional[str] = None,
+    surface: Optional[str] = None,
+    return_to: Optional[str] = None,
+    entry: Optional[str] = None,
+    anonymous_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+):
     """
-    Initiate Google OAuth flow
-    Redirects user to Google consent screen
+    Initiate Google OAuth with full auth intent contract.
+    All login entry points (app, community) should use this endpoint.
     """
     try:
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": GOOGLE_CLIENT_ID,
-                    "client_secret": GOOGLE_CLIENT_SECRET,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [GOOGLE_REDIRECT_URI]
-                }
-            },
-            scopes=SCOPES,
-            redirect_uri=GOOGLE_REDIRECT_URI
+        auth_intent = AuthIntent(
+            intent=_sanitize_intent(intent),
+            surface=_sanitize_surface(surface),
+            return_to=return_to or ("/therapist" if intent == "therapist" else "/chat"),
+            entry=entry or "",
+            anonymous_id=anonymous_id,
+            session_id=session_id,
         )
-        
+
+        flow = _build_google_flow()
         authorization_kwargs = {
             "access_type": "offline",
             "include_granted_scopes": "true",
-            "state": create_signed_oauth_state(sanitize_return_to(next)),
+            "state": serialize_intent(auth_intent),
         }
         if GOOGLE_OAUTH_PROMPT:
             authorization_kwargs["prompt"] = GOOGLE_OAUTH_PROMPT
 
         authorization_url, _ = flow.authorization_url(**authorization_kwargs)
+        return RedirectResponse(url=authorization_url)
 
-        response = RedirectResponse(url=authorization_url)
-        return response
-        
+    except Exception as e:
+        print(f"OAuth google/start error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initiate login")
+
+
+# ──────────────────────────────────────────────────────────────
+# Legacy login (backward compat – maps to google/start)
+# ──────────────────────────────────────────────────────────────
+
+@router.get("/login")
+async def login(next: Optional[str] = None):
+    """
+    Initiate Google OAuth flow (backward-compatible).
+    Maps old `?next=...` to a minimal AuthIntent.
+    """
+    try:
+        auth_intent = AuthIntent(
+            intent="client",
+            surface="app",
+            return_to=sanitize_return_to(next),
+            entry="legacy_login",
+        )
+
+        flow = _build_google_flow()
+        authorization_kwargs = {
+            "access_type": "offline",
+            "include_granted_scopes": "true",
+            "state": serialize_intent(auth_intent),
+        }
+        if GOOGLE_OAUTH_PROMPT:
+            authorization_kwargs["prompt"] = GOOGLE_OAUTH_PROMPT
+
+        authorization_url, _ = flow.authorization_url(**authorization_kwargs)
+        return RedirectResponse(url=authorization_url)
+
     except Exception as e:
         print(f"OAuth login error: {e}")
         raise HTTPException(status_code=500, detail="Failed to initiate login")
 
 
+# ──────────────────────────────────────────────────────────────
+# OAuth callback (now intent-aware)
+# ──────────────────────────────────────────────────────────────
+
 @router.get("/callback")
 async def callback(request: Request, code: str, state: str):
     """
-    Handle OAuth callback from Google
-    Exchange authorization code for user info and create session
+    Handle OAuth callback from Google.
+    Exchange authorization code for user info, apply role intent, redirect.
     """
     try:
-        return_to = parse_signed_oauth_state(state)
-        
+        intent = parse_intent(state)
+
         # Exchange code for tokens
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": GOOGLE_CLIENT_ID,
-                    "client_secret": GOOGLE_CLIENT_SECRET,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [GOOGLE_REDIRECT_URI]
-                }
-            },
-            scopes=SCOPES,
-            redirect_uri=GOOGLE_REDIRECT_URI,
-            state=state
-        )
-        
+        flow = _build_google_flow(state=state)
         flow.fetch_token(code=code)
         credentials = flow.credentials
-        
+
         # Verify and decode ID token
         idinfo = id_token.verify_oauth2_token(
             credentials.id_token,
@@ -204,44 +231,53 @@ async def callback(request: Request, code: str, state: str):
             GOOGLE_CLIENT_ID,
             clock_skew_in_seconds=GOOGLE_OAUTH_CLOCK_SKEW_SECONDS,
         )
-        
+
         # Extract user info
         user_data = {
             "id": idinfo["sub"],
             "email": idinfo["email"],
             "name": idinfo.get("name"),
-            "picture": idinfo.get("picture")
+            "picture": idinfo.get("picture"),
         }
-        
-        # Create or update user in database when available.
-        # Login should still complete if Supabase is temporarily unreachable.
+
+        # Persist user
         if not auth_db.create_or_update_user(user_data):
             print("OAuth callback warning: failed to persist user profile to database")
-        
-        # Generate JWT token
+
+        # Apply role intent (server-side – replaces frontend pending_role)
+        try:
+            from database import DatabaseManager
+
+            db = DatabaseManager()
+            apply_role_intent(db, user_data["id"], intent, user_data)
+        except Exception as exc:
+            print(f"OAuth callback warning: role intent apply failed: {exc}")
+
+        # Generate JWT
         token = create_access_token(
             user_id=user_data["id"],
             email=user_data["email"],
-            name=user_data.get("name")
+            name=user_data.get("name"),
         )
-        
-        # Set cookie and redirect to the original page.
-        # Token is passed as a query param for the frontend to capture once.
-        redirect_path = append_token(return_to, token)
-        response = RedirectResponse(
-            url=build_frontend_redirect(redirect_path),
-            status_code=302
-        )
+
+        # Build cookie + redirect
+        redirect_url = build_final_redirect(intent, token)
+        response = RedirectResponse(url=redirect_url, status_code=302)
         cookie_config = create_auth_cookie(token)
         response.set_cookie(**cookie_config)
 
         return response
+
     except HTTPException:
         raise
     except Exception as e:
         print(f"OAuth callback error: {e}")
         raise HTTPException(status_code=500, detail="Authentication failed")
 
+
+# ──────────────────────────────────────────────────────────────
+# Logout
+# ──────────────────────────────────────────────────────────────
 
 @router.get("/logout")
 async def logout_redirect(next: Optional[str] = None):
@@ -258,6 +294,10 @@ async def logout():
     return response
 
 
+# ──────────────────────────────────────────────────────────────
+# User info (auth/me – kept for backward compat)
+# ──────────────────────────────────────────────────────────────
+
 @router.get("/me")
 async def get_me(request: Request):
     """
@@ -265,13 +305,13 @@ async def get_me(request: Request):
     Protected endpoint for frontend to check auth status
     """
     user = await get_current_user(request)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated"
         )
-    
+
     # Fetch full user data from database when available.
     user_data = auth_db.get_user_by_id(user["sub"])
 

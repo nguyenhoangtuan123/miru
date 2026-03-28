@@ -147,6 +147,13 @@ textarea {
   box-shadow: 0 18px 48px rgba(86, 73, 124, 0.1);
 }
 
+.glass-card.hero-visual {
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  box-shadow: 0 18px 48px rgba(86, 73, 124, 0.15);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;

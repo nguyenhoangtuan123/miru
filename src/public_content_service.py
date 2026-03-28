@@ -50,6 +50,7 @@ VALID_PUBLIC_EVENT_TYPES = {
     "community_question_published",
     "community_question_answered",
     "community_question_hidden",
+    "chat_article_suggestion_click",
 }
 
 VALID_QUESTION_STATUSES = {

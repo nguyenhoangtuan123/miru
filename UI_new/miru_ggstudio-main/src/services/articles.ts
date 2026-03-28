@@ -425,3 +425,18 @@ export async function rejectAdminArticle(articleId: string | number, reason?: st
     ArticleMutationResponseSchemaForParse
   );
 }
+
+/**
+ * Upload an image for use in articles (cover or inline).
+ * Returns the public URL of the uploaded image.
+ */
+export async function uploadArticleImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post<{ success: boolean; url: string; path: string }>(
+    '/api/therapist/articles/upload-image',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return res.data.url;
+}

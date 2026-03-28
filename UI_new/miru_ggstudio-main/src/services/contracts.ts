@@ -16,6 +16,7 @@ export const UserSchema = z.object({
 export const CurrentUserResponseSchema = z.object({
   user: UserSchema.extend({
     role: z.enum(['client', 'therapist']).nullable().optional(),
+    auth_stage: z.enum(['client', 'therapist']).nullable().optional(),
     therapist_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).nullable().optional(),
     can_access_therapist_portal: z.boolean().optional(),
     is_admin_reviewer: z.boolean().optional(),
@@ -32,6 +33,11 @@ export const SetRoleResponseSchema = z.object({
   therapist_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).nullable().optional(),
   can_access_therapist_portal: z.boolean().optional(),
   warning: z.string().optional(),
+});
+
+export const AuthProvidersResponseSchema = z.object({
+  google: z.boolean(),
+  email_otp: z.boolean(),
 });
 
 export const AppConsentSchema = z.object({
