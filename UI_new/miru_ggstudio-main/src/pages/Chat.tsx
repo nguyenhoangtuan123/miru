@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Bot, LoaderCircle, Menu, Plus, Send } from 'lucide-react';
+import { Bot, ExternalLink, LoaderCircle, Menu, Plus, Send } from 'lucide-react';
 import { motion } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../contexts/AuthContext';
 import { shouldShowSystemNotification, showMiruNotification } from '../lib/notifications';
 import { cn } from '../lib/utils';
+import { buildPublicArticleUrl } from '../services/api';
 import {
   connectChatSocket,
   createChatSession,
   getChatSessions,
   getSessionMessages,
+  logChatArticleSuggestionClick,
 } from '../services/backend';
-import type { ChatMessage, ChatSession } from '../services/contracts';
+import type { ArticleSuggestion, ChatMessage, ChatSession } from '../services/contracts';
 
 type LocalMessage = {
   id: string;
@@ -18,6 +22,7 @@ type LocalMessage = {
   content: string;
   created_at: string;
   status?: 'thinking' | 'streaming' | 'done';
+  articleSuggestions?: ArticleSuggestion[];
 };
 
 const STREAMING_MESSAGE_ID = 'assistant-streaming';
@@ -36,6 +41,88 @@ function buildSessionTitle(input: string) {
   const cleaned = input.trim().replace(/\s+/g, ' ');
   if (!cleaned) return 'Cuoc tro chuyen moi';
   return cleaned.length <= 50 ? cleaned : `${cleaned.slice(0, 47)}...`;
+}
+
+function ArticleSuggestionBlock({
+  suggestions,
+  userId,
+  sessionId,
+}: {
+  suggestions: ArticleSuggestion[];
+  userId?: string;
+  sessionId: string | null;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="mt-3 w-full"
+    >
+      <p className="mb-2 text-xs font-medium text-white/50">
+        Bài viết có thể hữu ích cho bạn
+      </p>
+      <div className="space-y-2">
+        {suggestions.map((article, index) => {
+          const articleUrl = buildPublicArticleUrl(article.slug);
+          const handleClick = () => {
+            if (userId && sessionId) {
+              logChatArticleSuggestionClick({
+                user_id: userId,
+                session_id: sessionId,
+                article_slug: article.slug,
+                position: index,
+              });
+            }
+          };
+
+          return (
+            <a
+              key={article.slug}
+              href={articleUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={handleClick}
+              className="group block rounded-2xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-miru-primary/40 hover:bg-white/10"
+            >
+              <p className="text-sm font-medium text-white/90 group-hover:text-white line-clamp-1">
+                {article.title}
+              </p>
+              {article.excerpt && (
+                <p className="mt-1 text-xs text-white/50 line-clamp-2">
+                  {article.excerpt}
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {article.therapist_name && (
+                  <span className="text-[10px] text-white/40">
+                    {article.therapist_name}
+                  </span>
+                )}
+                {article.topic_tags.slice(0, 2).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-miru-primary/15 px-2 py-0.5 text-[10px] text-miru-primary/80"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              {article.reason_text && (
+                <p className="mt-1.5 text-[11px] italic text-white/35">
+                  {article.reason_text}
+                </p>
+              )}
+              <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-miru-primary/70 group-hover:text-miru-primary">
+                Đọc bài viết
+                <ExternalLink size={12} />
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
 }
 
 export function Chat() {
@@ -104,6 +191,7 @@ export function Chat() {
       }
 
       if (event.type === 'ai_response') {
+        const suggestions = event.article_suggestions ?? [];
         setMessages((prev) => {
           const nextMessage: LocalMessage = {
             id: `ai-${event.timestamp}-${prev.length}`,
@@ -111,6 +199,7 @@ export function Chat() {
             content: event.message,
             created_at: event.timestamp,
             status: 'done',
+            articleSuggestions: suggestions.length > 0 ? suggestions : undefined,
           };
           const withoutStreaming = prev.filter((message) => message.id !== STREAMING_MESSAGE_ID);
           return [...withoutStreaming, nextMessage];
@@ -447,8 +536,8 @@ export function Chat() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  'flex max-w-[85%] md:max-w-[75%]',
-                  message.role === 'user' ? 'ml-auto justify-end' : 'mr-auto'
+                  'flex flex-col max-w-[85%] md:max-w-[75%]',
+                  message.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'
                 )}
               >
                 <div
@@ -459,9 +548,15 @@ export function Chat() {
                       : 'rounded-tl-sm glass-panel'
                   )}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed md:text-base">
-                    {message.content || (message.status === 'thinking' ? 'Miru đang suy nghĩ...' : '')}
-                  </p>
+                  {message.role === 'assistant' && message.content ? (
+                    <div className="prose prose-sm md:prose-base max-w-none text-white/90 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-li:text-white/90 prose-headings:my-2 prose-headings:text-white prose-strong:text-white prose-a:text-miru-primary prose-ol:marker:text-white/60 prose-ul:marker:text-white/60 prose-code:text-miru-primary/80">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed md:text-base">
+                      {message.content || (message.status === 'thinking' ? 'Miru đang suy nghĩ...' : '')}
+                    </p>
+                  )}
                   {message.role === 'assistant' && message.status && message.status !== 'done' && (
                     <div className="mt-3 flex items-center gap-1.5 text-xs text-white/50">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
@@ -471,6 +566,16 @@ export function Chat() {
                     </div>
                   )}
                 </div>
+                {message.role === 'assistant' &&
+                  message.status === 'done' &&
+                  message.articleSuggestions &&
+                  message.articleSuggestions.length > 0 && (
+                    <ArticleSuggestionBlock
+                      suggestions={message.articleSuggestions}
+                      userId={user?.id}
+                      sessionId={activeSessionId}
+                    />
+                  )}
               </motion.div>
             ))
           )}

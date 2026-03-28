@@ -541,11 +541,23 @@ export const WsChatRequestSchema = z
     'message or images is required'
   );
 
+export const ArticleSuggestionSchema = z.object({
+  id: IdSchema.nullable().optional(),
+  slug: z.string(),
+  title: z.string(),
+  excerpt: z.string().nullable().optional(),
+  cover_image_url: z.string().nullable().optional(),
+  therapist_name: z.string().nullable().optional(),
+  topic_tags: z.array(z.string()).default([]),
+  reason_text: z.string().nullable().optional(),
+});
+
 export const WsAiResponseSchema = z.object({
   type: z.literal('ai_response'),
   message: z.string(),
   crisis_level: z.string().nullable().optional(),
   timestamp: z.string(),
+  article_suggestions: z.array(ArticleSuggestionSchema).optional(),
 });
 
 export const WsThinkingSchema = z.object({
@@ -591,4 +603,5 @@ export type TherapistAssignmentChecklistItem = z.infer<typeof TherapistAssignmen
 export type TherapistAssignmentAttachment = z.infer<typeof TherapistAssignmentAttachmentSchema>;
 export type TherapistClientSummary = z.infer<typeof TherapistClientSummaryResponseSchema>['summary'];
 export type TherapistMorningBoard = z.infer<typeof TherapistMorningBoardResponseSchema>['board'];
+export type ArticleSuggestion = z.infer<typeof ArticleSuggestionSchema>;
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

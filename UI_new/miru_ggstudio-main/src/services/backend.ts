@@ -249,6 +249,23 @@ export function connectChatSocket(
   };
 }
 
+export function logChatArticleSuggestionClick(payload: {
+  user_id: string;
+  session_id: string;
+  article_slug: string;
+  position: number;
+  source?: string;
+}) {
+  api
+    .post('/api/chat/article-suggestion-click', {
+      ...payload,
+      source: payload.source ?? 'chat_ai',
+    })
+    .catch(() => {
+      /* fire-and-forget: never block the user from opening the link */
+    });
+}
+
 export async function getMemories(userId: string) {
   return parseApi(api.get(`/api/memories/${userId}`), MemoryListResponseSchema);
 }
