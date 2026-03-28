@@ -15,7 +15,7 @@ from services import chat_manager
 logger = logging.getLogger(__name__)
 
 INACTIVITY_HOURS = int(os.getenv("PROACTIVE_PUSH_INACTIVITY_HOURS", "12"))
-POLL_MINUTES = int(os.getenv("PROACTIVE_PUSH_POLL_MINUTES", "15"))
+POLL_MINUTES = int(os.getenv("PROACTIVE_PUSH_POLL_MINUTES", "60"))
 STATE_FILE = Path(PROJECT_ROOT) / "proactive_push_state.json"
 
 
@@ -71,7 +71,7 @@ class ProactivePushScheduler:
         try:
             from trajectory_service import get_trajectory_service
 
-            get_trajectory_service().recompute_due_snapshots(limit=50)
+            get_trajectory_service().recompute_due_snapshots(limit=10)
         except Exception:
             pass
 

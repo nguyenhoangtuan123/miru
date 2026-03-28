@@ -21,6 +21,8 @@ ASSIGNMENT_SIGNED_URL_TTL = 60 * 60
 class TherapistService:
     """Therapist-client service used by the active API routes."""
 
+    _THERAPIST_CACHE_TTL = 300  # 5 minutes
+
     def __init__(self):
         url = os.environ.get("SUPABASE_URL", "").strip()
         key = os.environ.get("SUPABASE_KEY", "").strip()
@@ -29,6 +31,7 @@ class TherapistService:
         self.supabase: Client = create_client(url, key)
         self._pairing_store_path = Path(__file__).resolve().parent.parent / "pairing_codes.json"
         self._pairing_store_lock = Lock()
+        self._therapist_cache: Dict[str, tuple] = {}  # key -> (result, timestamp)
         print("[OK] TherapistService initialized")
 
     def _now(self) -> str:
@@ -542,6 +545,15 @@ class TherapistService:
         return None
 
     def get_therapist(self, therapist_identifier: str) -> Optional[Dict[str, Any]]:
+        import time as _time
+
+        # Check TTL cache first
+        cached = self._therapist_cache.get(therapist_identifier)
+        if cached:
+            result, ts = cached
+            if _time.monotonic() - ts < self._THERAPIST_CACHE_TTL:
+                return result
+
         candidates: List[Dict[str, Any]] = []
 
         try:
@@ -556,7 +568,9 @@ class TherapistService:
         except Exception:
             pass
 
-        return self._choose_preferred_therapist(candidates, user_id=therapist_identifier)
+        result = self._choose_preferred_therapist(candidates, user_id=therapist_identifier)
+        self._therapist_cache[therapist_identifier] = (result, _time.monotonic())
+        return result
 
     def create_therapist(self, email: str, name: str, license_number: str = None, user_id: str = None) -> Optional[Dict[str, Any]]:
         created_at = self._now()

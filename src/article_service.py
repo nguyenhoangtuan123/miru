@@ -12,6 +12,12 @@ from profile_service import get_profile_service
 from therapist_service import get_therapist_service
 from therapist_verification_service import get_therapist_verification_service
 
+try:
+    from embedding_service import get_embedding, build_article_embed_text
+    _HAS_EMBEDDING = True
+except ImportError:
+    _HAS_EMBEDDING = False
+
 load_dotenv()
 
 ARTICLES_TABLE = "therapist_articles"
@@ -172,6 +178,27 @@ class ArticleService:
     ) -> Optional[Dict[str, Any]]:
         rows = self._list_rows(eq_filters=eq_filters, limit=1)
         return rows[0] if rows else None
+
+    def _compute_and_store_embedding(self, article_id: Any, article_row: Dict[str, Any]) -> None:
+        """Generate embedding for an article and store it. Never raises."""
+        if not _HAS_EMBEDDING:
+            return
+        try:
+            serialized = self._serialize_article(article_row)
+            text = build_article_embed_text(serialized)
+            if not text.strip():
+                return
+            embedding = get_embedding(text, task_type="RETRIEVAL_DOCUMENT")
+            # Skip storing if the API returned a zero vector
+            if all(v == 0.0 for v in embedding[:10]):
+                print(f"[article_service] Skipping zero embedding for article {article_id}")
+                return
+            self.supabase.table(ARTICLES_TABLE).update(
+                {"embedding": embedding}
+            ).eq("id", self._coerce_article_id(article_id)).execute()
+            print(f"[article_service] Embedding stored for article {article_id}")
+        except Exception as exc:
+            print(f"[article_service] Embedding failed for article {article_id}: {exc}")
 
     def _insert_row(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -418,6 +445,7 @@ class ArticleService:
                 "updated_at": now,
             }
         )
+        self._compute_and_store_embedding(row.get("id"), row)
         return self._serialize_article(row)
 
     def update_article(
@@ -446,6 +474,7 @@ class ArticleService:
             update_payload["reviewed_by_email"] = None
             update_payload["archived_at"] = None
         row = self._update_row(current.get("id"), update_payload)
+        self._compute_and_store_embedding(row.get("id"), row)
         return self._serialize_article(row)
 
     def submit_article(
@@ -517,6 +546,7 @@ class ArticleService:
                 "updated_at": self._now(),
             },
         )
+        self._compute_and_store_embedding(row.get("id"), row)
         return self._serialize_article(row)
 
     def reject_article(
