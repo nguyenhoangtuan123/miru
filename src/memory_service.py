@@ -222,6 +222,27 @@ class MemoryService:
 
         return DatabaseManager()
 
+    def _can_use_threadless_mem0_path(self) -> bool:
+        return self.memory is not None and not getattr(self.memory, "enable_graph", False)
+
+    @staticmethod
+    def _build_mem0_filters(
+        *,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        from mem0.memory.main import _build_filters_and_metadata
+
+        _, effective_filters = _build_filters_and_metadata(
+            user_id=user_id,
+            agent_id=agent_id,
+            run_id=run_id,
+            input_filters=filters,
+        )
+        return effective_filters
+
     def _get_session_facts_from_db(self, session_id: Any) -> Optional[str]:
         try:
             return self._get_db_manager().get_analyzed_session_facts(self._session_id_for_db(session_id))
@@ -317,6 +338,17 @@ class MemoryService:
             return []
 
         try:
+            if self._can_use_threadless_mem0_path():
+                effective_filters = self._build_mem0_filters(user_id=user_id)
+                memories = self.memory._search_vector_store(query, effective_filters, limit, None)
+                reranker = getattr(self.memory, "reranker", None)
+                if reranker and memories:
+                    try:
+                        memories = reranker.rerank(query, memories, limit)
+                    except Exception as rerank_exc:
+                        mem0_logger.warning("[SEARCH] Mem0 reranking failed on threadless path: %s", rerank_exc)
+                return memories
+
             result = self.memory.search(
                 query=query,
                 user_id=user_id,
@@ -347,6 +379,11 @@ class MemoryService:
         if self.memory is None:
             return {"results": [], "relations": []}
         try:
+            if self._can_use_threadless_mem0_path():
+                effective_filters = self._build_mem0_filters(user_id=user_id)
+                memories = self.memory._get_all_from_vector_store(effective_filters, 100)
+                return {"results": memories, "relations": []}
+
             return self.memory.get_all(user_id=user_id)
         except RuntimeError as exc:
             mem0_logger.warning(
