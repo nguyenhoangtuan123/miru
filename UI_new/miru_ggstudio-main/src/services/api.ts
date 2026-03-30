@@ -17,6 +17,10 @@ export function buildPublicSiteUrl(path = '/') {
   return `${PUBLIC_SITE_URL}${normalizedPath}`;
 }
 
+export function buildPublicReturnBridgeUrl(returnTo: string) {
+  return `/public-return?return_to=${encodeURIComponent(returnTo)}`;
+}
+
 export function buildPublicArticleUrl(slug: string) {
   return buildPublicSiteUrl(`/bai-viet/${encodeURIComponent(slug)}`);
 }

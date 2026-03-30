@@ -5,7 +5,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { prefetchClientRouteData } from '../queries/appQueries';
-import { PUBLIC_SITE_URL } from '../services/api';
+import { PUBLIC_SITE_URL, buildPublicReturnBridgeUrl } from '../services/api';
 
 type GestureMode = 'open' | 'close';
 
@@ -26,10 +26,12 @@ export function BottomNav() {
     return null;
   }
 
+  const communityUrl = buildPublicReturnBridgeUrl(PUBLIC_SITE_URL);
+
   const navItems = [
     { icon: Home, label: 'Trang chủ', path: '/' },
     { icon: MessageCircle, label: 'Trò chuyện', path: '/chat' },
-    { icon: Globe, label: 'Community', path: PUBLIC_SITE_URL, external: true },
+    { icon: Globe, label: 'Community', path: communityUrl, external: true },
     { icon: ClipboardList, label: 'Đánh giá', path: '/assessments' },
     { icon: BrainCircuit, label: 'Ký ức', path: '/memories' },
     { icon: Stethoscope, label: 'Trị liệu', path: '/therapy' },

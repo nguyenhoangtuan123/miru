@@ -5,7 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { buildPublicContentLoginUrl, SITE_URL } from "../../lib/api";
-import { captureTokenFromUrl, logoutPublic, syncProfile } from "../../lib/public-auth";
+import {
+  captureTokenFromUrl,
+  logoutPublic,
+  subscribeToPublicAuth,
+  syncProfile,
+} from "../../lib/public-auth";
 import { getViewerState } from "../../lib/public-events";
 import { computeStageCta, type StageCta } from "../../lib/stage-cta";
 import { TrackedPublicLink } from "./TrackedPublicLink";
@@ -23,19 +28,18 @@ export function PublicHeader() {
 
   // Always start with anonymous CTA for SSR to avoid hydration mismatch
   const [cta, setCta] = useState<StageCta>(() => computeStageCta("anonymous"));
-  const [mounted, setMounted] = useState(false);
+  const refreshCta = useCallback(() => {
+    setCta(computeStageCta());
+  }, []);
 
   useEffect(() => {
-    setMounted(true);
     const captured = captureTokenFromUrl();
+    refreshCta();
     if (captured) {
-      syncProfile().then(() => {
-        setCta(computeStageCta());
-      });
-    } else {
-      setCta(computeStageCta());
+      void syncProfile();
     }
-  }, [pathname]);
+    return subscribeToPublicAuth(refreshCta);
+  }, [pathname, refreshCta]);
 
   // For anonymous stage, build a tracked login URL with viewer context
   const currentPageUrl = `${SITE_URL}${pathname || "/"}`;
@@ -56,8 +60,8 @@ export function PublicHeader() {
 
   const handleLogout = useCallback(() => {
     logoutPublic();
-    setCta(computeStageCta());
-  }, []);
+    refreshCta();
+  }, [refreshCta]);
 
   const renderCtaButton = (btn: StageCta["primary"], isLogin = false) => {
     const className = btn.style === "primary" ? "button-primary" : "button-secondary";

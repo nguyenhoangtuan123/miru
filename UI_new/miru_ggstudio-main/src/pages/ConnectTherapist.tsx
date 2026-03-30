@@ -4,7 +4,11 @@ import { ArrowLeft, MessageCircleHeart, Send, Sparkles, Stethoscope } from 'luci
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { publicTherapistDetailQueryOptions, queryKeys } from '../queries/appQueries';
-import { buildPublicSiteUrl, buildPublicTherapistUrl } from '../services/api';
+import {
+  buildPublicReturnBridgeUrl,
+  buildPublicSiteUrl,
+  buildPublicTherapistUrl,
+} from '../services/api';
 import { aliasPublicIdentity } from '../services/publicContent';
 import {
   createTherapistContactRequest,
@@ -121,6 +125,10 @@ export function ConnectTherapistPage() {
     () => normalizeReturnTo(searchParams.get('return_to'), therapistId),
     [searchParams, therapistId]
   );
+  const returnToBridgeUrl = useMemo(
+    () => buildPublicReturnBridgeUrl(returnTo),
+    [returnTo]
+  );
 
   const [form, setForm] = useState<TherapistContactRequestCreate>(() =>
     buildInitialForm(therapistId, null, source, sourceArticleSlug, entryIntent)
@@ -221,7 +229,7 @@ export function ConnectTherapistPage() {
             </div>
 
             <a
-              href={returnTo}
+              href={returnToBridgeUrl}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10"
             >
               <ArrowLeft size={16} />
@@ -360,7 +368,7 @@ export function ConnectTherapistPage() {
                 {saving ? 'Đang gửi...' : entryIntent === 'message' ? 'Gửi tin nhắn riêng' : 'Gửi yêu cầu trị liệu'}
               </button>
               <a
-                href={returnTo}
+                href={returnToBridgeUrl}
                 className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white/75 dark:hover:bg-white/10"
               >
                 Quay lại Community

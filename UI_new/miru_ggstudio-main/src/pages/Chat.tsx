@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { useAuth } from '../contexts/AuthContext';
 import { shouldShowSystemNotification, showMiruNotification } from '../lib/notifications';
 import { cn } from '../lib/utils';
-import { buildPublicArticleUrl } from '../services/api';
+import { buildPublicArticleUrl, buildPublicReturnBridgeUrl } from '../services/api';
 import {
   connectChatSocket,
   createChatSession,
@@ -64,7 +64,7 @@ function ArticleSuggestionBlock({
       </p>
       <div className="space-y-2">
         {suggestions.map((article, index) => {
-          const articleUrl = buildPublicArticleUrl(article.slug);
+          const articleUrl = buildPublicReturnBridgeUrl(buildPublicArticleUrl(article.slug));
           const handleClick = () => {
             if (userId && sessionId) {
               logChatArticleSuggestionClick({

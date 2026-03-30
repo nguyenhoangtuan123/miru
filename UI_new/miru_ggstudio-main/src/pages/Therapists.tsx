@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { buildPublicSiteUrl } from '../services/api';
+import { buildPublicReturnBridgeUrl, buildPublicSiteUrl } from '../services/api';
 
 export function TherapistsDirectory() {
   const location = useLocation();
   const canonicalUrl = useMemo(
-    () => buildPublicSiteUrl(`/therapists${location.search || ''}`),
+    () => buildPublicReturnBridgeUrl(buildPublicSiteUrl(`/therapists${location.search || ''}`)),
     [location.search]
   );
 

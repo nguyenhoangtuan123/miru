@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { APP_URL, buildClientLoginUrl, buildPublicContentLoginUrl } from "../../lib/api";
-import { getAuthStage } from "../../lib/public-auth";
+import { getAuthStage, subscribeToPublicAuth } from "../../lib/public-auth";
 import { getViewerState, type PublicEventPayload } from "../../lib/public-events";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
@@ -35,8 +35,7 @@ export function PublicLoginUpliftLink({
   const [href, setHref] = useState(() =>
     returnTo.startsWith("/") ? buildClientLoginUrl(returnTo) : buildClientLoginUrl("/chat"),
   );
-
-  useEffect(() => {
+  const refreshStage = useCallback(() => {
     const currentStage = getAuthStage();
     setStage(currentStage);
 
@@ -49,12 +48,21 @@ export function PublicLoginUpliftLink({
           sessionId: viewer.session_id,
         }),
       );
-    } else if (currentStage === "client") {
-      setHref(clientHref || `${APP_URL}/chat`);
-    } else if (currentStage === "therapist") {
-      setHref(`${APP_URL}/therapist/articles`);
+      return;
     }
-  }, [returnTo, clientHref]);
+
+    if (currentStage === "client") {
+      setHref(clientHref || `${APP_URL}/chat`);
+      return;
+    }
+
+    setHref(`${APP_URL}/therapist/articles`);
+  }, [clientHref, returnTo]);
+
+  useEffect(() => {
+    refreshStage();
+    return subscribeToPublicAuth(refreshStage);
+  }, [refreshStage]);
 
   // Anonymous: show login prompt as before
   if (stage === "anonymous") {

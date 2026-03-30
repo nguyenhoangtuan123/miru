@@ -14,13 +14,13 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { prefetchTherapistRouteData } from '../queries/appQueries';
-import { PUBLIC_SITE_URL } from '../services/api';
+import { PUBLIC_SITE_URL, buildPublicReturnBridgeUrl } from '../services/api';
 
 export function TherapistLayout() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const communityUrl = PUBLIC_SITE_URL;
+  const communityUrl = buildPublicReturnBridgeUrl(PUBLIC_SITE_URL);
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Tổng quan', path: '/therapist' },

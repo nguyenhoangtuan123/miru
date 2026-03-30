@@ -67,6 +67,20 @@ def _sanitize_return_to(return_to: Optional[str], default: str = "/chat") -> str
     return return_to
 
 
+def _sanitize_return_to_for_surface(
+    surface: Optional[str],
+    return_to: Optional[str],
+    default: str = "/chat",
+) -> str:
+    normalized_surface = _sanitize_surface(surface)
+    if normalized_surface == "community":
+        candidate = (return_to or "").strip()
+        if candidate.startswith("http") and _is_allowed_community_origin(candidate):
+            return candidate
+        return _sanitize_return_to(return_to, default="/")
+    return _sanitize_return_to(return_to, default=default)
+
+
 def _sanitize_intent(raw: Optional[str]) -> str:
     return raw if raw in ("client", "therapist") else "client"
 
@@ -85,10 +99,14 @@ def _get_state_secret() -> str:
 
 def serialize_intent(intent: AuthIntent) -> str:
     """Encode an AuthIntent into a signed, URL-safe string."""
+    sanitized_surface = _sanitize_surface(intent.surface)
     payload = {
         "intent": _sanitize_intent(intent.intent),
-        "surface": _sanitize_surface(intent.surface),
-        "return_to": _sanitize_return_to(intent.return_to),
+        "surface": sanitized_surface,
+        "return_to": _sanitize_return_to_for_surface(
+            sanitized_surface,
+            intent.return_to,
+        ),
         "entry": intent.entry or "",
         "iat": int(time.time()),
         "nonce": secrets.token_urlsafe(16),
@@ -137,7 +155,10 @@ def parse_intent(state: str) -> AuthIntent:
         return AuthIntent(
             intent=_sanitize_intent(payload.get("intent")),
             surface=_sanitize_surface(payload.get("surface")),
-            return_to=_sanitize_return_to(payload.get("return_to")),
+            return_to=_sanitize_return_to_for_surface(
+                payload.get("surface"),
+                payload.get("return_to"),
+            ),
             entry=payload.get("entry", ""),
             anonymous_id=payload.get("anonymous_id"),
             session_id=payload.get("session_id"),

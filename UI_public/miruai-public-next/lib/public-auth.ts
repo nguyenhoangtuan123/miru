@@ -2,6 +2,7 @@ import { API_BASE_URL } from "./api";
 
 const TOKEN_KEY = "miru_public_token";
 const PROFILE_KEY = "miru_public_profile";
+const AUTH_CHANGE_EVENT = "miru-public-auth-change";
 
 // ── Types ──────────────────────────────────────────────
 export type AuthStage = "anonymous" | "client" | "therapist";
@@ -17,6 +18,16 @@ export interface PublicAuthProfile {
     therapist_status: TherapistStatus | null;
     can_access_therapist_portal: boolean;
     is_admin_reviewer: boolean;
+}
+
+function notifyAuthChange() {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+function storeProfile(profile: PublicAuthProfile) {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    notifyAuthChange();
 }
 
 // ── JWT helpers ────────────────────────────────────────
@@ -41,6 +52,7 @@ function isTokenExpired(token: string): boolean {
 async function fetchProfileFromBackend(token: string): Promise<PublicAuthProfile | null> {
     try {
         const res = await fetch(`${API_BASE_URL}/api/user/me`, {
+            credentials: "include",
             headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -64,7 +76,7 @@ async function fetchProfileFromBackend(token: string): Promise<PublicAuthProfile
             is_admin_reviewer: u.is_admin_reviewer ?? false,
         };
 
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        storeProfile(profile);
         return profile;
     } catch (err) {
         console.error("[public-auth] Failed to fetch profile:", err);
@@ -103,7 +115,9 @@ export function captureTokenFromUrl(): boolean {
             can_access_therapist_portal: false,
             is_admin_reviewer: false,
         };
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(tempProfile));
+        storeProfile(tempProfile);
+    } else {
+        notifyAuthChange();
     }
 
     // Clean URL
@@ -222,4 +236,25 @@ export function logoutPublic() {
     localStorage.removeItem(PROFILE_KEY);
     // Legacy cleanup
     localStorage.removeItem("miru_public_user");
+    notifyAuthChange();
+}
+
+export function subscribeToPublicAuth(onChange: () => void): () => void {
+    if (typeof window === "undefined") {
+        return () => undefined;
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+        if (event.key === null || event.key === TOKEN_KEY || event.key === PROFILE_KEY) {
+            onChange();
+        }
+    };
+
+    window.addEventListener(AUTH_CHANGE_EVENT, onChange);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+        window.removeEventListener(AUTH_CHANGE_EVENT, onChange);
+        window.removeEventListener("storage", handleStorage);
+    };
 }

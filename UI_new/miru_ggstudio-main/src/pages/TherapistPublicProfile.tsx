@@ -1,15 +1,17 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { buildPublicTherapistUrl } from '../services/api';
+import { buildPublicReturnBridgeUrl, buildPublicTherapistUrl } from '../services/api';
 
 export function TherapistPublicProfilePage() {
   const { therapistId } = useParams<{ therapistId: string }>();
   const location = useLocation();
   const canonicalUrl = useMemo(() => {
     if (!therapistId) {
-      return buildPublicTherapistUrl('unknown');
+      return buildPublicReturnBridgeUrl(buildPublicTherapistUrl('unknown'));
     }
-    return `${buildPublicTherapistUrl(therapistId)}${location.search || ''}`;
+    return buildPublicReturnBridgeUrl(
+      `${buildPublicTherapistUrl(therapistId)}${location.search || ''}`
+    );
   }, [location.search, therapistId]);
 
   useEffect(() => {

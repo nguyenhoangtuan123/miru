@@ -30,7 +30,7 @@ import {
   myTherapistArticleAnalyticsQueryOptions,
   myTherapistArticlesQueryOptions,
 } from '../../queries/appQueries';
-import { PUBLIC_SITE_URL } from '../../services/api';
+import { PUBLIC_SITE_URL, buildPublicReturnBridgeUrl } from '../../services/api';
 import { createArticleDraft, formatArticleDate, getArticleStatusMeta } from '../articles/articleUtils';
 import { ArticleEditorPanel } from './articles/ArticleEditorPanel';
 import { ArticleAnalyticsPanel } from './articles/ArticleAnalyticsPanel';
@@ -158,7 +158,7 @@ function SaveStatusPill({ status }: { status: SaveStatus }) {
 export function TherapistArticlesPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const communityLibraryUrl = `${PUBLIC_SITE_URL}/bai-viet`;
+  const communityLibraryUrl = buildPublicReturnBridgeUrl(`${PUBLIC_SITE_URL}/bai-viet`);
   const articlesQuery = useQuery(myTherapistArticlesQueryOptions());
   const analyticsQuery = useQuery(myTherapistArticleAnalyticsQueryOptions());
   const [questionFilter, setQuestionFilter] = useState<ArticleQuestionStatus | 'all'>('all');
@@ -257,7 +257,7 @@ export function TherapistArticlesPage() {
   );
   const selectedArticleUrl =
     selectedArticle?.slug && selectedArticle.status === 'published'
-      ? `${PUBLIC_SITE_URL}/bai-viet/${selectedArticle.slug}`
+      ? buildPublicReturnBridgeUrl(`${PUBLIC_SITE_URL}/bai-viet/${selectedArticle.slug}`)
       : null;
   const hasArticles = articles.length > 0;
   const selectedStatusMeta = selectedArticle

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { API_BASE_URL, APP_URL, buildAppLoginUrl } from "../../lib/api";
-import { getAuthStage, getPublicToken, type AuthStage } from "../../lib/public-auth";
+import { API_BASE_URL, APP_URL, SITE_URL, buildPublicContentLoginUrl } from "../../lib/api";
+import {
+    getAuthStage,
+    getPublicToken,
+    subscribeToPublicAuth,
+    type AuthStage,
+} from "../../lib/public-auth";
+import { getViewerState } from "../../lib/public-events";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
 const TOPIC_OPTIONS = [
@@ -19,6 +25,14 @@ const TOPIC_OPTIONS = [
 
 export function CommunityQuestionForm() {
     const [stage, setStage] = useState<AuthStage>("anonymous");
+    const [loginHref, setLoginHref] = useState(() => {
+        const viewer = getViewerState();
+        return buildPublicContentLoginUrl({
+            returnTo: `${SITE_URL}/hoi-dap`,
+            anonymousId: viewer.anonymous_id,
+            sessionId: viewer.session_id,
+        });
+    });
     const [publicName, setPublicName] = useState("");
     const [questionText, setQuestionText] = useState("");
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -26,9 +40,26 @@ export function CommunityQuestionForm() {
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        setStage(getAuthStage());
+    const refreshAuthState = useCallback(() => {
+        const nextStage = getAuthStage();
+        setStage(nextStage);
+
+        if (nextStage === "anonymous") {
+            const viewer = getViewerState();
+            setLoginHref(
+                buildPublicContentLoginUrl({
+                    returnTo: `${SITE_URL}/hoi-dap`,
+                    anonymousId: viewer.anonymous_id,
+                    sessionId: viewer.session_id,
+                }),
+            );
+        }
     }, []);
+
+    useEffect(() => {
+        refreshAuthState();
+        return subscribeToPublicAuth(refreshAuthState);
+    }, [refreshAuthState]);
 
     const toggleTag = (tag: string) => {
         setSelectedTags((prev) =>
@@ -83,7 +114,7 @@ export function CommunityQuestionForm() {
                 </p>
                 <div className="button-row">
                     <TrackedPublicLink
-                        href={buildAppLoginUrl({ nextPath: "/chat", intent: "client" })}
+                        href={loginHref}
                         className="button-primary"
                         event={{
                             event_type: "community_hub_login_prompt",

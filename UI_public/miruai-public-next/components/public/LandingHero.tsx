@@ -1,23 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { buildPublicContentLoginUrl, SITE_URL } from "../../lib/api";
-import { getPublicAuthState, syncProfile } from "../../lib/public-auth";
+import { getPublicAuthState, subscribeToPublicAuth, syncProfile } from "../../lib/public-auth";
 import { getViewerState } from "../../lib/public-events";
 import { computeStageCta, type StageCta } from "../../lib/stage-cta";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
 export function LandingHero() {
   const [cta, setCta] = useState<StageCta>(() => computeStageCta());
+  const refreshCta = useCallback(() => {
+    setCta(computeStageCta());
+  }, []);
 
   useEffect(() => {
     // Re-sync profile on mount to ensure fresh data
     const authState = getPublicAuthState();
     if (authState) {
-      syncProfile().then(() => setCta(computeStageCta()));
+      void syncProfile();
     }
-  }, []);
+    refreshCta();
+    return subscribeToPublicAuth(refreshCta);
+  }, [refreshCta]);
 
   // For anonymous: build tracked login URL
   const [loginHref, setLoginHref] = useState(cta.primary.href);

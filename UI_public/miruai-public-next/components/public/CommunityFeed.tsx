@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { API_BASE_URL, APP_URL, SITE_URL, buildAppLoginUrl } from "../../lib/api";
-import { getAuthStage, getPublicToken, type AuthStage } from "../../lib/public-auth";
+import { API_BASE_URL, APP_URL, SITE_URL, buildPublicContentLoginUrl } from "../../lib/api";
+import {
+    getAuthStage,
+    getPublicToken,
+    subscribeToPublicAuth,
+    type AuthStage,
+} from "../../lib/public-auth";
+import { getViewerState } from "../../lib/public-events";
 import { TrackedPublicLink } from "./TrackedPublicLink";
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -61,6 +67,14 @@ function initialAvatar(name: string): string {
 
 export function CommunityFeed() {
     const [stage, setStage] = useState<AuthStage>("anonymous");
+    const [loginHref, setLoginHref] = useState(() => {
+        const viewer = getViewerState();
+        return buildPublicContentLoginUrl({
+            returnTo: `${SITE_URL}/hoi-dap`,
+            anonymousId: viewer.anonymous_id,
+            sessionId: viewer.session_id,
+        });
+    });
     const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState("Tất cả");
@@ -73,10 +87,27 @@ export function CommunityFeed() {
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        setStage(getAuthStage());
-        fetchQuestions();
+    const refreshAuthState = useCallback(() => {
+        const nextStage = getAuthStage();
+        setStage(nextStage);
+
+        if (nextStage === "anonymous") {
+            const viewer = getViewerState();
+            setLoginHref(
+                buildPublicContentLoginUrl({
+                    returnTo: `${SITE_URL}/hoi-dap`,
+                    anonymousId: viewer.anonymous_id,
+                    sessionId: viewer.session_id,
+                }),
+            );
+        }
     }, []);
+
+    useEffect(() => {
+        refreshAuthState();
+        fetchQuestions();
+        return subscribeToPublicAuth(refreshAuthState);
+    }, [refreshAuthState]);
 
     async function fetchQuestions() {
         try {
@@ -149,7 +180,7 @@ export function CommunityFeed() {
                             <div className="sanctuary-login-prompt">
                                 <p>Đăng nhập để đặt câu hỏi cho cộng đồng Miru</p>
                                 <TrackedPublicLink
-                                    href={buildAppLoginUrl({ nextPath: "/chat", intent: "client" })}
+                                    href={loginHref}
                                     className="sanctuary-btn-primary"
                                     event={{
                                         event_type: "community_hub_login_prompt",
