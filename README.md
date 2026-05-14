@@ -26,4 +26,6 @@ npm run dev
 - `UI_new/miru_ggstudio-main/`: Frontend Vite + React.
 - `database.py`: Quản lý kết nối Supabase và Vector Search.
 - `.env`: Cấu hình API Key và Database URL.
-"# reflection_project" 
+"# reflection_project"
+Đây là đường link để tải chatbot trên điện thoại
+https://drive.google.com/file/d/1iydGBtXzq8XzbhuF3DdLHFxROtP-z2wB/view?usp=sharing
